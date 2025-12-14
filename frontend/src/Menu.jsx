@@ -12,9 +12,7 @@ const translations = {
     campaigns: 'Kampanyalar',
     listAll: 'Tümünü Gör',
     categories: 'Kategoriler',
-    allProducts: 'Tüm Ürünler',
-    featured: 'Öne Çıkanlar',
-    reviews: 'Görüş ve Yorumlarınız',
+    reviews: 'Görüş & Yorumlarınız',
     reviewTitle: 'Bizi Değerlendirin',
     reviewSubtitle: 'Görüşleriniz bizim için değerli',
     contactOptional: 'İletişim (Opsiyonel)',
@@ -27,18 +25,17 @@ const translations = {
     viewInAR: 'AR\'da Görüntüle',
     only: 'Sadece',
     currency: '₺',
-    loading: 'Yükleniyor...',
     noProducts: 'Ürün bulunamadı',
     poweredBy: 'Powered by',
-    scrollTop: 'Yukarı',
-    share: 'Paylaş',
-    favorites: 'Favoriler',
+    products: 'ürün',
+    selectLanguage: 'Dil Seçin',
+    arSupported: 'AR Destekli',
+    arDescription: '3D modeli kameranızla görüntüleyin',
+    loading3D: '3D Model Yükleniyor...',
     callUs: 'Bizi Arayın',
     findUs: 'Konum',
     workingHours: 'Çalışma Saatleri',
-    followUs: 'Bizi Takip Edin',
-    products: 'ürün',
-    selectLanguage: 'Dil Seçin'
+    followUs: 'Bizi Takip Edin'
   },
   en: {
     search: 'Search...',
@@ -46,9 +43,7 @@ const translations = {
     campaigns: 'Campaigns',
     listAll: 'View All',
     categories: 'Categories',
-    allProducts: 'All Products',
-    featured: 'Featured',
-    reviews: 'Your Feedback',
+    reviews: 'Feedback & Reviews',
     reviewTitle: 'Rate Us',
     reviewSubtitle: 'Your feedback is valuable to us',
     contactOptional: 'Contact (Optional)',
@@ -61,18 +56,17 @@ const translations = {
     viewInAR: 'View in AR',
     only: 'Only',
     currency: '₺',
-    loading: 'Loading...',
     noProducts: 'No products found',
     poweredBy: 'Powered by',
-    scrollTop: 'Top',
-    share: 'Share',
-    favorites: 'Favorites',
+    products: 'products',
+    selectLanguage: 'Select Language',
+    arSupported: 'AR Supported',
+    arDescription: 'View 3D model with your camera',
+    loading3D: 'Loading 3D Model...',
     callUs: 'Call Us',
     findUs: 'Location',
     workingHours: 'Working Hours',
-    followUs: 'Follow Us',
-    products: 'products',
-    selectLanguage: 'Select Language'
+    followUs: 'Follow Us'
   },
   de: {
     search: 'Suchen...',
@@ -80,9 +74,7 @@ const translations = {
     campaigns: 'Angebote',
     listAll: 'Alle Anzeigen',
     categories: 'Kategorien',
-    allProducts: 'Alle Produkte',
-    featured: 'Empfohlen',
-    reviews: 'Ihr Feedback',
+    reviews: 'Feedback & Bewertungen',
     reviewTitle: 'Bewerten Sie uns',
     reviewSubtitle: 'Ihre Meinung ist uns wichtig',
     contactOptional: 'Kontakt (Optional)',
@@ -95,18 +87,17 @@ const translations = {
     viewInAR: 'In AR ansehen',
     only: 'Nur',
     currency: '₺',
-    loading: 'Laden...',
     noProducts: 'Keine Produkte gefunden',
     poweredBy: 'Powered by',
-    scrollTop: 'Nach oben',
-    share: 'Teilen',
-    favorites: 'Favoriten',
+    products: 'Produkte',
+    selectLanguage: 'Sprache wählen',
+    arSupported: 'AR Unterstützt',
+    arDescription: '3D-Modell mit Kamera ansehen',
+    loading3D: '3D-Modell wird geladen...',
     callUs: 'Anrufen',
     findUs: 'Standort',
     workingHours: 'Öffnungszeiten',
-    followUs: 'Folgen Sie uns',
-    products: 'Produkte',
-    selectLanguage: 'Sprache wählen'
+    followUs: 'Folgen Sie uns'
   },
   ar: {
     search: 'بحث...',
@@ -114,8 +105,6 @@ const translations = {
     campaigns: 'العروض',
     listAll: 'عرض الكل',
     categories: 'الفئات',
-    allProducts: 'جميع المنتجات',
-    featured: 'مميز',
     reviews: 'آراؤكم',
     reviewTitle: 'قيمنا',
     reviewSubtitle: 'رأيك مهم لنا',
@@ -129,18 +118,17 @@ const translations = {
     viewInAR: 'عرض AR',
     only: 'فقط',
     currency: '₺',
-    loading: 'جار التحميل...',
     noProducts: 'لا توجد منتجات',
     poweredBy: 'مدعوم من',
-    scrollTop: 'أعلى',
-    share: 'مشاركة',
-    favorites: 'المفضلة',
+    products: 'منتجات',
+    selectLanguage: 'اختر اللغة',
+    arSupported: 'يدعم AR',
+    arDescription: 'عرض النموذج ثلاثي الأبعاد بالكاميرا',
+    loading3D: 'جار تحميل النموذج...',
     callUs: 'اتصل بنا',
     findUs: 'الموقع',
     workingHours: 'ساعات العمل',
-    followUs: 'تابعنا',
-    products: 'منتجات',
-    selectLanguage: 'اختر اللغة'
+    followUs: 'تابعنا'
   },
   ru: {
     search: 'Поиск...',
@@ -148,9 +136,7 @@ const translations = {
     campaigns: 'Акции',
     listAll: 'Показать все',
     categories: 'Категории',
-    allProducts: 'Все продукты',
-    featured: 'Рекомендуемое',
-    reviews: 'Ваш отзыв',
+    reviews: 'Отзывы',
     reviewTitle: 'Оцените нас',
     reviewSubtitle: 'Ваше мнение важно для нас',
     contactOptional: 'Контакт (необязательно)',
@@ -163,24 +149,66 @@ const translations = {
     viewInAR: 'Посмотреть в AR',
     only: 'Только',
     currency: '₺',
-    loading: 'Загрузка...',
     noProducts: 'Продукты не найдены',
     poweredBy: 'Работает на',
-    scrollTop: 'Наверх',
-    share: 'Поделиться',
-    favorites: 'Избранное',
+    products: 'продуктов',
+    selectLanguage: 'Выберите язык',
+    arSupported: 'Поддержка AR',
+    arDescription: 'Просмотр 3D модели камерой',
+    loading3D: 'Загрузка 3D модели...',
     callUs: 'Позвоните нам',
     findUs: 'Местоположение',
     workingHours: 'Часы работы',
-    followUs: 'Подписывайтесь',
-    products: 'продуктов',
-    selectLanguage: 'Выберите язык'
+    followUs: 'Подписывайтесь'
   }
+}
+
+// ==================== MINIMALIST DARK THEME ====================
+const theme = {
+  bg: '#000000',
+  bgCard: '#0a0a0a',
+  bgElevated: '#111111',
+  
+  text: '#ffffff',
+  textSecondary: 'rgba(255, 255, 255, 0.6)',
+  textMuted: 'rgba(255, 255, 255, 0.4)',
+  
+  red: '#e53935',
+  redDark: '#c62828',
+  
+  border: 'rgba(255, 255, 255, 0.1)',
+  borderLight: 'rgba(255, 255, 255, 0.05)',
+  
+  shadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
+}
+
+// ==================== MODEL VIEWER LOADER ====================
+let modelViewerLoaded = false
+let modelViewerLoading = false
+const modelViewerCallbacks = []
+
+function loadModelViewer() {
+  return new Promise((resolve) => {
+    if (modelViewerLoaded) { resolve(); return }
+    if (modelViewerLoading) { modelViewerCallbacks.push(resolve); return }
+    modelViewerLoading = true
+    const script = document.createElement('script')
+    script.type = 'module'
+    script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js'
+    script.onload = () => {
+      modelViewerLoaded = true
+      modelViewerLoading = false
+      resolve()
+      modelViewerCallbacks.forEach(cb => cb())
+      modelViewerCallbacks.length = 0
+    }
+    script.onerror = () => { modelViewerLoading = false; resolve() }
+    document.head.appendChild(script)
+  })
 }
 
 // ==================== MAIN COMPONENT ====================
 export default function Menu() {
-  // States
   const [menu, setMenu] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showSplash, setShowSplash] = useState(true)
@@ -193,254 +221,109 @@ export default function Menu() {
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0)
-  const [scrollY, setScrollY] = useState(0)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [favorites, setFavorites] = useState([])
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
   const [allProducts, setAllProducts] = useState([])
+  const [modelViewerReady, setModelViewerReady] = useState(false)
   
-  const announcementRef = useRef(null)
   const t = translations[language] || translations.tr
 
-  // Load model-viewer script
+  useEffect(() => { loadModelViewer().then(() => setModelViewerReady(true)) }, [])
+
   useEffect(() => {
-    if (!document.querySelector('script[src*="model-viewer"]')) {
-      const script = document.createElement('script')
-      script.type = 'module'
-      script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js'
-      document.head.appendChild(script)
-    }
+    const saved = localStorage.getItem('ar-menu-favorites')
+    if (saved) try { setFavorites(JSON.parse(saved)) } catch {}
+    const lang = localStorage.getItem('ar-menu-language')
+    if (lang) setLanguage(lang)
   }, [])
 
-  // Load favorites from localStorage
   useEffect(() => {
-    const savedFavorites = localStorage.getItem('ar-menu-favorites')
-    if (savedFavorites) {
-      setFavorites(JSON.parse(savedFavorites))
-    }
-    
-    const savedLanguage = localStorage.getItem('ar-menu-language')
-    if (savedLanguage) {
-      setLanguage(savedLanguage)
-    }
+    const onScroll = () => setShowScrollTop(window.scrollY > 500)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Scroll tracking
   useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY)
-      setShowScrollTop(window.scrollY > 500)
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Load menu data
-  useEffect(() => {
-    axios.get(API_URL + '/menu')
-      .then(res => {
-        setMenu(res.data)
-        
-        // Tüm ürünleri topla
-        const products = []
-        res.data.categories?.forEach(cat => {
-          cat.products?.forEach(p => {
-            if (p.isActive !== false) {
-              products.push({ 
-                ...p, 
-                categoryName: cat.name, 
-                categoryIcon: cat.icon,
-                categoryId: cat.id
-              })
-            }
-          })
+    axios.get(API_URL + '/menu').then(res => {
+      setMenu(res.data)
+      const prods = []
+      res.data.categories?.forEach(cat => {
+        cat.products?.forEach(p => {
+          if (p.isActive !== false) prods.push({ ...p, categoryName: cat.name, categoryIcon: cat.icon, categoryId: cat.id })
         })
-        setAllProducts(products)
-        
-        setTimeout(() => {
-          setLoading(false)
-          setTimeout(() => setShowSplash(false), 800)
-        }, 2000)
       })
-      .catch(err => {
-        console.error('Menu yuklenemedi:', err)
-        setLoading(false)
-        setShowSplash(false)
-      })
+      setAllProducts(prods)
+      setTimeout(() => { setLoading(false); setTimeout(() => setShowSplash(false), 500) }, 1500)
+    }).catch(() => { setLoading(false); setShowSplash(false) })
   }, [])
 
-  // Announcement rotation
   useEffect(() => {
     if (!menu?.announcements?.length) return
-    
-    const interval = setInterval(() => {
-      setCurrentAnnouncementIndex(prev => 
-        (prev + 1) % menu.announcements.length
-      )
-    }, 3000)
-    
+    const interval = setInterval(() => setCurrentAnnouncementIndex(i => (i + 1) % menu.announcements.length), 4000)
     return () => clearInterval(interval)
   }, [menu?.announcements])
 
-  // Toggle favorite
-  const toggleFavorite = useCallback((productId) => {
+  const toggleFavorite = useCallback((id) => {
     setFavorites(prev => {
-      const newFavorites = prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-      localStorage.setItem('ar-menu-favorites', JSON.stringify(newFavorites))
-      return newFavorites
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      localStorage.setItem('ar-menu-favorites', JSON.stringify(next))
+      return next
     })
   }, [])
 
-  // Change language
-  const changeLanguage = (lang) => {
-    setLanguage(lang)
-    localStorage.setItem('ar-menu-language', lang)
-    setShowLanguageModal(false)
+  const changeLanguage = (lang) => { setLanguage(lang); localStorage.setItem('ar-menu-language', lang); setShowLanguageModal(false) }
+
+  const submitReview = async (data) => {
+    try { await axios.post(API_URL + '/reviews', data); setReviewSubmitted(true); setTimeout(() => { setShowReviewModal(false); setReviewSubmitted(false) }, 2000) } catch {}
   }
 
-  // Submit review
-  const submitReview = async (reviewData) => {
-    try {
-      await axios.post(API_URL + '/reviews', reviewData)
-      setReviewSubmitted(true)
-      setTimeout(() => {
-        setShowReviewModal(false)
-        setReviewSubmitted(false)
-      }, 2000)
-    } catch (err) {
-      console.error('Review gonderilemedi:', err)
-    }
-  }
+  const openProductModal = useCallback((product) => {
+    if (showProductModal) return
+    setSelectedProduct(product)
+    setShowProductModal(true)
+  }, [showProductModal])
 
-  // Scroll to top
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const closeProductModal = useCallback(() => { setShowProductModal(false); setTimeout(() => setSelectedProduct(null), 300) }, [])
 
-  // Search products
-  const searchResults = searchQuery.trim() 
-    ? allProducts.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.categoryName?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : []
-
-  // Theme
-  const theme = {
-    primary: menu?.settings?.primaryColor || '#dc2626',
-    primaryLight: '#fee2e2',
-    primaryDark: '#b91c1c',
-    secondary: '#1f2937',
-    bg: '#ffffff',
-    surface: '#f9fafb',
-    surfaceHover: '#f3f4f6',
-    text: '#111827',
-    textSecondary: '#6b7280',
-    textMuted: '#9ca3af',
-    border: '#e5e7eb',
-    borderLight: '#f3f4f6',
-    shadow: '0 4px 20px rgba(0,0,0,0.08)',
-    shadowMd: '0 8px 30px rgba(0,0,0,0.12)',
-    shadowLg: '0 12px 40px rgba(0,0,0,0.15)',
-    success: '#10b981',
-    warning: '#f59e0b',
-    gradient: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-  }
+  const searchResults = searchQuery.trim() ? allProducts.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.categoryName?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) : []
 
   // ==================== SPLASH SCREEN ====================
   if (showSplash) {
     return (
       <div style={{
-        position: 'fixed',
-        inset: 0,
-        background: theme.gradient,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        opacity: loading ? 1 : 0,
-        transition: 'opacity 0.8s ease'
+        position: 'fixed', inset: 0, background: theme.bg,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        zIndex: 9999, opacity: loading ? 1 : 0, transition: 'opacity 0.5s ease'
       }}>
-        <div style={{ animation: 'logoAnim 1s ease', marginBottom: '32px' }}>
+        <div style={{ animation: 'fadeIn 0.6s ease', marginBottom: '32px' }}>
           {menu?.settings?.logo ? (
-            <img 
-              src={FILES_URL + '/images/' + menu.settings.logo} 
-              alt="" 
-              style={{ 
-                width: '140px', 
-                height: '140px', 
-                borderRadius: '28px', 
-                objectFit: 'cover',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                border: '4px solid rgba(255,255,255,0.2)'
-              }} 
-            />
+            <img src={FILES_URL + '/images/' + menu.settings.logo} alt=""
+              style={{ width: '100px', height: '100px', borderRadius: '20px', objectFit: 'cover', border: `1px solid ${theme.border}` }} />
           ) : (
-            <div style={{
-              width: '140px',
-              height: '140px',
-              borderRadius: '28px',
-              backgroundColor: 'rgba(255,255,255,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '64px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-            }}>🍽️</div>
+            <div style={{ width: '100px', height: '100px', borderRadius: '20px', background: theme.bgElevated, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🍽️</div>
           )}
         </div>
         
-        <h1 style={{
-          color: 'white',
-          fontSize: '36px',
-          fontWeight: '800',
-          margin: '0 0 12px',
-          textAlign: 'center',
-          animation: 'fadeUp 0.8s ease 0.3s both'
-        }}>
+        <h1 style={{ color: theme.text, fontSize: '24px', fontWeight: '600', margin: '0 0 8px', animation: 'fadeIn 0.6s ease 0.2s both' }}>
           {menu?.settings?.restaurantName || 'Menu'}
         </h1>
         
         {menu?.settings?.slogan && (
-          <p style={{
-            color: 'rgba(255,255,255,0.85)',
-            fontSize: '18px',
-            margin: 0,
-            textAlign: 'center',
-            animation: 'fadeUp 0.8s ease 0.5s both'
-          }}>
-            {menu.settings.slogan}
-          </p>
+          <p style={{ color: theme.textSecondary, fontSize: '14px', margin: 0, animation: 'fadeIn 0.6s ease 0.3s both' }}>{menu.settings.slogan}</p>
         )}
         
-        <div style={{ marginTop: '48px', animation: 'fadeUp 0.8s ease 0.7s both' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '4px solid rgba(255,255,255,0.2)',
-            borderTopColor: 'white',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite'
-          }} />
+        <div style={{ marginTop: '40px', animation: 'fadeIn 0.6s ease 0.4s both' }}>
+          <div style={{ width: '40px', height: '40px', border: `2px solid ${theme.border}`, borderTopColor: theme.red, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         </div>
 
         <style>{`
-          @keyframes logoAnim {
-            0% { transform: scale(0) rotate(-10deg); opacity: 0; }
-            50% { transform: scale(1.1) rotate(5deg); }
-            100% { transform: scale(1) rotate(0); opacity: 1; }
-          }
-          @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes spin { to { transform: rotate(360deg); } }
         `}</style>
       </div>
     )
@@ -449,33 +332,14 @@ export default function Menu() {
   // ==================== ERROR STATE ====================
   if (!menu) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.bg,
-        padding: '20px'
-      }}>
-        <div style={{ fontSize: '80px', marginBottom: '24px' }}>😕</div>
-        <h2 style={{ color: theme.text, fontSize: '24px', margin: '0 0 8px' }}>Menu Yüklenemedi</h2>
-        <p style={{ color: theme.textSecondary }}>Lütfen daha sonra tekrar deneyin</p>
-        <button 
-          onClick={() => window.location.reload()}
-          style={{
-            marginTop: '24px',
-            padding: '14px 32px',
-            borderRadius: '12px',
-            border: 'none',
-            background: theme.gradient,
-            color: 'white',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}
-        >
-          Yenile
-        </button>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: theme.bg, padding: '20px' }}>
+        <div style={{ fontSize: '56px', marginBottom: '16px' }}>😕</div>
+        <h2 style={{ color: theme.text, fontSize: '18px', margin: '0 0 8px', fontWeight: '600' }}>Menu Yüklenemedi</h2>
+        <p style={{ color: theme.textSecondary, fontSize: '14px' }}>Lütfen daha sonra tekrar deneyin</p>
+        <button onClick={() => window.location.reload()} style={{
+          marginTop: '24px', padding: '12px 28px', borderRadius: '8px', border: 'none',
+          background: theme.red, color: 'white', fontWeight: '600', fontSize: '14px', cursor: 'pointer'
+        }}>Yenile</button>
       </div>
     )
   }
@@ -485,676 +349,235 @@ export default function Menu() {
   // ==================== MAIN RENDER ====================
   return (
     <div style={{
-      minHeight: '100vh',
-      backgroundColor: theme.surface,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      WebkitFontSmoothing: 'antialiased',
-      paddingBottom: '80px'
+      minHeight: '100vh', background: theme.bg,
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+      WebkitFontSmoothing: 'antialiased', paddingBottom: '80px'
     }}>
-      
-      {/* ========== HEADER / HERO ========== */}
+
+      {/* ========== HERO ========== */}
       <div style={{ position: 'relative' }}>
-        {/* Banner Image */}
-        <div style={{ 
-          position: 'relative', 
-          height: '280px',
-          overflow: 'hidden'
-        }}>
+        <div style={{ position: 'relative', height: '280px', overflow: 'hidden' }}>
           {settings.bannerImage || settings.homepageImage ? (
-            <img 
-              src={FILES_URL + '/images/' + (settings.homepageImage || settings.bannerImage)} 
-              alt="" 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'cover',
-                transform: `scale(${1 + scrollY * 0.0005})`,
-                transition: 'transform 0.1s ease-out'
-              }} 
-            />
+            <img src={FILES_URL + '/images/' + (settings.homepageImage || settings.bannerImage)} alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              background: theme.gradient
-            }} />
+            <div style={{ width: '100%', height: '100%', background: theme.bgElevated }} />
           )}
-          
-          {/* Gradient Overlay */}
           <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.6) 100%)'
+            position: 'absolute', inset: 0,
+            background: `linear-gradient(to bottom, transparent 0%, ${theme.bg} 100%)`
           }} />
         </div>
 
         {/* Top Bar */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          padding: '16px 20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          zIndex: 10
-        }}>
-          {/* Language Button */}
-          <button
-            onClick={() => setShowLanguageModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: 'none',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              backdropFilter: 'blur(10px)',
-              color: 'white',
-              fontWeight: '600',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>🌐</span>
-            <span>{language.toUpperCase()}</span>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+          <button onClick={() => setShowLanguageModal(true)} style={{
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: '8px',
+            border: `1px solid ${theme.border}`, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)',
+            color: theme.text, fontWeight: '500', fontSize: '13px', cursor: 'pointer'
+          }}>
+            🌐 {language.toUpperCase()}
           </button>
 
-          {/* Search Button */}
-          <button
-            onClick={() => setShowSearchModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '48px',
-              height: '48px',
-              borderRadius: '14px',
-              border: 'none',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              backdropFilter: 'blur(10px)',
-              color: 'white',
-              fontSize: '22px',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            🔍
-          </button>
+          <button onClick={() => setShowSearchModal(true)} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '8px',
+            border: `1px solid ${theme.border}`, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)',
+            color: theme.text, fontSize: '18px', cursor: 'pointer'
+          }}>🔍</button>
         </div>
 
         {/* Restaurant Info */}
-        <div style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '20px',
-          right: '20px',
-          zIndex: 10
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px' }}>
+        <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', zIndex: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px' }}>
             {settings.logo && (
-              <img 
-                src={FILES_URL + '/images/' + settings.logo} 
-                alt="" 
-                style={{ 
-                  width: '70px', 
-                  height: '70px', 
-                  borderRadius: '16px', 
-                  objectFit: 'cover',
-                  border: '3px solid white',
-                  boxShadow: theme.shadowMd
-                }} 
-              />
+              <img src={FILES_URL + '/images/' + settings.logo} alt=""
+                style={{ width: '70px', height: '70px', borderRadius: '14px', objectFit: 'cover', border: `2px solid ${theme.border}` }} />
             )}
             <div>
-              <h1 style={{
-                margin: 0,
-                fontSize: '26px',
-                fontWeight: '800',
-                color: 'white',
-                textShadow: '0 2px 10px rgba(0,0,0,0.3)'
-              }}>
+              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: theme.text }}>
                 {settings.restaurantName || 'Restoran'}
               </h1>
-              {settings.slogan && (
-                <p style={{
-                  margin: '4px 0 0',
-                  fontSize: '14px',
-                  color: 'rgba(255,255,255,0.9)'
-                }}>
-                  {settings.slogan}
-                </p>
-              )}
+              {settings.slogan && <p style={{ margin: '4px 0 0', fontSize: '13px', color: theme.textSecondary }}>{settings.slogan}</p>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ========== REVIEW BUTTON ========== */}
-      <div 
-        onClick={() => setShowReviewModal(true)}
-        style={{
-          margin: '16px',
-          padding: '16px 20px',
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          boxShadow: theme.shadow,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: 'pointer',
-          transition: 'all 0.3s ease'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            background: theme.gradient,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '24px'
-          }}>⭐</div>
-          <div>
-            <p style={{ margin: 0, fontWeight: '600', color: theme.text, fontSize: '15px' }}>
-              {t.reviews}
-            </p>
-            <p style={{ margin: '2px 0 0', fontSize: '13px', color: theme.textSecondary }}>
-              {t.reviewSubtitle}
-            </p>
-          </div>
-        </div>
-        <span style={{ fontSize: '20px', color: theme.textMuted }}>→</span>
-      </div>
-
-      {/* ========== ANNOUNCEMENTS SLIDER ========== */}
-      {announcements && announcements.length > 0 && (
-        <div style={{
-          margin: '0 16px 16px',
-          padding: '16px 20px',
-          backgroundColor: theme.primary,
-          borderRadius: '16px',
-          overflow: 'hidden',
-          position: 'relative'
-        }}>
-          <div 
-            ref={announcementRef}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              animation: 'slideIn 0.5s ease'
-            }}
-            key={currentAnnouncementIndex}
-          >
-            <span style={{ fontSize: '24px' }}>
-              {announcements[currentAnnouncementIndex]?.icon || '📢'}
-            </span>
-            <div style={{ flex: 1 }}>
-              <p style={{ 
-                margin: 0, 
-                fontWeight: '700', 
-                color: 'white',
-                fontSize: '15px'
-              }}>
-                {announcements[currentAnnouncementIndex]?.title}
-              </p>
-              <p style={{ 
-                margin: '4px 0 0', 
-                color: 'rgba(255,255,255,0.9)',
-                fontSize: '13px'
-              }}>
-                {announcements[currentAnnouncementIndex]?.message}
-              </p>
-            </div>
-          </div>
-          
-          {/* Dots */}
-          {announcements.length > 1 && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '6px',
-              marginTop: '12px'
-            }}>
-              {announcements.map((_, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    width: idx === currentAnnouncementIndex ? '20px' : '6px',
-                    height: '6px',
-                    borderRadius: '3px',
-                    backgroundColor: idx === currentAnnouncementIndex 
-                      ? 'white' 
-                      : 'rgba(255,255,255,0.4)',
-                    transition: 'all 0.3s ease'
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ========== CAMPAIGNS SECTION ========== */}
-      {campaignProducts && campaignProducts.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '0 16px',
-            marginBottom: '12px'
-          }}>
-            <h2 style={{
-              margin: 0,
-              fontSize: '20px',
-              fontWeight: '700',
-              color: theme.text,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <span>🔥</span>
-              {t.campaigns}
-            </h2>
-            <button
-              onClick={() => setSelectedCategory('campaigns')}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '20px',
-                border: 'none',
-                backgroundColor: theme.primaryLight,
-                color: theme.primary,
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-            >
-              {t.listAll}
-            </button>
-          </div>
-
-          {/* Horizontal Scroll */}
-          <div style={{
-            display: 'flex',
-            overflowX: 'auto',
-            gap: '14px',
-            padding: '0 16px 8px',
-            scrollSnapType: 'x mandatory',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}>
-            {campaignProducts.slice(0, 10).map((product, index) => (
-              <CampaignCard
-                key={product.id}
-                product={product}
-                settings={settings}
-                theme={theme}
-                t={t}
-                index={index}
-                onClick={() => {
-                  setSelectedProduct(product)
-                  setShowProductModal(true)
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========== CATEGORIES SECTION ========== */}
+      {/* Content */}
       <div style={{ padding: '0 16px' }}>
-        <h2 style={{
-          margin: '0 0 16px',
-          fontSize: '20px',
-          fontWeight: '700',
-          color: theme.text,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span>📋</span>
-          {t.categories}
-        </h2>
 
-        {/* Category Grid */}
-        <CategoryGrid
-          categories={categories}
-          categoryLayouts={categoryLayouts}
-          theme={theme}
-          t={t}
-          onCategoryClick={(cat) => setSelectedCategory(cat.id)}
-        />
-      </div>
-
-      {/* ========== FOOTER ========== */}
-      <Footer settings={settings} theme={theme} t={t} />
-
-      {/* ========== MODALS ========== */}
-      
-      {/* Language Modal */}
-      {showLanguageModal && (
-        <LanguageModal
-          currentLanguage={language}
-          onSelect={changeLanguage}
-          onClose={() => setShowLanguageModal(false)}
-          theme={theme}
-          t={t}
-        />
-      )}
-
-      {/* Search Modal */}
-      {showSearchModal && (
-        <SearchModal
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchResults={searchResults}
-          allProducts={allProducts}
-          settings={settings}
-          theme={theme}
-          t={t}
-          onClose={() => {
-            setShowSearchModal(false)
-            setSearchQuery('')
-          }}
-          onProductClick={(product) => {
-            setSelectedProduct(product)
-            setShowProductModal(true)
-            setShowSearchModal(false)
-            setSearchQuery('')
-          }}
-        />
-      )}
-
-      {/* Review Modal */}
-      {showReviewModal && (
-        <ReviewModal
-          theme={theme}
-          t={t}
-          settings={settings}
-          reviewSubmitted={reviewSubmitted}
-          onSubmit={submitReview}
-          onClose={() => {
-            setShowReviewModal(false)
-            setReviewSubmitted(false)
-          }}
-        />
-      )}
-
-      {/* Product Modal */}
-      {showProductModal && selectedProduct && (
-        <ProductModal
-          product={selectedProduct}
-          settings={settings}
-          theme={theme}
-          t={t}
-          isFavorite={favorites.includes(selectedProduct.id)}
-          onToggleFavorite={() => toggleFavorite(selectedProduct.id)}
-          onClose={() => {
-            setShowProductModal(false)
-            setSelectedProduct(null)
-          }}
-        />
-      )}
-
-      {/* Category Page Modal */}
-      {selectedCategory && (
-        <CategoryPageModal
-          categoryId={selectedCategory}
-          categories={categories}
-          allProducts={allProducts}
-          campaignProducts={campaignProducts}
-          settings={settings}
-          theme={theme}
-          t={t}
-          favorites={favorites}
-          onToggleFavorite={toggleFavorite}
-          onProductClick={(product) => {
-            setSelectedProduct(product)
-            setShowProductModal(true)
-          }}
-          onClose={() => setSelectedCategory(null)}
-        />
-      )}
-
-      {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
+        {/* ========== REVIEWS TEXT ========== */}
+        <div 
+          onClick={() => setShowReviewModal(true)}
           style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            border: 'none',
-            background: theme.gradient,
-            color: 'white',
-            fontSize: '24px',
+            padding: '20px 0',
+            borderBottom: `1px solid ${theme.border}`,
             cursor: 'pointer',
-            boxShadow: theme.shadowMd,
-            zIndex: 50,
-            animation: 'fadeUp 0.3s ease',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'space-between'
           }}
         >
-          ↑
-        </button>
+          <span style={{ color: theme.red, fontSize: '15px', fontWeight: '600' }}>
+            ⭐ {t.reviews}
+          </span>
+          <span style={{ color: theme.textMuted, fontSize: '20px' }}>→</span>
+        </div>
+
+        {/* ========== ANNOUNCEMENTS - KAYAN NOTLAR ========== */}
+        {announcements?.length > 0 && (
+          <div style={{
+            padding: '20px 0',
+            borderBottom: `1px solid ${theme.border}`
+          }}>
+            <div key={currentAnnouncementIndex} style={{ animation: 'fadeIn 0.3s ease' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ fontSize: '20px' }}>{announcements[currentAnnouncementIndex]?.icon || '📢'}</span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: '600', color: theme.text, fontSize: '14px' }}>
+                    {announcements[currentAnnouncementIndex]?.title}
+                  </p>
+                  <p style={{ margin: '6px 0 0', color: theme.textSecondary, fontSize: '13px', lineHeight: 1.5 }}>
+                    {announcements[currentAnnouncementIndex]?.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {announcements.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '16px' }}>
+                {announcements.map((_, i) => (
+                  <div key={i} style={{
+                    width: i === currentAnnouncementIndex ? '20px' : '6px', height: '6px', borderRadius: '3px',
+                    background: i === currentAnnouncementIndex ? theme.red : theme.border, transition: 'all 0.3s ease'
+                  }} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========== CAMPAIGNS ========== */}
+        {campaignProducts?.length > 0 && (
+          <div style={{ paddingTop: '24px', paddingBottom: '24px', borderBottom: `1px solid ${theme.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: theme.text }}>
+                🔥 {t.campaigns}
+              </h2>
+              <button onClick={() => setSelectedCategory('campaigns')} style={{
+                padding: '8px 14px', borderRadius: '6px', border: `1px solid ${theme.border}`,
+                background: 'transparent', color: theme.textSecondary, fontWeight: '500', fontSize: '12px', cursor: 'pointer'
+              }}>{t.listAll}</button>
+            </div>
+
+            <div style={{
+              display: 'flex', overflowX: 'auto', gap: '12px', paddingBottom: '8px',
+              scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch'
+            }}>
+              {campaignProducts.slice(0, 10).map((product, index) => (
+                <CampaignCard key={product.id} product={product} settings={settings} t={t} index={index} onClick={() => openProductModal(product)} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ========== CATEGORIES ========== */}
+        <div style={{ paddingTop: '24px' }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: '700', color: theme.text }}>
+            📋 {t.categories}
+          </h2>
+          <CategoryGrid categories={categories} categoryLayouts={categoryLayouts} t={t} onCategoryClick={(cat) => setSelectedCategory(cat.id)} />
+        </div>
+
+        {/* ========== FOOTER ========== */}
+        <Footer settings={settings} t={t} />
+      </div>
+
+      {/* ========== MODALS ========== */}
+      {showLanguageModal && <LanguageModal currentLanguage={language} onSelect={changeLanguage} onClose={() => setShowLanguageModal(false)} t={t} />}
+      {showSearchModal && <SearchModal searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} settings={settings} t={t} onClose={() => { setShowSearchModal(false); setSearchQuery('') }} onProductClick={(p) => { setShowSearchModal(false); setSearchQuery(''); setTimeout(() => openProductModal(p), 100) }} />}
+      {showReviewModal && <ReviewModal t={t} settings={settings} reviewSubmitted={reviewSubmitted} onSubmit={submitReview} onClose={() => { setShowReviewModal(false); setReviewSubmitted(false) }} />}
+      {selectedCategory && <CategoryPageModal categoryId={selectedCategory} categories={categories} allProducts={allProducts} campaignProducts={campaignProducts} settings={settings} t={t} favorites={favorites} onToggleFavorite={toggleFavorite} onProductClick={openProductModal} onClose={() => setSelectedCategory(null)} />}
+      {showProductModal && selectedProduct && <ProductModal product={selectedProduct} settings={settings} t={t} isFavorite={favorites.includes(selectedProduct.id)} onToggleFavorite={() => toggleFavorite(selectedProduct.id)} onClose={closeProductModal} modelViewerReady={modelViewerReady} />}
+
+      {/* Scroll Top */}
+      {showScrollTop && (
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{
+          position: 'fixed', bottom: '24px', right: '16px', width: '48px', height: '48px', borderRadius: '12px',
+          border: `1px solid ${theme.border}`, background: theme.bgCard, color: theme.text, fontSize: '18px', cursor: 'pointer',
+          zIndex: 50, animation: 'fadeIn 0.3s ease'
+        }}>↑</button>
       )}
 
       {/* Global Styles */}
       <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes scaleIn {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes fadeIn { 
-          from { opacity: 0; } 
-          to { opacity: 1; } 
-        }
-        @keyframes fadeOut { 
-          to { opacity: 0; } 
-        }
-        @keyframes slideUp { 
-          from { transform: translateY(100%); } 
-          to { transform: translateY(0); } 
-        }
-        @keyframes slideDown { 
-          from { transform: translateY(0); }
-          to { transform: translateY(100%); } 
-        }
-        @keyframes slideLeft { 
-          from { transform: translateX(100%); } 
-          to { transform: translateX(0); } 
-        }
-        @keyframes slideRight { 
-          from { transform: translateX(0); }
-          to { transform: translateX(100%); } 
-        }
-        @keyframes slideDownFromTop {
-          from { transform: translateY(-100%); }
-          to { transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+        @keyframes slideLeft { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes slideRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+        @keyframes slideFromTop { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         *::-webkit-scrollbar { display: none; }
-        * { scrollbar-width: none; }
+        * { scrollbar-width: none; box-sizing: border-box; }
+        input, textarea, button { font-family: inherit; }
+        input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.3); }
       `}</style>
     </div>
   )
 }
 
 // ==================== CAMPAIGN CARD ====================
-function CampaignCard({ product, settings, theme, t, index, onClick }) {
+function CampaignCard({ product, settings, t, index, onClick }) {
   return (
-    <div
-      onClick={onClick}
-      style={{
-        flexShrink: 0,
-        width: '280px',
-        borderRadius: '20px',
-        overflow: 'hidden',
-        backgroundColor: 'white',
-        boxShadow: theme.shadow,
-        cursor: 'pointer',
-        scrollSnapAlign: 'start',
-        animation: `fadeUp 0.5s ease ${index * 0.1}s both`
-      }}
-    >
-      {/* Image 16:9 */}
-      <div style={{ position: 'relative', paddingTop: '56.25%' }}>
-        {product.thumbnail ? (
-          <img
-            src={FILES_URL + '/images/' + product.thumbnail}
-            alt={product.name}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover'
-            }}
-          />
-        ) : (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: theme.surface,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '48px'
-          }}>🍽️</div>
-        )}
-        
-        {/* Product Name Overlay */}
+    <div onClick={(e) => { e.stopPropagation(); onClick() }} style={{
+      flexShrink: 0, width: '260px', height: '160px', borderRadius: '12px', overflow: 'hidden',
+      position: 'relative', cursor: 'pointer', scrollSnapAlign: 'start', animation: `fadeUp 0.4s ease ${index * 0.05}s both`
+    }}>
+      {product.thumbnail ? (
+        <img src={FILES_URL + '/images/' + product.thumbnail} alt={product.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, background: theme.bgElevated, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🍽️</div>
+      )}
+      
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' }} />
+      
+      {product.glbFile && (
         <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          padding: '12px',
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)'
-        }}>
-          <p style={{
-            margin: 0,
-            color: 'white',
-            fontWeight: '700',
-            fontSize: '16px',
-            textShadow: '0 1px 3px rgba(0,0,0,0.3)'
-          }}>
-            {product.name}
-          </p>
-        </div>
-        
-        {/* Price Badge */}
-        <div style={{
-          position: 'absolute',
-          bottom: '12px',
-          right: '12px',
-          backgroundColor: theme.primary,
-          color: 'white',
-          padding: '8px 14px',
-          borderRadius: '12px',
-          fontWeight: '700',
-          fontSize: '15px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-        }}>
-          {product.isCampaign && <span style={{ fontSize: '12px', marginRight: '4px' }}>{t.only}</span>}
-          {product.price} {settings.currency || '₺'}
-        </div>
+          position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.7)',
+          color: theme.text, padding: '5px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '600'
+        }}>AR</div>
+      )}
 
-        {/* AR Badge */}
-        {product.glbFile && (
-          <div style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            color: 'white',
-            padding: '6px 10px',
-            borderRadius: '8px',
-            fontSize: '11px',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}>
-            📱 AR
-          </div>
-        )}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px' }}>
+        <p style={{ margin: 0, color: theme.text, fontWeight: '600', fontSize: '15px' }}>{product.name}</p>
+        <p style={{ margin: '8px 0 0', color: theme.red, fontWeight: '700', fontSize: '16px' }}>
+          {product.isCampaign && <span style={{ fontSize: '11px', color: theme.textSecondary, marginRight: '4px' }}>{t.only}</span>}
+          {product.price} {settings.currency || '₺'}
+        </p>
       </div>
     </div>
   )
 }
 
 // ==================== CATEGORY GRID ====================
-function CategoryGrid({ categories, categoryLayouts, theme, t, onCategoryClick }) {
-  // Layout'a göre kategorileri düzenle
-  const getGridTemplate = (layout) => {
-    switch (layout) {
-      case 'full': return '1fr'
-      case 'half': return '1fr 1fr'
-      case 'third': return '1fr 1fr 1fr'
-      default: return '1fr 1fr'
-    }
+function CategoryGrid({ categories, categoryLayouts, t, onCategoryClick }) {
+  const getGrid = (layout) => {
+    if (layout === 'full') return '1fr'
+    if (layout === 'third') return '1fr 1fr 1fr'
+    return '1fr 1fr'
   }
 
-  // Layout varsa kullan, yoksa default 2'li grid
-  if (categoryLayouts && categoryLayouts.length > 0) {
+  if (categoryLayouts?.length > 0) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {categoryLayouts.map((row, rowIndex) => (
-          <div
-            key={rowIndex}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: getGridTemplate(row.layout),
-              gap: '12px'
-            }}
-          >
+        {categoryLayouts.map((row, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: getGrid(row.layout), gap: '12px' }}>
             {row.categoryIds?.map(catId => {
-              const category = categories.find(c => c.id === catId)
-              if (!category) return null
-              return (
-                <CategoryCard
-                  key={category.id}
-                  category={category}
-                  theme={theme}
-                  t={t}
-                  onClick={() => onCategoryClick(category)}
-                  height={row.layout === 'full' ? '160px' : '140px'}
-                />
-              )
+              const cat = categories.find(c => c.id === catId)
+              if (!cat) return null
+              return <CategoryCard key={cat.id} category={cat} t={t} onClick={() => onCategoryClick(cat)} height={row.layout === 'full' ? '140px' : '120px'} />
             })}
           </div>
         ))}
@@ -1162,235 +585,95 @@ function CategoryGrid({ categories, categoryLayouts, theme, t, onCategoryClick }
     )
   }
 
-  // Default grid
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: '12px'
-    }}>
-      {categories.map((category, index) => (
-        <CategoryCard
-          key={category.id}
-          category={category}
-          theme={theme}
-          t={t}
-          onClick={() => onCategoryClick(category)}
-          height="140px"
-          animationDelay={index * 0.05}
-        />
-      ))}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+      {categories.map((cat, i) => <CategoryCard key={cat.id} category={cat} t={t} onClick={() => onCategoryClick(cat)} height="120px" delay={i * 0.03} />)}
     </div>
   )
 }
 
 // ==================== CATEGORY CARD ====================
-function CategoryCard({ category, theme, t, onClick, height = '140px', animationDelay = 0 }) {
+function CategoryCard({ category, t, onClick, height = '120px', delay = 0 }) {
   return (
-    <div
-      onClick={onClick}
-      style={{
-        position: 'relative',
-        height,
-        borderRadius: '20px',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        boxShadow: theme.shadow,
-        animation: `fadeUp 0.4s ease ${animationDelay}s both`
-      }}
-    >
+    <div onClick={onClick} style={{
+      position: 'relative', height, borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', animation: `fadeUp 0.4s ease ${delay}s both`
+    }}>
       {category.image ? (
-        <img
-          src={FILES_URL + '/images/' + category.image}
-          alt={category.name}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.3s ease'
-          }}
-        />
+        <img src={FILES_URL + '/images/' + category.image} alt={category.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <div style={{
-          width: '100%',
-          height: '100%',
-          background: theme.gradient,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '48px'
-        }}>
-          {category.icon}
-        </div>
+        <div style={{ width: '100%', height: '100%', background: theme.bgElevated, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px' }}>{category.icon}</div>
       )}
       
-      {/* Overlay */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)'
-      }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
       
-      {/* Category Name */}
-      <div style={{
-        position: 'absolute',
-        bottom: '14px',
-        left: '14px',
-        right: '14px'
-      }}>
-        <p style={{
-          margin: 0,
-          color: 'white',
-          fontWeight: '700',
-          fontSize: '18px',
-          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-        }}>
-          {category.icon} {category.name}
-        </p>
-        <p style={{
-          margin: '4px 0 0',
-          color: 'rgba(255,255,255,0.8)',
-          fontSize: '13px'
-        }}>
-          {category.products?.length || 0} {t.products}
-        </p>
+      <div style={{ position: 'absolute', bottom: '12px', left: '12px', right: '12px' }}>
+        <p style={{ margin: 0, color: theme.text, fontWeight: '600', fontSize: '14px' }}>{category.icon} {category.name}</p>
+        <p style={{ margin: '4px 0 0', color: theme.textMuted, fontSize: '12px' }}>{category.products?.length || 0} {t.products}</p>
       </div>
     </div>
   )
 }
 
 // ==================== FOOTER ====================
-function Footer({ settings, theme, t }) {
+function Footer({ settings, t }) {
   return (
-    <div style={{
-      marginTop: '32px',
-      padding: '32px 20px',
-      backgroundColor: 'white',
-      borderTop: '1px solid ' + theme.border
-    }}>
-      {/* Contact Info */}
-      <div style={{ marginBottom: '24px' }}>
-        {settings.phone && (
-          <a
-            href={'tel:' + settings.phone}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '14px 16px',
-              backgroundColor: theme.surface,
-              borderRadius: '14px',
-              textDecoration: 'none',
-              marginBottom: '10px'
-            }}
-          >
-            <span style={{ fontSize: '24px' }}>📞</span>
-            <div>
-              <p style={{ margin: 0, fontSize: '13px', color: theme.textSecondary }}>{t.callUs}</p>
-              <p style={{ margin: '2px 0 0', fontWeight: '600', color: theme.text }}>{settings.phone}</p>
-            </div>
-          </a>
-        )}
-        
-        {settings.address && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px 16px',
-            backgroundColor: theme.surface,
-            borderRadius: '14px',
-            marginBottom: '10px'
-          }}>
-            <span style={{ fontSize: '24px' }}>📍</span>
-            <div>
-              <p style={{ margin: 0, fontSize: '13px', color: theme.textSecondary }}>{t.findUs}</p>
-              <p style={{ margin: '2px 0 0', fontWeight: '600', color: theme.text, fontSize: '14px' }}>{settings.address}</p>
-            </div>
+    <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: `1px solid ${theme.border}` }}>
+      {settings.phone && (
+        <a href={'tel:' + settings.phone} style={{
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 0',
+          borderBottom: `1px solid ${theme.borderLight}`, textDecoration: 'none'
+        }}>
+          <span style={{ fontSize: '18px' }}>📞</span>
+          <div>
+            <p style={{ margin: 0, fontSize: '11px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.callUs}</p>
+            <p style={{ margin: '2px 0 0', fontWeight: '600', color: theme.text, fontSize: '14px' }}>{settings.phone}</p>
           </div>
-        )}
-        
-        {settings.openingHours && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px 16px',
-            backgroundColor: theme.surface,
-            borderRadius: '14px'
-          }}>
-            <span style={{ fontSize: '24px' }}>🕐</span>
-            <div>
-              <p style={{ margin: 0, fontSize: '13px', color: theme.textSecondary }}>{t.workingHours}</p>
-              <p style={{ margin: '2px 0 0', fontWeight: '600', color: theme.text }}>{settings.openingHours}</p>
-            </div>
+        </a>
+      )}
+      
+      {settings.address && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 0', borderBottom: `1px solid ${theme.borderLight}` }}>
+          <span style={{ fontSize: '18px' }}>📍</span>
+          <div>
+            <p style={{ margin: 0, fontSize: '11px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.findUs}</p>
+            <p style={{ margin: '2px 0 0', fontWeight: '500', color: theme.text, fontSize: '13px' }}>{settings.address}</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+      
+      {settings.openingHours && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 0', borderBottom: `1px solid ${theme.borderLight}` }}>
+          <span style={{ fontSize: '18px' }}>🕐</span>
+          <div>
+            <p style={{ margin: 0, fontSize: '11px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.workingHours}</p>
+            <p style={{ margin: '2px 0 0', fontWeight: '500', color: theme.text, fontSize: '14px' }}>{settings.openingHours}</p>
+          </div>
+        </div>
+      )}
 
-      {/* Social Links */}
       {(settings.instagram || settings.facebook) && (
-        <div style={{ marginBottom: '24px' }}>
-          <p style={{ 
-            margin: '0 0 12px', 
-            fontSize: '14px', 
-            fontWeight: '600',
-            color: theme.textSecondary,
-            textAlign: 'center'
-          }}>
-            {t.followUs}
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+        <div style={{ padding: '20px 0' }}>
+          <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: '600', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.followUs}</p>
+          <div style={{ display: 'flex', gap: '10px' }}>
             {settings.instagram && (
-              <a
-                href={'https://instagram.com/' + settings.instagram.replace('@', '')}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '16px',
-                  background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '28px',
-                  textDecoration: 'none',
-                  boxShadow: theme.shadow
-                }}
-              >
-                📷
-              </a>
+              <a href={'https://instagram.com/' + settings.instagram.replace('@', '')} target="_blank" rel="noopener noreferrer" style={{
+                width: '44px', height: '44px', borderRadius: '10px', background: theme.bgElevated, border: `1px solid ${theme.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', textDecoration: 'none'
+              }}>📷</a>
             )}
             {settings.facebook && (
-              <a
-                href={'https://facebook.com/' + settings.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '16px',
-                  backgroundColor: '#1877f2',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '28px',
-                  textDecoration: 'none',
-                  boxShadow: theme.shadow
-                }}
-              >
-                📘
-              </a>
+              <a href={'https://facebook.com/' + settings.facebook} target="_blank" rel="noopener noreferrer" style={{
+                width: '44px', height: '44px', borderRadius: '10px', background: theme.bgElevated, border: `1px solid ${theme.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', textDecoration: 'none'
+              }}>📘</a>
             )}
           </div>
         </div>
       )}
 
-      {/* Powered By */}
-      <div style={{ textAlign: 'center', paddingTop: '16px', borderTop: '1px solid ' + theme.borderLight }}>
-        <p style={{ margin: 0, fontSize: '13px', color: theme.textMuted }}>
-          {t.poweredBy} <span style={{ color: theme.primary, fontWeight: '700' }}>AR Menu</span>
+      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>
+          {t.poweredBy} <span style={{ color: theme.red, fontWeight: '600' }}>AR Menu</span>
         </p>
       </div>
     </div>
@@ -1398,8 +681,8 @@ function Footer({ settings, theme, t }) {
 }
 
 // ==================== LANGUAGE MODAL ====================
-function LanguageModal({ currentLanguage, onSelect, onClose, theme, t }) {
-  const languages = [
+function LanguageModal({ currentLanguage, onSelect, onClose, t }) {
+  const langs = [
     { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
     { code: 'en', name: 'English', flag: '🇬🇧' },
     { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
@@ -1408,39 +691,19 @@ function LanguageModal({ currentLanguage, onSelect, onClose, theme, t }) {
   ]
 
   return (
-    <ModalWrapper onClose={onClose} theme={theme}>
-      <div style={{ padding: '24px' }}>
-        <h3 style={{ margin: '0 0 20px', fontSize: '20px', fontWeight: '700', color: theme.text, textAlign: 'center' }}>
-          🌐 {t.selectLanguage}
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {languages.map(lang => (
-            <button
-              key={lang.code}
-              onClick={() => onSelect(lang.code)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                padding: '16px',
-                borderRadius: '14px',
-                border: currentLanguage === lang.code ? '2px solid ' + theme.primary : '2px solid transparent',
-                backgroundColor: currentLanguage === lang.code ? theme.primaryLight : theme.surface,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span style={{ fontSize: '32px' }}>{lang.flag}</span>
-              <span style={{ 
-                fontWeight: '600', 
-                color: currentLanguage === lang.code ? theme.primary : theme.text,
-                fontSize: '16px'
-              }}>
-                {lang.name}
-              </span>
-              {currentLanguage === lang.code && (
-                <span style={{ marginLeft: 'auto', color: theme.primary, fontSize: '20px' }}>✓</span>
-              )}
+    <ModalWrapper onClose={onClose}>
+      <div style={{ padding: '24px 20px' }}>
+        <h3 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600', color: theme.text, textAlign: 'center' }}>🌐 {t.selectLanguage}</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {langs.map(l => (
+            <button key={l.code} onClick={() => onSelect(l.code)} style={{
+              display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: '10px',
+              border: currentLanguage === l.code ? `1px solid ${theme.red}` : `1px solid ${theme.border}`,
+              background: currentLanguage === l.code ? 'rgba(229,57,53,0.1)' : 'transparent', cursor: 'pointer'
+            }}>
+              <span style={{ fontSize: '28px' }}>{l.flag}</span>
+              <span style={{ fontWeight: '500', color: currentLanguage === l.code ? theme.red : theme.text, fontSize: '15px' }}>{l.name}</span>
+              {currentLanguage === l.code && <span style={{ marginLeft: 'auto', color: theme.red, fontSize: '18px' }}>✓</span>}
             </button>
           ))}
         </div>
@@ -1450,137 +713,66 @@ function LanguageModal({ currentLanguage, onSelect, onClose, theme, t }) {
 }
 
 // ==================== SEARCH MODAL ====================
-function SearchModal({ searchQuery, setSearchQuery, searchResults, allProducts, settings, theme, t, onClose, onProductClick }) {
+function SearchModal({ searchQuery, setSearchQuery, searchResults, settings, t, onClose, onProductClick }) {
   const inputRef = useRef(null)
-  
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100) }, [])
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 1000,
-        animation: 'fadeIn 0.2s ease'
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '0 0 24px 24px',
-          maxHeight: '80vh',
-          overflow: 'hidden',
-          animation: 'slideDownFromTop 0.3s ease'
-        }}
-      >
-        {/* Search Input */}
-        <div style={{ padding: '16px', borderBottom: '1px solid ' + theme.border }}>
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1000, animation: 'fadeIn 0.2s ease'
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: theme.bgCard, borderRadius: '0 0 16px 16px', maxHeight: '80vh', overflow: 'hidden',
+        animation: 'slideFromTop 0.3s ease', borderBottom: `1px solid ${theme.border}`
+      }}>
+        <div style={{ padding: '16px', borderBottom: `1px solid ${theme.border}` }}>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px 18px',
-            backgroundColor: theme.surface,
-            borderRadius: '14px'
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+            background: theme.bg, borderRadius: '10px', border: `1px solid ${theme.border}`
           }}>
-            <span style={{ fontSize: '20px' }}>🔍</span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              style={{
-                flex: 1,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                fontSize: '16px',
-                color: theme.text
-              }}
-            />
+            <span style={{ fontSize: '18px', opacity: 0.5 }}>🔍</span>
+            <input ref={inputRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder}
+              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', color: theme.text }} />
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  color: theme.textMuted
-                }}
-              >
-                ✕
-              </button>
+              <button onClick={() => setSearchQuery('')} style={{
+                background: theme.bgElevated, border: 'none', width: '26px', height: '26px', borderRadius: '6px', cursor: 'pointer', color: theme.textMuted, fontSize: '12px'
+              }}>✕</button>
             )}
           </div>
         </div>
 
-        {/* Results */}
-        <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '16px' }}>
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '12px' }}>
           {searchQuery.trim() ? (
             searchResults.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {searchResults.map(product => (
-                  <div
-                    key={product.id}
-                    onClick={() => onProductClick(product)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '14px',
-                      padding: '12px',
-                      backgroundColor: theme.surface,
-                      borderRadius: '14px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {product.thumbnail ? (
-                      <img
-                        src={FILES_URL + '/images/' + product.thumbnail}
-                        alt=""
-                        style={{ width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover' }}
-                      />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {searchResults.map(p => (
+                  <div key={p.id} onClick={() => onProductClick(p)} style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: theme.bg,
+                    borderRadius: '10px', border: `1px solid ${theme.border}`, cursor: 'pointer'
+                  }}>
+                    {p.thumbnail ? (
+                      <img src={FILES_URL + '/images/' + p.thumbnail} alt="" style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
                     ) : (
-                      <div style={{
-                        width: '60px',
-                        height: '60px',
-                        borderRadius: '10px',
-                        backgroundColor: theme.border,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '24px'
-                      }}>🍽️</div>
+                      <div style={{ width: '56px', height: '56px', borderRadius: '8px', background: theme.bgElevated, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>🍽️</div>
                     )}
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: '600', color: theme.text }}>{product.name}</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '13px', color: theme.textSecondary }}>
-                        {product.categoryIcon} {product.categoryName}
-                      </p>
+                      <p style={{ margin: 0, fontWeight: '600', color: theme.text, fontSize: '14px' }}>{p.name}</p>
+                      <p style={{ margin: '3px 0 0', fontSize: '12px', color: theme.textSecondary }}>{p.categoryIcon} {p.categoryName}</p>
                     </div>
-                    <span style={{ fontWeight: '700', color: theme.primary }}>
-                      {product.price} {settings.currency || '₺'}
-                    </span>
+                    <span style={{ fontWeight: '700', color: theme.red, fontSize: '14px' }}>{p.price} {settings.currency || '₺'}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <p style={{ fontSize: '48px', marginBottom: '12px' }}>🔍</p>
-                <p style={{ color: theme.textSecondary }}>{t.noProducts}</p>
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <p style={{ fontSize: '40px', marginBottom: '8px' }}>🔍</p>
+                <p style={{ color: theme.textSecondary, fontSize: '14px' }}>{t.noProducts}</p>
               </div>
             )
           ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
-              <p style={{ fontSize: '48px', marginBottom: '12px' }}>💡</p>
-              <p>{t.searchPlaceholder}</p>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.textMuted }}>
+              <p style={{ fontSize: '40px', marginBottom: '8px' }}>💡</p>
+              <p style={{ fontSize: '14px' }}>{t.searchPlaceholder}</p>
             </div>
           )}
         </div>
@@ -1590,137 +782,56 @@ function SearchModal({ searchQuery, setSearchQuery, searchResults, allProducts, 
 }
 
 // ==================== REVIEW MODAL ====================
-function ReviewModal({ theme, t, settings, reviewSubmitted, onSubmit, onClose }) {
+function ReviewModal({ t, settings, reviewSubmitted, onSubmit, onClose }) {
   const [rating, setRating] = useState(5)
   const [contact, setContact] = useState('')
   const [note, setNote] = useState('')
 
-  const handleSubmit = () => {
-    onSubmit({ rating, contact, note })
-  }
-
   return (
-    <ModalWrapper onClose={onClose} theme={theme}>
-      <div style={{ padding: '24px' }}>
+    <ModalWrapper onClose={onClose}>
+      <div style={{ padding: '24px 20px' }}>
         {reviewSubmitted ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px', animation: 'pulse 0.5s ease' }}>🎉</div>
-            <h3 style={{ margin: '0 0 8px', color: theme.text, fontSize: '22px' }}>{t.thankYou}</h3>
-            <p style={{ color: theme.textSecondary }}>{t.reviewSent}</p>
+          <div style={{ textAlign: 'center', padding: '30px 0' }}>
+            <div style={{ fontSize: '56px', marginBottom: '12px' }}>🎉</div>
+            <h3 style={{ margin: '0 0 6px', color: theme.text, fontSize: '20px', fontWeight: '600' }}>{t.thankYou}</h3>
+            <p style={{ color: theme.textSecondary, fontSize: '14px' }}>{t.reviewSent}</p>
           </div>
         ) : (
           <>
-            <h3 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: '700', color: theme.text, textAlign: 'center' }}>
-              {t.reviewTitle}
-            </h3>
-            <p style={{ margin: '0 0 24px', color: theme.textSecondary, textAlign: 'center' }}>
-              {t.reviewSubtitle}
-            </p>
+            <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600', color: theme.text, textAlign: 'center' }}>{t.reviewTitle}</h3>
+            <p style={{ margin: '0 0 24px', color: theme.textSecondary, textAlign: 'center', fontSize: '13px' }}>{t.reviewSubtitle}</p>
 
-            {/* Star Rating */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-              {[1, 2, 3, 4, 5].map(star => (
-                <button
-                  key={star}
-                  onClick={() => setRating(star)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '40px',
-                    cursor: 'pointer',
-                    transform: rating >= star ? 'scale(1.1)' : 'scale(1)',
-                    transition: 'transform 0.2s ease',
-                    filter: rating >= star ? 'none' : 'grayscale(1)'
-                  }}
-                >
-                  ⭐
-                </button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '24px' }}>
+              {[1, 2, 3, 4, 5].map(s => (
+                <button key={s} onClick={() => setRating(s)} style={{
+                  background: 'none', border: 'none', fontSize: '32px', cursor: 'pointer',
+                  opacity: rating >= s ? 1 : 0.3, transition: 'opacity 0.2s ease'
+                }}>⭐</button>
               ))}
             </div>
 
-            {/* Contact Input */}
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                type="text"
-                value={contact}
-                onChange={e => setContact(e.target.value)}
-                placeholder={t.contactOptional}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '14px',
-                  border: '1px solid ' + theme.border,
-                  fontSize: '15px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+            <div style={{ marginBottom: '12px' }}>
+              <input type="text" value={contact} onChange={e => setContact(e.target.value)} placeholder={t.contactOptional}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: `1px solid ${theme.border}`, background: theme.bg, fontSize: '14px', outline: 'none', color: theme.text, boxSizing: 'border-box' }} />
             </div>
 
-            {/* Note Input */}
-            <div style={{ marginBottom: '24px' }}>
-              <textarea
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                placeholder={t.noteOptional}
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '14px',
-                  border: '1px solid ' + theme.border,
-                  fontSize: '15px',
-                  outline: 'none',
-                  resize: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+            <div style={{ marginBottom: '20px' }}>
+              <textarea value={note} onChange={e => setNote(e.target.value)} placeholder={t.noteOptional} rows={3}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: `1px solid ${theme.border}`, background: theme.bg, fontSize: '14px', outline: 'none', resize: 'none', color: theme.text, boxSizing: 'border-box' }} />
             </div>
 
-            {/* Submit Button */}
-            <button
-              onClick={handleSubmit}
-              style={{
-                width: '100%',
-                padding: '18px',
-                borderRadius: '14px',
-                border: 'none',
-                background: theme.gradient,
-                color: 'white',
-                fontWeight: '700',
-                fontSize: '16px',
-                cursor: 'pointer',
-                marginBottom: '12px'
-              }}
-            >
-              {t.submit}
-            </button>
+            <button onClick={() => onSubmit({ rating, contact, note })} style={{
+              width: '100%', padding: '16px', borderRadius: '8px', border: 'none', background: theme.red,
+              color: 'white', fontWeight: '600', fontSize: '15px', cursor: 'pointer', marginBottom: '10px'
+            }}>{t.submit}</button>
 
-            {/* Google Review Button */}
             {settings.googleReviewUrl && (
-              <a
-                href={settings.googleReviewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '14px',
-                  border: '2px solid ' + theme.border,
-                  backgroundColor: 'white',
-                  color: theme.text,
-                  fontWeight: '600',
-                  fontSize: '15px',
-                  textDecoration: 'none',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <span style={{ fontSize: '20px' }}>📝</span>
-                {t.writeGoogleReview}
+              <a href={settings.googleReviewUrl} target="_blank" rel="noopener noreferrer" style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px',
+                borderRadius: '8px', border: `1px solid ${theme.border}`, background: 'transparent',
+                color: theme.text, fontWeight: '500', fontSize: '14px', textDecoration: 'none', boxSizing: 'border-box'
+              }}>
+                📝 {t.writeGoogleReview}
               </a>
             )}
           </>
@@ -1731,214 +842,112 @@ function ReviewModal({ theme, t, settings, reviewSubmitted, onSubmit, onClose })
 }
 
 // ==================== PRODUCT MODAL ====================
-function ProductModal({ product, settings, theme, t, isFavorite, onToggleFavorite, onClose }) {
+function ProductModal({ product, settings, t, isFavorite, onToggleFavorite, onClose, modelViewerReady }) {
   const [isClosing, setIsClosing] = useState(false)
+  const [modelLoading, setModelLoading] = useState(true)
+  const modelViewerRef = useRef(null)
 
-  const handleClose = () => {
-    setIsClosing(true)
-    setTimeout(onClose, 300)
-  }
+  const handleClose = () => { setIsClosing(true); setTimeout(onClose, 300) }
+
+  useEffect(() => { document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = 'unset' } }, [])
 
   useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = 'unset' }
-  }, [])
+    if (!product.glbFile || !modelViewerReady) return
+    const check = () => {
+      const mv = modelViewerRef.current
+      if (mv) { mv.addEventListener('load', () => setModelLoading(false)); mv.addEventListener('error', () => setModelLoading(false)) }
+    }
+    if (customElements.get('model-viewer')) setTimeout(check, 100)
+    else customElements.whenDefined('model-viewer').then(() => setTimeout(check, 100))
+  }, [product.glbFile, modelViewerReady])
+
+  const glbUrl = product.glbFile ? FILES_URL + '/outputs/' + product.glbFile : null
+  const usdzUrl = product.usdzFile ? FILES_URL + '/outputs/' + product.usdzFile : null
 
   return (
-    <div
-      onClick={handleClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        animation: isClosing ? 'fadeOut 0.3s ease forwards' : 'fadeIn 0.3s ease'
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '28px 28px 0 0',
-          width: '100%',
-          maxWidth: '500px',
-          maxHeight: '92vh',
-          overflow: 'auto',
-          animation: isClosing ? 'slideDown 0.3s ease forwards' : 'slideUp 0.4s ease'
-        }}
-      >
-        {/* Handle */}
-        <div style={{ padding: '14px', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ width: '44px', height: '5px', backgroundColor: theme.border, borderRadius: '3px' }} />
+    <div onClick={handleClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1100,
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      animation: isClosing ? 'fadeOut 0.3s ease forwards' : 'fadeIn 0.3s ease'
+    }}>
+      <style>{`@keyframes fadeOut { to { opacity: 0; } }`}</style>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: theme.bgCard, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '500px', maxHeight: '92vh', overflow: 'auto',
+        animation: isClosing ? 'slideDown 0.3s ease forwards' : 'slideUp 0.4s ease', border: `1px solid ${theme.border}`, borderBottom: 'none'
+      }}>
+        <div style={{ padding: '12px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '40px', height: '4px', background: theme.border, borderRadius: '2px' }} />
         </div>
 
-        {/* Image / 3D Model */}
-        <div style={{ position: 'relative', backgroundColor: theme.surface }}>
-          {product.glbFile ? (
-            <div style={{ height: '320px' }}>
-              <model-viewer
-                src={FILES_URL + '/outputs/' + product.glbFile}
-                alt={product.name}
-                auto-rotate
-                camera-controls
-                ar
-                ar-modes="webxr scene-viewer quick-look"
-                style={{ width: '100%', height: '100%' }}
-              >
-                <button
-                  slot="ar-button"
-                  style={{
-                    position: 'absolute',
-                    bottom: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    padding: '16px 28px',
-                    borderRadius: '50px',
-                    border: 'none',
-                    background: theme.gradient,
-                    color: 'white',
-                    fontWeight: '700',
-                    fontSize: '15px',
-                    cursor: 'pointer',
-                    boxShadow: theme.shadowMd,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}
-                >
-                  📱 {t.viewInAR}
-                </button>
+        <div style={{ position: 'relative', background: theme.bg }}>
+          {glbUrl && modelViewerReady ? (
+            <div style={{ height: '320px', position: 'relative' }}>
+              {modelLoading && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: theme.bg, zIndex: 5 }}>
+                  <div style={{ width: '40px', height: '40px', border: `2px solid ${theme.border}`, borderTopColor: theme.red, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <p style={{ color: theme.textSecondary, marginTop: '12px', fontSize: '13px' }}>{t.loading3D}</p>
+                </div>
+              )}
+              
+              <model-viewer ref={modelViewerRef} src={glbUrl} ios-src={usdzUrl} alt={product.name}
+                auto-rotate camera-controls ar ar-modes="webxr scene-viewer quick-look"
+                shadow-intensity="1" environment-image="neutral"
+                style={{ width: '100%', height: '100%', background: theme.bg, opacity: modelLoading ? 0 : 1, transition: 'opacity 0.3s ease' }}>
+                <button slot="ar-button" style={{
+                  position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+                  padding: '14px 28px', borderRadius: '8px', border: 'none', background: theme.red,
+                  color: 'white', fontWeight: '600', fontSize: '14px', cursor: 'pointer'
+                }}>📱 {t.viewInAR}</button>
               </model-viewer>
+
+              <div style={{
+                position: 'absolute', top: '12px', left: '12px', background: 'rgba(0,0,0,0.7)',
+                color: theme.text, padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', zIndex: 10
+              }}>3D</div>
             </div>
           ) : product.thumbnail ? (
-            <img
-              src={FILES_URL + '/images/' + product.thumbnail}
-              alt={product.name}
-              style={{ width: '100%', height: '300px', objectFit: 'cover' }}
-            />
+            <img src={FILES_URL + '/images/' + product.thumbnail} alt={product.name} style={{ width: '100%', height: '280px', objectFit: 'cover' }} />
           ) : (
-            <div style={{
-              width: '100%',
-              height: '240px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '80px',
-              color: theme.border
-            }}>🍽️</div>
+            <div style={{ width: '100%', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', background: theme.bgElevated }}>🍽️</div>
           )}
 
-          {/* Favorite Button */}
-          <button
-            onClick={onToggleFavorite}
-            style={{
-              position: 'absolute',
-              top: '16px',
-              right: '16px',
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              border: 'none',
-              backgroundColor: 'white',
-              boxShadow: theme.shadow,
-              fontSize: '24px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {isFavorite ? '❤️' : '🤍'}
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); onToggleFavorite() }} style={{
+            position: 'absolute', top: '12px', right: '12px', width: '44px', height: '44px', borderRadius: '50%',
+            border: 'none', background: 'rgba(0,0,0,0.7)', fontSize: '22px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10
+          }}>{isFavorite ? '❤️' : '🤍'}</button>
         </div>
 
-        {/* Content */}
-        <div style={{ padding: '24px' }}>
-          {/* Header */}
+        <div style={{ padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: theme.text }}>
-                {product.name}
-              </h2>
-              {product.categoryName && (
-                <p style={{ margin: '6px 0 0', fontSize: '14px', color: theme.textSecondary }}>
-                  {product.categoryIcon} {product.categoryName}
-                </p>
-              )}
+            <div style={{ flex: 1 }}>
+              <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: theme.text }}>{product.name}</h2>
+              {product.categoryName && <p style={{ margin: '6px 0 0', fontSize: '13px', color: theme.textSecondary }}>{product.categoryIcon} {product.categoryName}</p>}
             </div>
-            <div style={{
-              backgroundColor: theme.primaryLight,
-              padding: '10px 16px',
-              borderRadius: '14px'
-            }}>
-              {product.isCampaign && (
-                <span style={{ fontSize: '12px', color: theme.primary, display: 'block', textAlign: 'center' }}>
-                  {t.only}
-                </span>
-              )}
-              <span style={{ fontSize: '24px', fontWeight: '800', color: theme.primary }}>
-                {product.price} {settings.currency || '₺'}
-              </span>
+            <div style={{ textAlign: 'right' }}>
+              {product.isCampaign && <span style={{ fontSize: '11px', color: theme.textSecondary, display: 'block' }}>{t.only}</span>}
+              <span style={{ fontSize: '24px', fontWeight: '700', color: theme.red }}>{product.price} {settings.currency || '₺'}</span>
             </div>
           </div>
 
-          {/* Description */}
           {product.description && (
-            <p style={{
-              margin: '0 0 20px',
-              fontSize: '15px',
-              color: theme.textSecondary,
-              lineHeight: 1.7,
-              padding: '16px',
-              backgroundColor: theme.surface,
-              borderRadius: '14px'
-            }}>
-              {product.description}
-            </p>
+            <p style={{ margin: '0 0 16px', fontSize: '14px', color: theme.textSecondary, lineHeight: 1.6, padding: '14px', background: theme.bg, borderRadius: '10px', border: `1px solid ${theme.border}` }}>{product.description}</p>
           )}
 
-          {/* AR Badge */}
           {product.glbFile && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '14px',
-              padding: '16px',
-              backgroundColor: '#ecfdf5',
-              borderRadius: '14px',
-              marginBottom: '20px'
-            }}>
-              <span style={{ fontSize: '32px' }}>📱</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', background: 'rgba(229,57,53,0.1)', borderRadius: '10px', marginBottom: '16px', border: `1px solid rgba(229,57,53,0.2)` }}>
+              <span style={{ fontSize: '28px' }}>📱</span>
               <div>
-                <p style={{ margin: 0, fontWeight: '600', color: '#065f46' }}>AR Destekli</p>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#047857' }}>
-                  3D modeli kameranızla görüntüleyin
-                </p>
+                <p style={{ margin: 0, fontWeight: '600', color: theme.red, fontSize: '14px' }}>{t.arSupported}</p>
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: theme.textSecondary }}>{t.arDescription}</p>
               </div>
             </div>
           )}
 
-          {/* Close Button */}
-          <button
-            onClick={handleClose}
-            style={{
-              width: '100%',
-              padding: '18px',
-              borderRadius: '14px',
-              border: 'none',
-              backgroundColor: theme.surface,
-              color: theme.text,
-              fontWeight: '600',
-              fontSize: '16px',
-              cursor: 'pointer'
-            }}
-          >
-            {t.close}
-          </button>
+          <button onClick={handleClose} style={{
+            width: '100%', padding: '16px', borderRadius: '10px', border: `1px solid ${theme.border}`,
+            background: 'transparent', color: theme.text, fontWeight: '600', fontSize: '15px', cursor: 'pointer'
+          }}>{t.close}</button>
         </div>
       </div>
     </div>
@@ -1946,190 +955,45 @@ function ProductModal({ product, settings, theme, t, isFavorite, onToggleFavorit
 }
 
 // ==================== CATEGORY PAGE MODAL ====================
-function CategoryPageModal({ categoryId, categories, allProducts, campaignProducts, settings, theme, t, favorites, onToggleFavorite, onProductClick, onClose }) {
+function CategoryPageModal({ categoryId, categories, allProducts, campaignProducts, settings, t, favorites, onToggleFavorite, onProductClick, onClose }) {
   const [isClosing, setIsClosing] = useState(false)
-  
-  const handleClose = () => {
-    setIsClosing(true)
-    setTimeout(onClose, 300)
-  }
+  const handleClose = () => { setIsClosing(true); setTimeout(onClose, 300) }
 
-  // Ürünleri getir
-  let products = []
-  let title = ''
-  
-  if (categoryId === 'campaigns') {
-    products = campaignProducts || []
-    title = t.campaigns
-  } else {
-    const category = categories.find(c => c.id === categoryId)
-    products = category?.products?.filter(p => p.isActive !== false) || []
-    title = category ? `${category.icon} ${category.name}` : ''
-  }
+  let products = [], title = ''
+  if (categoryId === 'campaigns') { products = campaignProducts || []; title = '🔥 ' + t.campaigns }
+  else { const cat = categories.find(c => c.id === categoryId); products = cat?.products?.filter(p => p.isActive !== false) || []; title = cat ? `${cat.icon} ${cat.name}` : '' }
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = 'unset' }
-  }, [])
+  useEffect(() => { document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = 'unset' } }, [])
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'white',
-        zIndex: 1000,
-        overflow: 'auto',
-        animation: isClosing ? 'slideRight 0.3s ease forwards' : 'slideLeft 0.3s ease'
-      }}
-    >
-      {/* Header */}
+    <div style={{
+      position: 'fixed', inset: 0, background: theme.bg, zIndex: 1000, overflow: 'auto',
+      animation: isClosing ? 'slideRight 0.3s ease forwards' : 'slideLeft 0.3s ease'
+    }}>
       <div style={{
-        position: 'sticky',
-        top: 0,
-        backgroundColor: 'white',
-        borderBottom: '1px solid ' + theme.border,
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        zIndex: 10
+        position: 'sticky', top: 0, background: theme.bgCard, borderBottom: `1px solid ${theme.border}`,
+        padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '14px', zIndex: 10
       }}>
-        <button
-          onClick={handleClose}
-          style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            border: 'none',
-            backgroundColor: theme.surface,
-            fontSize: '20px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          ←
-        </button>
-        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: theme.text }}>
-          {title}
-        </h2>
-        <span style={{
-          marginLeft: 'auto',
-          padding: '6px 12px',
-          backgroundColor: theme.surface,
-          borderRadius: '20px',
-          fontSize: '14px',
-          color: theme.textSecondary
-        }}>
-          {products.length} {t.products}
-        </span>
+        <button onClick={handleClose} style={{
+          width: '42px', height: '42px', borderRadius: '10px', border: `1px solid ${theme.border}`, background: 'transparent',
+          fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.text
+        }}>←</button>
+        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: theme.text, flex: 1 }}>{title}</h2>
+        <span style={{ padding: '6px 12px', background: theme.bg, borderRadius: '6px', fontSize: '13px', color: theme.textSecondary, border: `1px solid ${theme.border}` }}>{products.length}</span>
       </div>
 
-      {/* Products Grid */}
       <div style={{ padding: '16px' }}>
         {products.length > 0 ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '14px'
-          }}>
-            {products.map((product, index) => (
-              <div
-                key={product.id}
-                onClick={() => onProductClick(product)}
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  boxShadow: theme.shadow,
-                  cursor: 'pointer',
-                  animation: `fadeUp 0.4s ease ${index * 0.05}s both`
-                }}
-              >
-                <div style={{ position: 'relative' }}>
-                  {product.thumbnail ? (
-                    <img
-                      src={FILES_URL + '/images/' + product.thumbnail}
-                      alt={product.name}
-                      style={{ width: '100%', height: '130px', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: '100%',
-                      height: '130px',
-                      backgroundColor: theme.surface,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '40px'
-                    }}>🍽️</div>
-                  )}
-                  
-                  {product.glbFile && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      backgroundColor: theme.primary,
-                      color: 'white',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '10px',
-                      fontWeight: '600'
-                    }}>AR</div>
-                  )}
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onToggleFavorite(product.id)
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '8px',
-                      left: '8px',
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      backgroundColor: 'white',
-                      fontSize: '16px',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                    }}
-                  >
-                    {favorites.includes(product.id) ? '❤️' : '🤍'}
-                  </button>
-                </div>
-
-                <div style={{ padding: '12px' }}>
-                  <h4 style={{
-                    margin: '0 0 6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: theme.text,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {product.name}
-                  </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: theme.primary }}>
-                      {product.isCampaign && <span style={{ fontSize: '11px' }}>{t.only} </span>}
-                      {product.price} {settings.currency || '₺'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+            {products.map((p, i) => (
+              <ProductGridCard key={p.id} product={p} settings={settings} t={t} index={i}
+                isFavorite={favorites.includes(p.id)} onToggleFavorite={() => onToggleFavorite(p.id)} onClick={() => onProductClick(p)} />
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <p style={{ fontSize: '48px', marginBottom: '16px' }}>🍽️</p>
-            <p style={{ color: theme.textSecondary }}>{t.noProducts}</p>
+          <div style={{ textAlign: 'center', padding: '50px 20px' }}>
+            <p style={{ fontSize: '48px', marginBottom: '12px' }}>🍽️</p>
+            <p style={{ color: theme.textSecondary, fontSize: '14px' }}>{t.noProducts}</p>
           </div>
         )}
       </div>
@@ -2137,50 +1001,66 @@ function CategoryPageModal({ categoryId, categories, allProducts, campaignProduc
   )
 }
 
+// ==================== PRODUCT GRID CARD ====================
+function ProductGridCard({ product, settings, t, index, isFavorite, onToggleFavorite, onClick }) {
+  return (
+    <div onClick={(e) => { e.stopPropagation(); onClick() }} style={{
+      position: 'relative', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
+      animation: `fadeUp 0.4s ease ${index * 0.03}s both`, aspectRatio: '1 / 1'
+    }}>
+      {product.thumbnail ? (
+        <img src={FILES_URL + '/images/' + product.thumbnail} alt={product.name}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, background: theme.bgElevated, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px' }}>🍽️</div>
+      )}
+      
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' }} />
+
+      {product.glbFile && (
+        <div style={{
+          position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)',
+          color: theme.text, padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', zIndex: 2
+        }}>AR</div>
+      )}
+
+      <button onClick={(e) => { e.stopPropagation(); onToggleFavorite() }} style={{
+        position: 'absolute', top: '8px', left: '8px', width: '32px', height: '32px', borderRadius: '50%',
+        border: 'none', background: 'rgba(0,0,0,0.7)', fontSize: '14px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2
+      }}>{isFavorite ? '❤️' : '🤍'}</button>
+
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px', zIndex: 2 }}>
+        <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: '600', color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</h4>
+        <p style={{ margin: 0, color: theme.red, fontWeight: '700', fontSize: '15px' }}>
+          {product.isCampaign && <span style={{ fontSize: '10px', color: theme.textSecondary, marginRight: '3px' }}>{t.only}</span>}
+          {product.price} {settings.currency || '₺'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ==================== MODAL WRAPPER ====================
-function ModalWrapper({ children, onClose, theme }) {
+function ModalWrapper({ children, onClose }) {
   const [isClosing, setIsClosing] = useState(false)
+  const handleClose = () => { setIsClosing(true); setTimeout(onClose, 300) }
 
-  const handleClose = () => {
-    setIsClosing(true)
-    setTimeout(onClose, 300)
-  }
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = 'unset' }
-  }, [])
+  useEffect(() => { document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = 'unset' } }, [])
 
   return (
-    <div
-      onClick={handleClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        animation: isClosing ? 'fadeOut 0.3s ease forwards' : 'fadeIn 0.3s ease'
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '24px 24px 0 0',
-          width: '100%',
-          maxWidth: '500px',
-          maxHeight: '85vh',
-          overflow: 'auto',
-          animation: isClosing ? 'slideDown 0.3s ease forwards' : 'slideUp 0.3s ease'
-        }}
-      >
-        {/* Handle */}
+    <div onClick={handleClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1000,
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      animation: isClosing ? 'fadeOut 0.3s ease forwards' : 'fadeIn 0.3s ease'
+    }}>
+      <style>{`@keyframes fadeOut { to { opacity: 0; } }`}</style>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: theme.bgCard, borderRadius: '16px 16px 0 0', width: '100%', maxWidth: '500px', maxHeight: '85vh', overflow: 'auto',
+        animation: isClosing ? 'slideDown 0.3s ease forwards' : 'slideUp 0.3s ease', border: `1px solid ${theme.border}`, borderBottom: 'none'
+      }}>
         <div style={{ padding: '12px', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ width: '40px', height: '4px', backgroundColor: theme.border, borderRadius: '2px' }} />
+          <div style={{ width: '36px', height: '4px', background: theme.border, borderRadius: '2px' }} />
         </div>
         {children}
       </div>
