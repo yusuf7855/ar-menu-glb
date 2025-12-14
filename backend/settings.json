@@ -1,0 +1,16 @@
+{
+  "restaurantName": "Garage",
+  "slogan": "Lezzetin Adresi",
+  "logo": "image_1765646281786_dpzld1c1m.png",
+  "bannerImage": "image_1765646320804_33hk7zzwi.png",
+  "primaryColor": "#dc2626",
+  "secondaryColor": "#ffffff",
+  "phone": "5417722607",
+  "address": "",
+  "openingHours": "09:00 - 22:00",
+  "instagram": "garage",
+  "facebook": "garage",
+  "showSplash": true,
+  "splashDuration": 2000,
+  "currency": "TL"
+}

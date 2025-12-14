@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ar-menu-glb}/swift-cli",
+            "name": "Debug PhotoTo3D (swift-cli)",
+            "target": "PhotoTo3D",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug PhotoTo3D (swift-cli)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ar-menu-glb}/swift-cli",
+            "name": "Release PhotoTo3D (swift-cli)",
+            "target": "PhotoTo3D",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release PhotoTo3D (swift-cli)"
+        }
+    ]
+}

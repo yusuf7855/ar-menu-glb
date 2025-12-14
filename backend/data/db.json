@@ -1,0 +1,48 @@
+{
+  "settings": {
+    "restaurantName": "AR Menu Restaurant",
+    "slogan": "Lezzetin Yeni Boyutu",
+    "currency": "₺",
+    "primaryColor": "#dc2626"
+  },
+  "categories": [
+    {
+      "id": "a9d34850-06b6-43c7-a293-8437af79fc40",
+      "name": "ooo",
+      "icon": "🍔",
+      "image": null,
+      "order": 0,
+      "createdAt": "2025-12-13T21:20:36.961Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "67ff70ee-9b4b-4cf1-a54a-923e6170f794",
+      "name": "kırmızı",
+      "price": 456,
+      "description": "high",
+      "categoryId": "a9d34850-06b6-43c7-a293-8437af79fc40",
+      "thumbnail": "eef22ea5-e2ec-4453-9f24-f47cd7e7429b.HEIC",
+      "glbFile": "67ff70ee-9b4b-4cf1-a54a-923e6170f794.glb",
+      "isActive": true,
+      "isFeatured": false,
+      "isCampaign": false,
+      "createdAt": "2025-12-14T14:25:02.619Z",
+      "usdzFile": "67ff70ee-9b4b-4cf1-a54a-923e6170f794.usdz"
+    }
+  ],
+  "announcements": [],
+  "reviews": [],
+  "categoryLayouts": [
+    {
+      "layout": "full",
+      "categoryIds": [
+        "a9d34850-06b6-43c7-a293-8437af79fc40"
+      ]
+    }
+  ],
+  "campaignSettings": {
+    "title": "Kampanyalar",
+    "enabled": true
+  }
+}

@@ -1,0 +1,53 @@
+[
+  {
+    "id": "c324a31c-5eed-49a0-afb6-fa0fea45d3b0",
+    "name": "elma",
+    "description": "",
+    "status": "completed",
+    "photoCount": 25,
+    "createdAt": "2025-12-13T16:36:36.363Z",
+    "usdzFile": "c324a31c-5eed-49a0-afb6-fa0fea45d3b0.usdz",
+    "glbFile": "c324a31c-5eed-49a0-afb6-fa0fea45d3b0.glb",
+    "thumbnail": "image_1765646246454_dc2odfyyc.webp",
+    "category": {
+      "id": "7f7ea03b-db0a-4c17-b4e5-828cebc449cc",
+      "name": "Ana Yemekler",
+      "icon": "🍖",
+      "color": "#dc2626",
+      "image": null,
+      "order": 1
+    },
+    "price": 100,
+    "categoryId": "70708738-24b2-4228-993e-b808b5058dfb",
+    "isFeatured": true
+  },
+  {
+    "id": "711c4424-2f4d-47ed-8e62-170cd5e3ab18",
+    "name": "çok elma",
+    "description": "",
+    "status": "completed",
+    "photoCount": 91,
+    "createdAt": "2025-12-13T16:39:20.201Z",
+    "usdzFile": "711c4424-2f4d-47ed-8e62-170cd5e3ab18.usdz",
+    "glbFile": "711c4424-2f4d-47ed-8e62-170cd5e3ab18.glb",
+    "thumbnail": "image_1765646229161_4rs99u8ke.webp",
+    "category": null,
+    "price": 2000
+  },
+  {
+    "id": "0cc6ec1b-0570-4118-9097-fe47a47c2d51",
+    "name": "elma",
+    "description": "elmas",
+    "price": 100,
+    "categoryId": "7f7ea03b-db0a-4c17-b4e5-828cebc449cc",
+    "thumbnail": "image_1765649178813_c0saamunf.HEIC",
+    "status": "completed",
+    "photoCount": 83,
+    "createdAt": "2025-12-13T18:02:31.656Z",
+    "usdzFile": "0cc6ec1b-0570-4118-9097-fe47a47c2d51.usdz",
+    "glbFile": "0cc6ec1b-0570-4118-9097-fe47a47c2d51.glb",
+    "isActive": true,
+    "isFeatured": true,
+    "category": null
+  }
+]
