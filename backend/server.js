@@ -1,1011 +1,854 @@
 const express = require('express')
+const mongoose = require('mongoose')
 const cors = require('cors')
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
-const { v4: uuidv4 } = require('uuid')
-const { exec, spawn } = require('child_process')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+require('dotenv').config()
 
 const app = express()
-const PORT = 3001
+
+// ==================== CONFIG ====================
+const PORT = process.env.PORT || 3001
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ar-menu'
+const JWT_SECRET = process.env.JWT_SECRET || 'ar-menu-secret-key-change-in-production'
+const API_KEY = process.env.API_KEY || 'your-secret-api-key'
 
 // ==================== MIDDLEWARE ====================
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}))
+app.use(cors())
 app.use(express.json())
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+app.use('/outputs', express.static(path.join(__dirname, 'outputs')))
 
-// Static files - resimler için tam path
-app.use('/images', express.static(path.join(__dirname, 'images'), {
-  setHeaders: (res, path) => {
-    res.set('Access-Control-Allow-Origin', '*')
-    res.set('Cache-Control', 'public, max-age=31536000')
-  }
-}))
-app.use('/outputs', express.static(path.join(__dirname, 'outputs'), {
-  setHeaders: (res, path) => {
-    res.set('Access-Control-Allow-Origin', '*')
-    res.set('Cache-Control', 'public, max-age=31536000')
-  }
-}))
-app.use('/photos', express.static(path.join(__dirname, 'photos'), {
-  setHeaders: (res, path) => {
-    res.set('Access-Control-Allow-Origin', '*')
-    res.set('Cache-Control', 'public, max-age=31536000')
-  }
-}))
-
-// ==================== DIRECTORIES ====================
-const dirs = ['images', 'outputs', 'photos', 'data']
+// Create directories
+const dirs = ['uploads/images', 'outputs']
 dirs.forEach(dir => {
-  const dirPath = path.join(__dirname, dir)
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true })
+  const fullPath = path.join(__dirname, dir)
+  if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true })
+})
+
+// ==================== SCHEMAS ====================
+
+// Branch (Şube)
+const branchSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  slug: { type: String, required: true, unique: true },
+  description: { type: String, default: '' },
+  image: { type: String, default: null },           // Şube ana görseli
+  logo: { type: String, default: null },            // Şube logosu
+  banner: { type: String, default: null },          // Banner görseli
+  homepageImage: { type: String, default: null },   // YENİ: Menü sayfası üst görsel
+  address: { type: String, default: '' },
+  phone: { type: String, default: '' },
+  whatsapp: { type: String, default: '' },
+  instagram: { type: String, default: '' },
+  workingHours: { type: String, default: '' },
+  isActive: { type: Boolean, default: true },
+  order: { type: Number, default: 0 },
+  theme: {
+    primaryColor: { type: String, default: '#e53935' },
+    secondaryColor: { type: String, default: '#1e88e5' }
   }
-})
+}, { timestamps: true })
 
-// ==================== MULTER CONFIG ====================
-const imageStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, 'images')),
-  filename: (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname))
-})
+// Category
+const categorySchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  name: { type: String, required: true },
+  icon: { type: String, default: '📁' },
+  image: { type: String, default: null },           // Kategori görseli
+  order: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+  description: { type: String, default: '' },
+  layoutSize: { type: String, enum: ['full', 'half', 'third'], default: 'half' }  // YENİ: Yerleşim boyutu
+}, { timestamps: true })
 
-const photoStorage = multer.diskStorage({
+// CategoryLayout (YENİ) - Satır bazlı kategori düzeni
+const categoryLayoutSchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  rowOrder: { type: Number, default: 0 },           // Satır sırası
+  categories: [{                                     // Bu satırdaki kategoriler
+    category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+    size: { type: String, enum: ['full', 'half', 'third'], default: 'half' }
+  }]
+}, { timestamps: true })
+
+// Product
+const productSchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  description: { type: String, default: '' },
+  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
+  thumbnail: { type: String, default: null },       // Ürün görseli
+  images: [{ type: String }],                       // Ek görseller
+  glbFile: { type: String, default: null },         // 3D model dosyası
+  isActive: { type: Boolean, default: true },
+  isFeatured: { type: Boolean, default: false },    // Öne çıkan ürün
+  isCampaign: { type: Boolean, default: false },    // Kampanyalı mı?
+  campaignPrice: { type: Number, default: null },   // Kampanya fiyatı
+  calories: { type: Number, default: null },
+  preparationTime: { type: Number, default: null },
+  allergens: [{ type: String }],
+  tags: [{ type: String }],
+  viewCount: { type: Number, default: 0 }
+}, { timestamps: true })
+
+// Announcement
+const announcementSchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  icon: { type: String, default: '📢' },
+  type: { type: String, enum: ['info', 'warning', 'success', 'promo'], default: 'info' },
+  isActive: { type: Boolean, default: true },
+  order: { type: Number, default: 0 }
+}, { timestamps: true })
+
+// Review (Görüş ve Yorumlar)
+const reviewSchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  rating: { type: Number, required: true, min: 1, max: 5 },
+  comment: { type: String, default: '' },
+  contact: { type: String, default: '' },           // İletişim bilgisi (telefon/email)
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+  customerName: { type: String, default: 'Anonim' },
+  isApproved: { type: Boolean, default: false },    // Onay durumu
+  reply: { type: String, default: '' },             // İşletme yanıtı
+  repliedAt: { type: Date, default: null }
+}, { timestamps: true })
+
+// GlbFile
+const glbFileSchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
+  filename: { type: String, required: true, unique: true },
+  originalName: { type: String },
+  size: { type: Number },
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }
+}, { timestamps: true })
+
+// User
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['superadmin', 'admin', 'manager', 'staff'], default: 'staff' },
+  branches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Branch' }],
+  isActive: { type: Boolean, default: true },
+  lastLogin: { type: Date, default: null },
+  avatar: { type: String, default: null },
+  fullName: { type: String, default: '' }
+}, { timestamps: true })
+
+// Models
+const Branch = mongoose.model('Branch', branchSchema)
+const Category = mongoose.model('Category', categorySchema)
+const CategoryLayout = mongoose.model('CategoryLayout', categoryLayoutSchema)  // YENİ
+const Product = mongoose.model('Product', productSchema)
+const Announcement = mongoose.model('Announcement', announcementSchema)
+const Review = mongoose.model('Review', reviewSchema)
+const GlbFile = mongoose.model('GlbFile', glbFileSchema)
+const User = mongoose.model('User', userSchema)
+
+// ==================== MULTER ====================
+const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const productId = req.params.id
-    const productDir = path.join(__dirname, 'photos', productId)
-    if (!fs.existsSync(productDir)) {
-      fs.mkdirSync(productDir, { recursive: true })
-    }
-    cb(null, productDir)
+    const dest = file.fieldname === 'file' ? 'outputs' : 'uploads/images'
+    cb(null, path.join(__dirname, dest))
   },
-  filename: (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname))
-})
-
-const uploadImage = multer({ storage: imageStorage })
-const uploadPhotos = multer({ storage: photoStorage })
-
-// ==================== DATA HELPERS ====================
-const DATA_FILE = path.join(__dirname, 'data', 'db.json')
-
-function loadData() {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'))
-    }
-  } catch (err) {
-    console.error('Data load error:', err)
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, uniqueSuffix + path.extname(file.originalname))
   }
-  return {
-    settings: {
-      restaurantName: 'AR Menu Restaurant',
-      slogan: 'Lezzetin Yeni Boyutu',
-      currency: '₺',
-      primaryColor: '#dc2626'
-    },
-    categories: [],
-    products: [],
-    announcements: [],
-    reviews: [],
-    categoryLayouts: [],
-    campaignSettings: { title: 'Kampanyalar', enabled: true }
+})
+const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } })
+
+// ==================== MIDDLEWARE ====================
+const authMiddleware = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) return res.status(401).json({ error: 'No token' })
+    const decoded = jwt.verify(token, JWT_SECRET)
+    const user = await User.findById(decoded.userId).populate('branches')
+    if (!user || !user.isActive) return res.status(401).json({ error: 'Invalid token' })
+    req.user = user
+    next()
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' })
   }
 }
 
-function saveData(data) {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2))
-  } catch (err) {
-    console.error('Data save error:', err)
-  }
+const apiKeyMiddleware = (req, res, next) => {
+  if (req.headers['x-api-key'] !== API_KEY) return res.status(401).json({ error: 'Invalid API key' })
+  next()
 }
 
-let db = loadData()
+const checkBranchAccess = (user, branchId) => {
+  if (user.role === 'superadmin') return true
+  if (!branchId) return false
+  return user.branches.some(b => b._id.toString() === branchId.toString())
+}
 
-// ==================== SETTINGS ====================
-app.get('/api/settings', (req, res) => {
-  res.json(db.settings)
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 B'
+  const k = 1024, sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// ==================== PUBLIC ROUTES ====================
+
+// Get all branches for selection screen
+app.get('/api/public/branches', async (req, res) => {
+  try {
+    const branches = await Branch.find({ isActive: true }).sort({ order: 1, name: 1 })
+    res.json(branches.map(b => ({
+      id: b._id, name: b.name, slug: b.slug, description: b.description,
+      image: b.image, logo: b.logo, address: b.address, phone: b.phone
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.put('/api/settings', (req, res) => {
-  db.settings = { ...db.settings, ...req.body }
-  saveData(db)
-  res.json(db.settings)
+// Get branch details
+app.get('/api/public/branches/:slug', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    res.json({
+      id: branch._id, name: branch.name, slug: branch.slug, description: branch.description,
+      image: branch.image, logo: branch.logo, banner: branch.banner,
+      homepageImage: branch.homepageImage,  // YENİ
+      address: branch.address, phone: branch.phone, whatsapp: branch.whatsapp, 
+      instagram: branch.instagram, workingHours: branch.workingHours, theme: branch.theme
+    })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.post('/api/settings/logo', uploadImage.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-  db.settings.logo = req.file.filename
-  saveData(db)
-  res.json({ filename: req.file.filename })
+// Get categories with layout info
+app.get('/api/public/branches/:slug/categories', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    const categories = await Category.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
+    res.json(categories.map(c => ({ 
+      id: c._id, name: c.name, icon: c.icon, image: c.image, 
+      description: c.description, layoutSize: c.layoutSize  // YENİ
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.post('/api/settings/banner', uploadImage.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-  db.settings.bannerImage = req.file.filename
-  saveData(db)
-  res.json({ filename: req.file.filename })
+// Get category layouts
+app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    const layouts = await CategoryLayout.find({ branch: branch._id })
+      .populate('categories.category', 'name icon image description')
+      .sort({ rowOrder: 1 })
+    res.json(layouts)
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.post('/api/settings/homepage-image', uploadImage.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-  db.settings.homepageImage = req.file.filename
-  saveData(db)
-  res.json({ filename: req.file.filename })
+// Get products
+app.get('/api/public/branches/:slug/products', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    const filter = { branch: branch._id, isActive: true }
+    if (req.query.category) filter.category = req.query.category
+    if (req.query.isCampaign === 'true') filter.isCampaign = true  // YENİ: Kampanya filtresi
+    if (req.query.isFeatured === 'true') filter.isFeatured = true  // YENİ: Öne çıkan filtresi
+    const products = await Product.find(filter).populate('category', 'name icon').sort({ isFeatured: -1, name: 1 })
+    res.json(products.map(p => ({
+      id: p._id, name: p.name, price: p.price, description: p.description,
+      thumbnail: p.thumbnail, glbFile: p.glbFile, hasGlb: !!p.glbFile,
+      isFeatured: p.isFeatured, isCampaign: p.isCampaign, campaignPrice: p.campaignPrice,
+      calories: p.calories, preparationTime: p.preparationTime,
+      category: p.category ? { id: p.category._id, name: p.category.name, icon: p.category.icon } : null
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Get announcements
+app.get('/api/public/branches/:slug/announcements', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    const announcements = await Announcement.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
+    res.json(announcements.map(a => ({ id: a._id, title: a.title, message: a.message, icon: a.icon, type: a.type })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Get approved reviews (YENİ - Public)
+app.get('/api/public/branches/:slug/reviews', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    const reviews = await Review.find({ branch: branch._id, isApproved: true })
+      .populate('product', 'name')
+      .sort({ createdAt: -1 })
+      .limit(20)
+    res.json(reviews.map(r => ({
+      id: r._id, rating: r.rating, comment: r.comment, customerName: r.customerName,
+      productName: r.product?.name, reply: r.reply, createdAt: r.createdAt
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Submit review
+app.post('/api/public/branches/:slug/reviews', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    const review = await Review.create({ ...req.body, branch: branch._id })
+    res.status(201).json({ id: review._id, message: 'Review submitted' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== AUTH ====================
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body
+    const user = await User.findOne({ $or: [{ username }, { email: username }] }).populate('branches')
+    if (!user || !user.isActive) return res.status(401).json({ error: 'Invalid credentials' })
+    if (!await bcrypt.compare(password, user.password)) return res.status(401).json({ error: 'Invalid credentials' })
+    user.lastLogin = new Date()
+    await user.save()
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' })
+    res.json({
+      token,
+      user: {
+        id: user._id, username: user.username, email: user.email, role: user.role,
+        fullName: user.fullName, avatar: user.avatar,
+        branches: user.branches.map(b => ({ id: b._id, name: b.name, slug: b.slug }))
+      }
+    })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  const user = await User.findById(req.user._id).populate('branches')
+  res.json({
+    id: user._id, username: user.username, email: user.email, role: user.role,
+    fullName: user.fullName, avatar: user.avatar,
+    branches: user.branches.map(b => ({ id: b._id, name: b.name, slug: b.slug }))
+  })
+})
+
+app.post('/api/auth/setup', async (req, res) => {
+  try {
+    if (await User.findOne({ role: 'superadmin' })) return res.status(400).json({ error: 'Admin exists' })
+    const { username, email, password, fullName } = req.body
+    const admin = await User.create({
+      username, email, password: await bcrypt.hash(password, 10), fullName, role: 'superadmin'
+    })
+    const token = jwt.sign({ userId: admin._id }, JWT_SECRET, { expiresIn: '7d' })
+    res.json({ token, user: { id: admin._id, username, email, role: 'superadmin', fullName, branches: [] } })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.get('/api/auth/check-setup', async (req, res) => {
+  res.json({ needsSetup: !await User.exists({ role: 'superadmin' }) })
+})
+
+// ==================== BRANCHES ====================
+app.get('/api/branches', authMiddleware, async (req, res) => {
+  try {
+    let branches = req.user.role === 'superadmin' 
+      ? await Branch.find().sort({ order: 1 })
+      : await Branch.find({ _id: { $in: req.user.branches } }).sort({ order: 1 })
+    
+    const counts = await Product.aggregate([{ $group: { _id: '$branch', count: { $sum: 1 } } }])
+    const countMap = {}
+    counts.forEach(c => { if (c._id) countMap[c._id.toString()] = c.count })
+    
+    res.json(branches.map(b => ({ ...b.toObject(), id: b._id, productCount: countMap[b._id.toString()] || 0 })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.get('/api/branches/:id', authMiddleware, async (req, res) => {
+  try {
+    const branch = await Branch.findById(req.params.id)
+    if (!branch) return res.status(404).json({ error: 'Not found' })
+    res.json({ ...branch.toObject(), id: branch._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/branches', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    let slug = req.body.slug || req.body.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+    if (await Branch.findOne({ slug })) slug = slug + '-' + Date.now()
+    const branch = await Branch.create({ ...req.body, slug })
+    res.status(201).json({ ...branch.toObject(), id: branch._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/branches/:id', authMiddleware, async (req, res) => {
+  try {
+    const branch = await Branch.findById(req.params.id)
+    if (!branch) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    Object.assign(branch, req.body)
+    await branch.save()
+    res.json({ ...branch.toObject(), id: branch._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    const branch = await Branch.findById(req.params.id)
+    if (!branch) return res.status(404).json({ error: 'Not found' })
+    await Promise.all([
+      Category.deleteMany({ branch: branch._id }),
+      CategoryLayout.deleteMany({ branch: branch._id }),  // YENİ
+      Product.deleteMany({ branch: branch._id }),
+      Announcement.deleteMany({ branch: branch._id }),
+      Review.deleteMany({ branch: branch._id })
+    ])
+    await branch.deleteOne()
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Branch image upload - tüm görsel tipleri için
+app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const field = req.query.type || 'image'  // image, logo, banner, homepageImage
+    const allowedFields = ['image', 'logo', 'banner', 'homepageImage']
+    if (!allowedFields.includes(field)) return res.status(400).json({ error: 'Invalid image type' })
+    
+    const branch = await Branch.findByIdAndUpdate(req.params.id, { [field]: req.file.filename }, { new: true })
+    res.json({ ...branch.toObject(), id: branch._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== DASHBOARD ====================
+app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) => {
+  try {
+    const { branchId } = req.params
+    if (!checkBranchAccess(req.user, branchId)) return res.status(403).json({ error: 'Access denied' })
+    
+    const [productCount, categoryCount, reviewCount, glbCount, pendingReviewCount, campaignCount] = await Promise.all([
+      Product.countDocuments({ branch: branchId }),
+      Category.countDocuments({ branch: branchId }),
+      Review.countDocuments({ branch: branchId }),
+      GlbFile.countDocuments({ branch: branchId }),
+      Review.countDocuments({ branch: branchId, isApproved: false }),
+      Product.countDocuments({ branch: branchId, isCampaign: true })  // YENİ
+    ])
+
+    const recentReviews = await Review.find({ branch: branchId }).sort({ createdAt: -1 }).limit(5).populate('product', 'name')
+    const topProducts = await Product.find({ branch: branchId }).sort({ viewCount: -1 }).limit(5).select('name viewCount thumbnail')
+    const campaignProducts = await Product.find({ branch: branchId, isCampaign: true }).select('name price campaignPrice thumbnail')  // YENİ
+    
+    const categoryStats = await Product.aggregate([
+      { $match: { branch: new mongoose.Types.ObjectId(branchId) } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'cat' } },
+      { $project: { name: { $ifNull: [{ $arrayElemAt: ['$cat.name', 0] }, 'Kategorisiz'] }, count: 1 } }
+    ])
+
+    const avgRating = await Review.aggregate([
+      { $match: { branch: new mongoose.Types.ObjectId(branchId) } },
+      { $group: { _id: null, avg: { $avg: '$rating' } } }
+    ])
+
+    const ratingStats = await Review.aggregate([
+      { $match: { branch: new mongoose.Types.ObjectId(branchId) } },
+      { $group: { _id: '$rating', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ])
+
+    res.json({
+      counts: { 
+        products: productCount, categories: categoryCount, reviews: reviewCount, 
+        glbFiles: glbCount, pendingReviews: pendingReviewCount, campaigns: campaignCount  // YENİ
+      },
+      recentReviews, topProducts, categoryStats, campaignProducts,  // YENİ
+      averageRating: avgRating[0]?.avg || 0, ratingStats
+    })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    const [branchCount, productCount, categoryCount, reviewCount, userCount] = await Promise.all([
+      Branch.countDocuments(), Product.countDocuments(), Category.countDocuments(), Review.countDocuments(), User.countDocuments()
+    ])
+    const branchStats = await Product.aggregate([
+      { $group: { _id: '$branch', count: { $sum: 1 } } },
+      { $lookup: { from: 'branches', localField: '_id', foreignField: '_id', as: 'branch' } },
+      { $unwind: '$branch' },
+      { $project: { name: '$branch.name', count: 1 } }
+    ])
+    res.json({ counts: { branches: branchCount, products: productCount, categories: categoryCount, reviews: reviewCount, users: userCount }, branchStats })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ==================== CATEGORIES ====================
-app.get('/api/categories', (req, res) => {
-  res.json(db.categories)
+app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) => {
+  try {
+    const categories = await Category.find({ branch: req.params.branchId }).sort({ order: 1 })
+    const counts = await Product.aggregate([
+      { $match: { branch: new mongoose.Types.ObjectId(req.params.branchId) } },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ])
+    const countMap = {}
+    counts.forEach(c => { if (c._id) countMap[c._id.toString()] = c.count })
+    res.json(categories.map(c => ({ 
+      ...c.toObject(), id: c._id, productCount: countMap[c._id.toString()] || 0 
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.post('/api/categories', (req, res) => {
-  const category = {
-    id: uuidv4(),
-    name: req.body.name,
-    icon: req.body.icon || '📁',
-    image: null,
-    order: db.categories.length,
-    createdAt: new Date().toISOString()
-  }
-  db.categories.push(category)
-  saveData(db)
-  res.json(category)
+app.post('/api/branches/:branchId/categories', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const category = await Category.create({ ...req.body, branch: req.params.branchId })
+    res.status(201).json({ ...category.toObject(), id: category._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.put('/api/categories/:id', (req, res) => {
-  const index = db.categories.findIndex(c => c.id === req.params.id)
-  if (index === -1) return res.status(404).json({ error: 'Category not found' })
-  db.categories[index] = { ...db.categories[index], ...req.body }
-  saveData(db)
-  res.json(db.categories[index])
+app.put('/api/categories/:id', authMiddleware, async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id)
+    if (!category) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
+    Object.assign(category, req.body)
+    await category.save()
+    res.json({ ...category.toObject(), id: category._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.delete('/api/categories/:id', (req, res) => {
-  db.categories = db.categories.filter(c => c.id !== req.params.id)
-  saveData(db)
-  res.json({ success: true })
+app.delete('/api/categories/:id', authMiddleware, async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id)
+    if (!category) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
+    await Product.updateMany({ category: category._id }, { category: null })
+    await category.deleteOne()
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.post('/api/categories/:id/image', uploadImage.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-  const category = db.categories.find(c => c.id === req.params.id)
-  if (!category) return res.status(404).json({ error: 'Category not found' })
-  category.image = req.file.filename
-  saveData(db)
-  res.json({ filename: req.file.filename })
+app.post('/api/categories/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const category = await Category.findByIdAndUpdate(req.params.id, { image: req.file.filename }, { new: true })
+    res.json({ ...category.toObject(), id: category._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== CATEGORY LAYOUTS (YENİ) ====================
+app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, res) => {
+  try {
+    const layouts = await CategoryLayout.find({ branch: req.params.branchId })
+      .populate('categories.category', 'name icon image')
+      .sort({ rowOrder: 1 })
+    res.json(layouts.map(l => ({ ...l.toObject(), id: l._id })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/branches/:branchId/category-layouts', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const layout = await CategoryLayout.create({ ...req.body, branch: req.params.branchId })
+    res.status(201).json({ ...layout.toObject(), id: layout._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/category-layouts/:id', authMiddleware, async (req, res) => {
+  try {
+    const layout = await CategoryLayout.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    res.json({ ...layout.toObject(), id: layout._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/category-layouts/:id', authMiddleware, async (req, res) => {
+  try {
+    await CategoryLayout.findByIdAndDelete(req.params.id)
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Tüm layout'ları tek seferde kaydet
+app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const { layouts } = req.body
+    
+    // Mevcut layout'ları sil
+    await CategoryLayout.deleteMany({ branch: req.params.branchId })
+    
+    // Yeni layout'ları ekle
+    if (layouts && layouts.length > 0) {
+      await CategoryLayout.insertMany(layouts.map(l => ({ ...l, branch: req.params.branchId })))
+    }
+    
+    const newLayouts = await CategoryLayout.find({ branch: req.params.branchId })
+      .populate('categories.category', 'name icon image')
+      .sort({ rowOrder: 1 })
+    res.json(newLayouts)
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ==================== PRODUCTS ====================
-app.get('/api/products', (req, res) => {
-  const products = db.products.map(p => {
-    const photoDir = path.join(__dirname, 'photos', p.id)
-    let photoCount = 0
-    if (fs.existsSync(photoDir)) {
-      photoCount = fs.readdirSync(photoDir).filter(f => /\.(jpg|jpeg|png|heic|heif)$/i.test(f)).length
-    }
-    // GLB dosyası gerçekten var mı kontrol et
-    const glbPath = path.join(__dirname, 'outputs', `${p.id}.glb`)
-    const glbExists = fs.existsSync(glbPath)
-    return { 
-      ...p, 
-      photoCount,
-      glbFile: glbExists ? `${p.id}.glb` : null 
-    }
-  })
-  res.json(products)
-})
-
-app.post('/api/products', (req, res) => {
-  const product = {
-    id: uuidv4(),
-    name: req.body.name,
-    price: req.body.price,
-    description: req.body.description || '',
-    categoryId: req.body.categoryId || null,
-    thumbnail: null,
-    glbFile: null,
-    isActive: req.body.isActive !== false,
-    isFeatured: req.body.isFeatured || false,
-    isCampaign: req.body.isCampaign || false,
-    createdAt: new Date().toISOString()
-  }
-  db.products.push(product)
-  saveData(db)
-  res.json(product)
-})
-
-app.put('/api/products/:id', (req, res) => {
-  const index = db.products.findIndex(p => p.id === req.params.id)
-  if (index === -1) return res.status(404).json({ error: 'Product not found' })
-  db.products[index] = { ...db.products[index], ...req.body }
-  saveData(db)
-  res.json(db.products[index])
-})
-
-app.delete('/api/products/:id', (req, res) => {
-  const product = db.products.find(p => p.id === req.params.id)
-  if (product) {
-    // Delete product photos directory
-    const photoDir = path.join(__dirname, 'photos', req.params.id)
-    if (fs.existsSync(photoDir)) {
-      fs.rmSync(photoDir, { recursive: true })
-    }
-    // Delete GLB file if exists
-    const glbPath = path.join(__dirname, 'outputs', `${req.params.id}.glb`)
-    if (fs.existsSync(glbPath)) {
-      fs.unlinkSync(glbPath)
-    }
-  }
-  db.products = db.products.filter(p => p.id !== req.params.id)
-  saveData(db)
-  res.json({ success: true })
-})
-
-app.post('/api/products/:id/thumbnail', uploadImage.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-  const product = db.products.find(p => p.id === req.params.id)
-  if (!product) return res.status(404).json({ error: 'Product not found' })
-  product.thumbnail = req.file.filename
-  saveData(db)
-  res.json({ filename: req.file.filename })
-})
-
-app.post('/api/products/:id/photos', uploadPhotos.array('photos', 100), (req, res) => {
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ error: 'No files uploaded' })
-  }
-  res.json({ 
-    count: req.files.length, 
-    files: req.files.map(f => f.filename) 
-  })
-})
-
-app.get('/api/products/:id/photos', (req, res) => {
-  const photoDir = path.join(__dirname, 'photos', req.params.id)
-  if (!fs.existsSync(photoDir)) {
-    return res.json([])
-  }
-  const photos = fs.readdirSync(photoDir)
-    .filter(f => /\.(jpg|jpeg|png|heic|heif)$/i.test(f))
-    .map(f => ({
-      filename: f,
-      url: `/photos/${req.params.id}/${f}`
-    }))
-  res.json(photos)
-})
-
-app.delete('/api/products/:id/photos/:filename', (req, res) => {
-  const filePath = path.join(__dirname, 'photos', req.params.id, req.params.filename)
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath)
-  }
-  res.json({ success: true })
-})
-
-// ==================== 3D GENERATION ====================
-const generationProgress = {}
-
-// swift-cli paths - küçük harf klasör adı ile
-const PHOTO_TO_3D_PATHS = [
-  path.join(__dirname, '..', 'swift-cli', '.build', 'release', 'PhotoTo3D'),
-  path.join(__dirname, '..', 'swift-cli', '.build', 'debug', 'PhotoTo3D'),
-  path.join(__dirname, '..', 'Swift-cli', '.build', 'release', 'PhotoTo3D'),
-  path.join(__dirname, '..', 'Swift-cli', '.build', 'debug', 'PhotoTo3D'),
-  '/Users/yusufkerimsaritas/Desktop/ar-menu-glb/swift-cli/.build/release/PhotoTo3D',
-  '/Users/yusufkerimsaritas/Desktop/ar-menu-glb/swift-cli/.build/debug/PhotoTo3D'
-]
-
-// swift-cli klasörü (build için)
-const SWIFT_CLI_DIR = path.join(__dirname, '..', 'swift-cli')
-
-function findPhotoTo3D() {
-  console.log('🔍 PhotoTo3D aranıyor...')
-  for (const p of PHOTO_TO_3D_PATHS) {
-    if (fs.existsSync(p)) {
-      console.log(`   ✅ Bulundu: ${p}`)
-      return p
-    }
-  }
-  console.log('   ❌ Bulunamadı')
-  return null
-}
-
-app.post('/api/products/:id/generate', async (req, res) => {
-  const product = db.products.find(p => p.id === req.params.id)
-  if (!product) return res.status(404).json({ error: 'Product not found' })
-
-  const photoDir = path.join(__dirname, 'photos', req.params.id)
-  if (!fs.existsSync(photoDir)) {
-    return res.status(400).json({ error: 'No photos found' })
-  }
-
-  const photos = fs.readdirSync(photoDir).filter(f => /\.(jpg|jpeg|png|heic|heif)$/i.test(f))
-  if (photos.length < 20) {
-    return res.status(400).json({ error: 'Minimum 20 photos required' })
-  }
-
-  // Initialize progress
-  generationProgress[req.params.id] = {
-    stage: 'queued',
-    progress: 0,
-    message: 'Sıraya alındı...'
-  }
-
-  res.json({ status: 'started', productId: req.params.id })
-
-  // Start 3D generation with Swift CLI
-  generate3DModel(req.params.id, product, photoDir)
-})
-
-async function generate3DModel(productId, product, photoDir) {
-  const outputDir = path.join(__dirname, 'outputs')
-  const usdzPath = path.join(outputDir, `${productId}.usdz`)
-  const glbPath = path.join(outputDir, `${productId}.glb`)
-  
-  // Ensure output directory exists
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true })
-  }
-
+app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => {
   try {
-    generationProgress[productId] = {
-      stage: 'processing',
-      progress: 5,
-      message: 'Fotoğraflar kontrol ediliyor...'
-    }
-
-    // Check if PhotoTo3D CLI exists
-    let cliPath = findPhotoTo3D()
+    const { category, search, isActive, isFeatured, isCampaign, hasGlb, page = 1, limit = 50 } = req.query
+    const filter = { branch: req.params.branchId }
+    if (category) filter.category = category
+    if (isActive !== undefined) filter.isActive = isActive === 'true'
+    if (isFeatured !== undefined) filter.isFeatured = isFeatured === 'true'
+    if (isCampaign !== undefined) filter.isCampaign = isCampaign === 'true'
+    if (hasGlb === 'true') filter.glbFile = { $ne: null }
+    if (hasGlb === 'false') filter.glbFile = null
+    if (search) filter.name = { $regex: search, $options: 'i' }
     
-    if (!cliPath) {
-      // Try to build it
-      if (fs.existsSync(path.join(SWIFT_CLI_DIR, 'Package.swift'))) {
-        console.log('📦 Swift-cli derleniyor...')
-        generationProgress[productId] = {
-          stage: 'processing',
-          progress: 10,
-          message: 'Swift-cli derleniyor...'
-        }
-        
-        try {
-          await runCommand('swift', ['build', '-c', 'release'], { cwd: SWIFT_CLI_DIR })
-          cliPath = findPhotoTo3D()
-          if (cliPath) {
-            console.log('✅ Swift-cli built successfully')
-          }
-        } catch (buildError) {
-          console.error('Build error:', buildError)
-        }
-      } else {
-        console.log(`⚠️ Package.swift bulunamadı: ${SWIFT_CLI_DIR}`)
-      }
-    }
-
-    if (!cliPath) {
-      console.log('⚠️ PhotoTo3D not found, using fallback method')
-      // Fallback: Create placeholder GLB
-      await createPlaceholderModel(glbPath, productId)
-      
-      product.glbFile = `${productId}.glb`
-      saveData(db)
-      
-      generationProgress[productId] = {
-        stage: 'completed',
-        progress: 100,
-        message: '3D model oluşturuldu (test modu)'
-      }
-      return
-    }
-
-    // Run PhotoTo3D CLI
-    generationProgress[productId] = {
-      stage: 'generating',
-      progress: 15,
-      message: 'Object Capture başlatılıyor...'
-    }
-
-    console.log(`🚀 Starting PhotoTo3D: ${cliPath}`)
-    console.log(`   Input: ${photoDir}`)
-    console.log(`   Output: ${usdzPath}`)
-
-    await runPhotoTo3D(cliPath, photoDir, usdzPath, productId)
-
-    // Check if USDZ was created
-    if (fs.existsSync(usdzPath)) {
-      console.log(`✅ USDZ created: ${usdzPath}`)
-      
-      // Convert USDZ to GLB for web viewing
-      generationProgress[productId] = {
-        stage: 'converting',
-        progress: 90,
-        message: 'GLB formatına dönüştürülüyor...'
-      }
-
-      // Try to convert USDZ to GLB using Reality Converter or usdzconvert
-      const converted = await convertUsdzToGlb(usdzPath, glbPath)
-      
-      if (converted && fs.existsSync(glbPath)) {
-        product.glbFile = `${productId}.glb`
-        product.usdzFile = `${productId}.usdz`
-      } else {
-        // Keep USDZ, also copy as GLB placeholder
-        product.usdzFile = `${productId}.usdz`
-        product.glbFile = `${productId}.usdz` // model-viewer can load USDZ too
-      }
-      
-      saveData(db)
-
-      generationProgress[productId] = {
-        stage: 'completed',
-        progress: 100,
-        message: '3D model başarıyla oluşturuldu!'
-      }
-      
-      const stats = fs.statSync(usdzPath)
-      console.log(`✅ 3D model completed: ${usdzPath} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`)
-    } else {
-      throw new Error('USDZ dosyası oluşturulamadı')
-    }
-
-  } catch (error) {
-    console.error('❌ 3D generation error:', error)
-    generationProgress[productId] = {
-      stage: 'error',
-      progress: 0,
-      message: `Hata: ${error.message}`
-    }
-  }
-}
-
-// Run PhotoTo3D Swift CLI
-function runPhotoTo3D(cliPath, inputDir, outputFile, productId) {
-  return new Promise((resolve, reject) => {
-    console.log(`🚀 Çalıştırılıyor: ${cliPath}`)
-    console.log(`   Args: ${inputDir} ${outputFile}`)
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const [products, total] = await Promise.all([
+      Product.find(filter).populate('category', 'name icon').sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+      Product.countDocuments(filter)
+    ])
     
-    const proc = spawn(cliPath, [inputDir, outputFile])
-
-    let stdout = ''
-    let stderr = ''
-
-    proc.stdout.on('data', (data) => {
-      const output = data.toString()
-      stdout += output
-      console.log('PhotoTo3D:', output.trim())
-
-      // Parse progress from output: "Ilerleme: %XX"
-      const progressMatch = output.match(/Ilerleme:\s*%(\d+)/)
-      if (progressMatch) {
-        const percent = parseInt(progressMatch[1])
-        generationProgress[productId] = {
-          stage: 'generating',
-          progress: 15 + Math.floor(percent * 0.7), // Map 0-100 to 15-85
-          message: `3D model oluşturuluyor... %${percent}`
-        }
-      }
-
-      // Check for completion
-      if (output.includes('TAMAMLANDI') || output.includes('Model basariyla')) {
-        generationProgress[productId] = {
-          stage: 'finalizing',
-          progress: 85,
-          message: 'Model tamamlandı, dosya kaydediliyor...'
-        }
-      }
-
-      // Check for errors
-      if (output.includes('HATA:')) {
-        const errorMatch = output.match(/HATA:\s*(.+)/)
-        if (errorMatch) {
-          console.error('PhotoTo3D Error:', errorMatch[1])
-        }
-      }
+    res.json({
+      products: products.map(p => ({
+        ...p.toObject(), id: p._id, categoryId: p.category?._id, categoryName: p.category?.name,
+        categoryIcon: p.category?.icon, hasGlb: !!p.glbFile
+      })),
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) }
     })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
 
-    proc.stderr.on('data', (data) => {
-      stderr += data.toString()
-      console.error('PhotoTo3D stderr:', data.toString().trim())
-    })
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ PhotoTo3D completed successfully')
-        resolve()
-      } else {
-        console.error(`❌ PhotoTo3D exited with code ${code}`)
-        reject(new Error(`PhotoTo3D failed with code ${code}: ${stderr || stdout}`))
-      }
-    })
-
-    proc.on('error', (error) => {
-      console.error('PhotoTo3D process error:', error)
-      reject(error)
-    })
-
-    // Timeout after 10 minutes (3D generation can take a while)
-    setTimeout(() => {
-      proc.kill('SIGTERM')
-      reject(new Error('3D oluşturma zaman aşımına uğradı (10 dakika)'))
-    }, 600000)
-  })
-}
-
-// Convert USDZ to GLB using Blender
-async function convertUsdzToGlb(usdzPath, glbPath) {
+app.post('/api/branches/:branchId/products', authMiddleware, async (req, res) => {
   try {
-    console.log('🔄 USDZ → GLB dönüştürme başlıyor...')
-    
-    // Blender path
-    const BLENDER_PATH = '/Applications/Blender.app/Contents/MacOS/Blender'
-    
-    // Check if Blender exists
-    if (!fs.existsSync(BLENDER_PATH)) {
-      console.log('❌ Blender bulunamadı: ' + BLENDER_PATH)
-      console.log('   Blender yükleyin: https://www.blender.org/download/')
-      return false
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const data = { ...req.body, branch: req.params.branchId }
+    if (data.categoryId) { data.category = data.categoryId; delete data.categoryId }
+    const product = await Product.create(data)
+    res.status(201).json({ ...product.toObject(), id: product._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/products/:id', authMiddleware, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+    if (!product) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    const data = { ...req.body }
+    if (data.categoryId !== undefined) { data.category = data.categoryId || null; delete data.categoryId }
+    Object.assign(product, data)
+    await product.save()
+    res.json({ ...product.toObject(), id: product._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/products/:id', authMiddleware, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+    if (!product) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (product.glbFile) await GlbFile.findOneAndUpdate({ filename: product.glbFile }, { assignedTo: null })
+    await product.deleteOne()
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/products/:id/thumbnail', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(req.params.id, { thumbnail: req.file.filename }, { new: true })
+    res.json({ ...product.toObject(), id: product._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/products/:id/assign-glb', authMiddleware, async (req, res) => {
+  try {
+    const { glbFile } = req.body
+    const product = await Product.findById(req.params.id)
+    if (!product) return res.status(404).json({ error: 'Not found' })
+    if (product.glbFile && product.glbFile !== glbFile) {
+      await GlbFile.findOneAndUpdate({ filename: product.glbFile }, { assignedTo: null })
     }
-
-    // Create Blender Python script
-    const blenderScript = `
-import bpy
-import sys
-
-# Get arguments
-argv = sys.argv
-argv = argv[argv.index("--") + 1:]
-input_file = argv[0]
-output_file = argv[1]
-
-# Clear scene
-bpy.ops.wm.read_factory_settings(use_empty=True)
-
-# Import USDZ
-bpy.ops.wm.usd_import(filepath=input_file)
-
-# Export as GLB
-bpy.ops.export_scene.gltf(
-    filepath=output_file,
-    export_format='GLB',
-    export_draco_mesh_compression_enable=True,
-    export_draco_mesh_compression_level=6,
-    export_materials='EXPORT'
-)
-
-print(f"CONVERT_SUCCESS: {output_file}")
-`
-
-    // Write temporary script
-    const scriptPath = '/tmp/blender_convert_usdz.py'
-    fs.writeFileSync(scriptPath, blenderScript)
-
-    console.log(`   Input: ${usdzPath}`)
-    console.log(`   Output: ${glbPath}`)
-
-    // Run Blender in background
-    await new Promise((resolve, reject) => {
-      const proc = spawn(BLENDER_PATH, [
-        '--background',
-        '--python', scriptPath,
-        '--',
-        usdzPath,
-        glbPath
-      ])
-
-      let output = ''
-      
-      proc.stdout.on('data', (data) => {
-        output += data.toString()
-      })
-
-      proc.stderr.on('data', (data) => {
-        // Blender often outputs to stderr, not always errors
-        output += data.toString()
-      })
-
-      proc.on('close', (code) => {
-        if (fs.existsSync(glbPath)) {
-          const stats = fs.statSync(glbPath)
-          console.log(`✅ GLB oluşturuldu: ${glbPath} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`)
-          resolve()
-        } else if (code === 0 && output.includes('CONVERT_SUCCESS')) {
-          resolve()
-        } else {
-          console.log('Blender output:', output.slice(-500))
-          reject(new Error('GLB dosyası oluşturulamadı'))
-        }
-      })
-
-      proc.on('error', (err) => {
-        reject(err)
-      })
-
-      // Timeout after 2 minutes
-      setTimeout(() => {
-        proc.kill()
-        reject(new Error('Blender timeout'))
-      }, 120000)
-    })
-
-    return fs.existsSync(glbPath)
-
-  } catch (error) {
-    console.error('❌ Blender dönüştürme hatası:', error.message)
-    return false
-  }
-}
-
-// Run a command and return promise
-function runCommand(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(command, args, { ...options, shell: true })
-    let stdout = ''
-    let stderr = ''
-    
-    proc.stdout?.on('data', (data) => { stdout += data.toString() })
-    proc.stderr?.on('data', (data) => { stderr += data.toString() })
-    
-    proc.on('close', (code) => {
-      if (code === 0) resolve(stdout)
-      else reject(new Error(`Command failed: ${stderr || stdout}`))
-    })
-    
-    proc.on('error', reject)
-  })
-}
-
-// Create placeholder GLB model for testing
-async function createPlaceholderModel(glbPath, productId) {
-  console.log('📦 Creating placeholder GLB model...')
-  
-  generationProgress[productId] = {
-    stage: 'generating',
-    progress: 50,
-    message: 'Test modeli oluşturuluyor...'
-  }
-
-  // Simple cube GLB
-  const gltfJson = {
-    asset: { version: "2.0", generator: "AR Menu" },
-    scene: 0,
-    scenes: [{ nodes: [0] }],
-    nodes: [{ mesh: 0, name: productId }],
-    meshes: [{
-      primitives: [{
-        attributes: { POSITION: 0, NORMAL: 1 },
-        indices: 2,
-        material: 0
-      }]
-    }],
-    materials: [{
-      pbrMetallicRoughness: {
-        baseColorFactor: [0.86, 0.16, 0.16, 1.0],
-        metallicFactor: 0.0,
-        roughnessFactor: 0.5
-      },
-      doubleSided: true
-    }],
-    accessors: [
-      { bufferView: 0, componentType: 5126, count: 24, type: "VEC3", max: [0.5,0.5,0.5], min: [-0.5,-0.5,-0.5] },
-      { bufferView: 1, componentType: 5126, count: 24, type: "VEC3" },
-      { bufferView: 2, componentType: 5123, count: 36, type: "SCALAR" }
-    ],
-    bufferViews: [
-      { buffer: 0, byteOffset: 0, byteLength: 288, target: 34962 },
-      { buffer: 0, byteOffset: 288, byteLength: 288, target: 34962 },
-      { buffer: 0, byteOffset: 576, byteLength: 72, target: 34963 }
-    ],
-    buffers: [{ byteLength: 648 }]
-  }
-
-  const positions = new Float32Array([
-    -0.5,-0.5,0.5, 0.5,-0.5,0.5, 0.5,0.5,0.5, -0.5,0.5,0.5,
-    0.5,-0.5,-0.5, -0.5,-0.5,-0.5, -0.5,0.5,-0.5, 0.5,0.5,-0.5,
-    -0.5,0.5,0.5, 0.5,0.5,0.5, 0.5,0.5,-0.5, -0.5,0.5,-0.5,
-    -0.5,-0.5,-0.5, 0.5,-0.5,-0.5, 0.5,-0.5,0.5, -0.5,-0.5,0.5,
-    0.5,-0.5,0.5, 0.5,-0.5,-0.5, 0.5,0.5,-0.5, 0.5,0.5,0.5,
-    -0.5,-0.5,-0.5, -0.5,-0.5,0.5, -0.5,0.5,0.5, -0.5,0.5,-0.5
-  ])
-
-  const normals = new Float32Array([
-    0,0,1, 0,0,1, 0,0,1, 0,0,1,
-    0,0,-1, 0,0,-1, 0,0,-1, 0,0,-1,
-    0,1,0, 0,1,0, 0,1,0, 0,1,0,
-    0,-1,0, 0,-1,0, 0,-1,0, 0,-1,0,
-    1,0,0, 1,0,0, 1,0,0, 1,0,0,
-    -1,0,0, -1,0,0, -1,0,0, -1,0,0
-  ])
-
-  const indices = new Uint16Array([
-    0,1,2, 0,2,3, 4,5,6, 4,6,7,
-    8,9,10, 8,10,11, 12,13,14, 12,14,15,
-    16,17,18, 16,18,19, 20,21,22, 20,22,23
-  ])
-
-  const binary = Buffer.concat([
-    Buffer.from(positions.buffer),
-    Buffer.from(normals.buffer),
-    Buffer.from(indices.buffer)
-  ])
-
-  const jsonStr = JSON.stringify(gltfJson)
-  const jsonBuf = Buffer.from(jsonStr)
-  const jsonPad = (4 - (jsonBuf.length % 4)) % 4
-  const paddedJson = Buffer.concat([jsonBuf, Buffer.alloc(jsonPad, 0x20)])
-  
-  const binPad = (4 - (binary.length % 4)) % 4
-  const paddedBin = Buffer.concat([binary, Buffer.alloc(binPad, 0x00)])
-
-  const header = Buffer.alloc(12)
-  header.writeUInt32LE(0x46546C67, 0)
-  header.writeUInt32LE(2, 4)
-  header.writeUInt32LE(12 + 8 + paddedJson.length + 8 + paddedBin.length, 8)
-
-  const jsonHeader = Buffer.alloc(8)
-  jsonHeader.writeUInt32LE(paddedJson.length, 0)
-  jsonHeader.writeUInt32LE(0x4E4F534A, 4)
-
-  const binHeader = Buffer.alloc(8)
-  binHeader.writeUInt32LE(paddedBin.length, 0)
-  binHeader.writeUInt32LE(0x004E4942, 4)
-
-  const glb = Buffer.concat([header, jsonHeader, paddedJson, binHeader, paddedBin])
-  
-  fs.writeFileSync(glbPath, glb)
-  console.log(`✅ Placeholder GLB created: ${glbPath} (${glb.length} bytes)`)
-}
-
-app.get('/api/products/:id/progress', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream')
-  res.setHeader('Cache-Control', 'no-cache')
-  res.setHeader('Connection', 'keep-alive')
-  res.setHeader('Access-Control-Allow-Origin', '*')
-
-  let intervalId = null
-
-  const sendProgress = () => {
-    const progress = generationProgress[req.params.id] || { stage: 'unknown', progress: 0, message: 'Durum bilinmiyor' }
-    res.write(`data: ${JSON.stringify(progress)}\n\n`)
-    
-    if (progress.stage === 'completed' || progress.stage === 'error') {
-      if (intervalId) {
-        clearInterval(intervalId)
-      }
-      res.end()
+    if (glbFile) {
+      await GlbFile.findOneAndUpdate({ filename: glbFile }, { assignedTo: product._id, branch: product.branch })
     }
-  }
+    product.glbFile = glbFile || null
+    await product.save()
+    res.json({ ...product.toObject(), id: product._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
 
-  // İlk progress'i hemen gönder
-  sendProgress()
-  
-  // Sonra her saniye güncelle
-  intervalId = setInterval(sendProgress, 1000)
+app.post('/api/branches/:branchId/products/bulk', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const { action, ids, data } = req.body
+    if (action === 'delete') await Product.deleteMany({ _id: { $in: ids }, branch: req.params.branchId })
+    else if (action === 'update') await Product.updateMany({ _id: { $in: ids }, branch: req.params.branchId }, data)
+    res.json({ success: true, affected: ids.length })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
 
-  req.on('close', () => {
-    if (intervalId) {
-      clearInterval(intervalId)
-    }
-  })
+// ==================== GLB FILES ====================
+app.get('/api/branches/:branchId/glb', authMiddleware, async (req, res) => {
+  try {
+    const files = await GlbFile.find({ $or: [{ branch: req.params.branchId }, { branch: null }] }).populate('assignedTo', 'name')
+    res.json(files.map(f => ({
+      filename: f.filename, size: f.size, sizeFormatted: formatBytes(f.size),
+      isAssigned: !!f.assignedTo, assignedTo: f.assignedTo?.name || null,
+      assignedToId: f.assignedTo?._id || null, uploadedAt: f.createdAt
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.get('/api/glb/list', apiKeyMiddleware, async (req, res) => {
+  try {
+    const files = await GlbFile.find().populate('assignedTo', 'name')
+    res.json({ files: files.map(f => ({ name: f.filename, filename: f.filename, size: f.size, uploadedAt: f.createdAt, assignedTo: f.assignedTo?.name || null })) })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/glb/upload', apiKeyMiddleware, upload.single('file'), async (req, res) => {
+  try {
+    const filename = req.body.name || req.file.filename
+    const finalPath = path.join(__dirname, 'outputs', filename)
+    if (req.body.name && req.body.name !== req.file.filename) fs.renameSync(req.file.path, finalPath)
+    let glbFile = await GlbFile.findOne({ filename })
+    if (glbFile) { glbFile.size = req.file.size; await glbFile.save() }
+    else glbFile = await GlbFile.create({ filename, originalName: req.file.originalname, size: req.file.size })
+    res.json({ success: true, filename, size: req.file.size })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/glb/:filename', apiKeyMiddleware, async (req, res) => {
+  try {
+    const glbFile = await GlbFile.findOne({ filename: req.params.filename })
+    if (!glbFile) return res.status(404).json({ error: 'Not found' })
+    if (glbFile.assignedTo) await Product.findByIdAndUpdate(glbFile.assignedTo, { glbFile: null })
+    const filePath = path.join(__dirname, 'outputs', req.params.filename)
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    await glbFile.deleteOne()
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ==================== ANNOUNCEMENTS ====================
-app.get('/api/announcements', (req, res) => {
-  res.json(db.announcements)
+app.get('/api/branches/:branchId/announcements', authMiddleware, async (req, res) => {
+  try {
+    const announcements = await Announcement.find({ branch: req.params.branchId }).sort({ order: 1, createdAt: -1 })
+    res.json(announcements.map(a => ({ ...a.toObject(), id: a._id })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.post('/api/announcements', (req, res) => {
-  const announcement = {
-    id: uuidv4(),
-    title: req.body.title,
-    message: req.body.message,
-    icon: req.body.icon || '📢',
-    isActive: true,
-    order: db.announcements.length,
-    createdAt: new Date().toISOString()
-  }
-  db.announcements.push(announcement)
-  saveData(db)
-  res.json(announcement)
+app.post('/api/branches/:branchId/announcements', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const announcement = await Announcement.create({ ...req.body, branch: req.params.branchId })
+    res.status(201).json({ ...announcement.toObject(), id: announcement._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.put('/api/announcements/:id', (req, res) => {
-  const index = db.announcements.findIndex(a => a.id === req.params.id)
-  if (index === -1) return res.status(404).json({ error: 'Announcement not found' })
-  db.announcements[index] = { ...db.announcements[index], ...req.body }
-  saveData(db)
-  res.json(db.announcements[index])
+app.put('/api/announcements/:id', authMiddleware, async (req, res) => {
+  try {
+    const announcement = await Announcement.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    res.json({ ...announcement.toObject(), id: announcement._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.delete('/api/announcements/:id', (req, res) => {
-  db.announcements = db.announcements.filter(a => a.id !== req.params.id)
-  saveData(db)
-  res.json({ success: true })
+app.delete('/api/announcements/:id', authMiddleware, async (req, res) => {
+  try {
+    await Announcement.findByIdAndDelete(req.params.id)
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ==================== REVIEWS ====================
-app.get('/api/reviews', (req, res) => {
-  res.json(db.reviews)
-})
-
-app.post('/api/reviews', (req, res) => {
-  const review = {
-    id: uuidv4(),
-    rating: req.body.rating,
-    contact: req.body.contact || null,
-    note: req.body.note || null,
-    createdAt: new Date().toISOString()
-  }
-  db.reviews.push(review)
-  saveData(db)
-  res.json(review)
-})
-
-app.delete('/api/reviews/:id', (req, res) => {
-  db.reviews = db.reviews.filter(r => r.id !== req.params.id)
-  saveData(db)
-  res.json({ success: true })
-})
-
-// ==================== CATEGORY LAYOUTS ====================
-app.get('/api/category-layouts', (req, res) => {
-  res.json(db.categoryLayouts || [])
-})
-
-app.put('/api/category-layouts', (req, res) => {
-  db.categoryLayouts = req.body
-  saveData(db)
-  res.json(db.categoryLayouts)
-})
-
-// ==================== CAMPAIGN SETTINGS ====================
-app.get('/api/campaign-settings', (req, res) => {
-  res.json(db.campaignSettings || { title: 'Kampanyalar', enabled: true })
-})
-
-app.put('/api/campaign-settings', (req, res) => {
-  db.campaignSettings = { ...db.campaignSettings, ...req.body }
-  saveData(db)
-  res.json(db.campaignSettings)
-})
-
-// ==================== MENU (PUBLIC) ====================
-app.get('/api/menu', (req, res) => {
-  // Build categories with products
-  const categoriesWithProducts = db.categories.map(cat => {
-    const products = db.products
-      .filter(p => p.categoryId === cat.id && p.isActive !== false)
-      .map(p => {
-        // Check if GLB actually exists
-        const glbPath = path.join(__dirname, 'outputs', `${p.id}.glb`)
-        const glbExists = fs.existsSync(glbPath)
-        return {
-          ...p,
-          glbFile: glbExists ? `${p.id}.glb` : null,
-          categoryName: cat.name,
-          categoryIcon: cat.icon
-        }
-      })
-    return { ...cat, products }
-  })
-
-  // Get campaign products
-  const campaignProducts = db.products
-    .filter(p => p.isCampaign && p.isActive !== false)
-    .map(p => {
-      const cat = db.categories.find(c => c.id === p.categoryId)
-      const glbPath = path.join(__dirname, 'outputs', `${p.id}.glb`)
-      const glbExists = fs.existsSync(glbPath)
-      return {
-        ...p,
-        glbFile: glbExists ? `${p.id}.glb` : null,
-        categoryName: cat?.name || '',
-        categoryIcon: cat?.icon || ''
-      }
-    })
-
-  // Get featured products
-  const featuredProducts = db.products
-    .filter(p => p.isFeatured && p.isActive !== false)
-    .map(p => {
-      const cat = db.categories.find(c => c.id === p.categoryId)
-      const glbPath = path.join(__dirname, 'outputs', `${p.id}.glb`)
-      const glbExists = fs.existsSync(glbPath)
-      return {
-        ...p,
-        glbFile: glbExists ? `${p.id}.glb` : null,
-        categoryName: cat?.name || '',
-        categoryIcon: cat?.icon || ''
-      }
-    })
-
-  // Get active announcements
-  const activeAnnouncements = db.announcements.filter(a => a.isActive)
-
-  res.json({
-    settings: db.settings,
-    categories: categoriesWithProducts,
-    announcements: activeAnnouncements,
-    campaignProducts,
-    featuredProducts,
-    categoryLayouts: db.categoryLayouts || [],
-    campaignSettings: db.campaignSettings || { title: 'Kampanyalar', enabled: true }
-  })
-})
-
-// ==================== MANUAL USDZ → GLB CONVERSION ====================
-app.post('/api/products/:id/convert', async (req, res) => {
-  const product = db.products.find(p => p.id === req.params.id)
-  if (!product) return res.status(404).json({ error: 'Product not found' })
-
-  const usdzPath = path.join(__dirname, 'outputs', `${req.params.id}.usdz`)
-  const glbPath = path.join(__dirname, 'outputs', `${req.params.id}.glb`)
-
-  if (!fs.existsSync(usdzPath)) {
-    return res.status(400).json({ error: 'USDZ dosyası bulunamadı' })
-  }
-
-  if (fs.existsSync(glbPath)) {
-    return res.json({ status: 'exists', message: 'GLB zaten mevcut', glbFile: `${req.params.id}.glb` })
-  }
-
-  console.log(`🔄 Manuel dönüştürme başlatılıyor: ${req.params.id}`)
-
+app.get('/api/branches/:branchId/reviews', authMiddleware, async (req, res) => {
   try {
-    const converted = await convertUsdzToGlb(usdzPath, glbPath)
-    
-    if (converted && fs.existsSync(glbPath)) {
-      product.glbFile = `${req.params.id}.glb`
-      saveData(db)
-      
-      const stats = fs.statSync(glbPath)
-      res.json({ 
-        status: 'success', 
-        message: 'GLB oluşturuldu',
-        glbFile: `${req.params.id}.glb`,
-        size: (stats.size / 1024 / 1024).toFixed(2) + ' MB'
-      })
-    } else {
-      res.status(500).json({ error: 'GLB dönüştürme başarısız' })
-    }
-  } catch (error) {
-    console.error('Convert error:', error)
-    res.status(500).json({ error: error.message })
-  }
+    const { isApproved, page = 1, limit = 50 } = req.query
+    const filter = { branch: req.params.branchId }
+    if (isApproved !== undefined) filter.isApproved = isApproved === 'true'
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const [reviews, total] = await Promise.all([
+      Review.find(filter).populate('product', 'name thumbnail').sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+      Review.countDocuments(filter)
+    ])
+    res.json({
+      reviews: reviews.map(r => ({ ...r.toObject(), id: r._id, productName: r.product?.name })),
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) }
+    })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ==================== HEALTH CHECK ====================
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    platform: process.platform
+app.put('/api/reviews/:id/approve', authMiddleware, async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(req.params.id, { isApproved: true }, { new: true })
+    res.json({ ...review.toObject(), id: review._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/reviews/:id/reply', authMiddleware, async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(req.params.id, { reply: req.body.reply, repliedAt: new Date() }, { new: true })
+    res.json({ ...review.toObject(), id: review._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/reviews/:id', authMiddleware, async (req, res) => {
+  try {
+    await Review.findByIdAndDelete(req.params.id)
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== USERS ====================
+app.get('/api/users', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    const users = await User.find().select('-password').populate('branches', 'name slug').sort({ createdAt: -1 })
+    res.json(users.map(u => ({ ...u.toObject(), id: u._id })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/users', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    const { username, email, password, role, fullName, branches } = req.body
+    const user = await User.create({ username, email, password: await bcrypt.hash(password, 10), role, fullName, branches })
+    res.status(201).json({ id: user._id, username, email, role })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/users/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin' && req.user._id.toString() !== req.params.id) return res.status(403).json({ error: 'Access denied' })
+    const data = { ...req.body }
+    if (data.password) data.password = await bcrypt.hash(data.password, 10)
+    else delete data.password
+    const user = await User.findByIdAndUpdate(req.params.id, data, { new: true }).select('-password')
+    res.json({ ...user.toObject(), id: user._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/users/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    if (req.user._id.toString() === req.params.id) return res.status(400).json({ error: 'Cannot delete yourself' })
+    await User.findByIdAndDelete(req.params.id)
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== START ====================
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('✅ MongoDB connected')
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server: http://localhost:${PORT}`)
+    })
   })
-})
-
-// ==================== START SERVER ====================
-app.listen(PORT, '0.0.0.0', () => {
-  // Swift-cli durumunu kontrol et
-  const cliPath = findPhotoTo3D()
-  const cliStatus = cliPath ? '✅ Hazır' : '❌ Derlenmemiş (swift build -c release)'
-  
-  console.log(`
-╔════════════════════════════════════════════════════════╗
-║         🍽️  AR Menu Backend Server                    ║
-╠════════════════════════════════════════════════════════╣
-║  Status:    ✅ Running                                 ║
-║  Port:      ${PORT}                                       ║
-║  URL:       http://192.168.1.2:${PORT}                    ║
-║  Platform:  ${process.platform.padEnd(42)}║
-║  Swift-cli: ${cliStatus.padEnd(42)}║
-╚════════════════════════════════════════════════════════╝
-  `)
-  
-  if (!cliPath) {
-    console.log('⚠️  Swift-cli derlemek için:')
-    console.log('    cd ~/Desktop/ar-menu-glb/Swift-cli')
-    console.log('    swift build -c release')
-    console.log('')
-  }
-})
+  .catch(err => { console.error('❌ MongoDB error:', err); process.exit(1) })
