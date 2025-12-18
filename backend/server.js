@@ -11,10 +11,10 @@ require('dotenv').config()
 const app = express()
 
 // ==================== CONFIG ====================
-const PORT = process.env.PORT || 3001
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ar-menu'
-const JWT_SECRET = process.env.JWT_SECRET || 'ar-menu-secret-key-change-in-production'
-const API_KEY = process.env.API_KEY || 'your-secret-api-key'
+const PORT = process.env.PORT || 3001;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ar-menu';
+const JWT_SECRET = process.env.JWT_SECRET || 'ar-menu-secret-key-change-in-production';
+const API_KEY = "test123";
 
 // ==================== MIDDLEWARE ====================
 app.use(cors())
@@ -39,7 +39,7 @@ const branchSchema = new mongoose.Schema({
   image: { type: String, default: null },           // Şube ana görseli
   logo: { type: String, default: null },            // Şube logosu
   banner: { type: String, default: null },          // Banner görseli
-  homepageImage: { type: String, default: null },   // YENİ: Menü sayfası üst görsel
+  homepageImage: { type: String, default: null },   // Menü sayfası üst görsel
   address: { type: String, default: '' },
   phone: { type: String, default: '' },
   whatsapp: { type: String, default: '' },
@@ -62,10 +62,10 @@ const categorySchema = new mongoose.Schema({
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   description: { type: String, default: '' },
-  layoutSize: { type: String, enum: ['full', 'half', 'third'], default: 'half' }  // YENİ: Yerleşim boyutu
+  layoutSize: { type: String, enum: ['full', 'half', 'third'], default: 'half' }
 }, { timestamps: true })
 
-// CategoryLayout (YENİ) - Satır bazlı kategori düzeni
+// CategoryLayout - Satır bazlı kategori düzeni
 const categoryLayoutSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   rowOrder: { type: Number, default: 0 },           // Satır sırası
@@ -145,7 +145,7 @@ const userSchema = new mongoose.Schema({
 // Models
 const Branch = mongoose.model('Branch', branchSchema)
 const Category = mongoose.model('Category', categorySchema)
-const CategoryLayout = mongoose.model('CategoryLayout', categoryLayoutSchema)  // YENİ
+const CategoryLayout = mongoose.model('CategoryLayout', categoryLayoutSchema)
 const Product = mongoose.model('Product', productSchema)
 const Announcement = mongoose.model('Announcement', announcementSchema)
 const Review = mongoose.model('Review', reviewSchema)
@@ -219,7 +219,7 @@ app.get('/api/public/branches/:slug', async (req, res) => {
     res.json({
       id: branch._id, name: branch.name, slug: branch.slug, description: branch.description,
       image: branch.image, logo: branch.logo, banner: branch.banner,
-      homepageImage: branch.homepageImage,  // YENİ
+      homepageImage: branch.homepageImage,
       address: branch.address, phone: branch.phone, whatsapp: branch.whatsapp, 
       instagram: branch.instagram, workingHours: branch.workingHours, theme: branch.theme
     })
@@ -234,12 +234,12 @@ app.get('/api/public/branches/:slug/categories', async (req, res) => {
     const categories = await Category.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
     res.json(categories.map(c => ({ 
       id: c._id, name: c.name, icon: c.icon, image: c.image, 
-      description: c.description, layoutSize: c.layoutSize  // YENİ
+      description: c.description, layoutSize: c.layoutSize
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get category layouts
+// Get category layouts (PUBLIC) - DÜZELTİLDİ: id alanları eklendi
 app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
@@ -247,25 +247,55 @@ app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
     const layouts = await CategoryLayout.find({ branch: branch._id })
       .populate('categories.category', 'name icon image description')
       .sort({ rowOrder: 1 })
-    res.json(layouts)
+    
+    // Frontend için uygun formata dönüştür
+    res.json(layouts.map(l => ({
+      id: l._id,
+      rowOrder: l.rowOrder,
+      categories: l.categories.map(c => ({
+        category: c.category ? {
+          id: c.category._id,
+          _id: c.category._id,
+          name: c.category.name,
+          icon: c.category.icon,
+          image: c.category.image,
+          description: c.category.description
+        } : null,
+        size: c.size
+      })).filter(c => c.category)
+    })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get products
+// Get products - DÜZELTİLDİ: categoryId, allergens, tags eklendi
 app.get('/api/public/branches/:slug/products', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
     const filter = { branch: branch._id, isActive: true }
     if (req.query.category) filter.category = req.query.category
-    if (req.query.isCampaign === 'true') filter.isCampaign = true  // YENİ: Kampanya filtresi
-    if (req.query.isFeatured === 'true') filter.isFeatured = true  // YENİ: Öne çıkan filtresi
+    if (req.query.isCampaign === 'true') filter.isCampaign = true
+    if (req.query.isFeatured === 'true') filter.isFeatured = true
     const products = await Product.find(filter).populate('category', 'name icon').sort({ isFeatured: -1, name: 1 })
     res.json(products.map(p => ({
-      id: p._id, name: p.name, price: p.price, description: p.description,
-      thumbnail: p.thumbnail, glbFile: p.glbFile, hasGlb: !!p.glbFile,
-      isFeatured: p.isFeatured, isCampaign: p.isCampaign, campaignPrice: p.campaignPrice,
-      calories: p.calories, preparationTime: p.preparationTime,
+      id: p._id, 
+      name: p.name, 
+      price: p.price, 
+      description: p.description,
+      thumbnail: p.thumbnail, 
+      glbFile: p.glbFile, 
+      hasGlb: !!p.glbFile,
+      isFeatured: p.isFeatured, 
+      isCampaign: p.isCampaign, 
+      campaignPrice: p.campaignPrice,
+      calories: p.calories, 
+      preparationTime: p.preparationTime,
+      allergens: p.allergens || [],
+      tags: p.tags || [],
+      // Kategori bilgileri - Frontend için gerekli
+      categoryId: p.category?._id || null,
+      categoryName: p.category?.name || null,
+      categoryIcon: p.category?.icon || null,
       category: p.category ? { id: p.category._id, name: p.category.name, icon: p.category.icon } : null
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -281,7 +311,7 @@ app.get('/api/public/branches/:slug/announcements', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get approved reviews (YENİ - Public)
+// Get approved reviews (Public)
 app.get('/api/public/branches/:slug/reviews', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
@@ -404,7 +434,7 @@ app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
     if (!branch) return res.status(404).json({ error: 'Not found' })
     await Promise.all([
       Category.deleteMany({ branch: branch._id }),
-      CategoryLayout.deleteMany({ branch: branch._id }),  // YENİ
+      CategoryLayout.deleteMany({ branch: branch._id }),
       Product.deleteMany({ branch: branch._id }),
       Announcement.deleteMany({ branch: branch._id }),
       Review.deleteMany({ branch: branch._id })
@@ -438,12 +468,12 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
       Review.countDocuments({ branch: branchId }),
       GlbFile.countDocuments({ branch: branchId }),
       Review.countDocuments({ branch: branchId, isApproved: false }),
-      Product.countDocuments({ branch: branchId, isCampaign: true })  // YENİ
+      Product.countDocuments({ branch: branchId, isCampaign: true })
     ])
 
     const recentReviews = await Review.find({ branch: branchId }).sort({ createdAt: -1 }).limit(5).populate('product', 'name')
     const topProducts = await Product.find({ branch: branchId }).sort({ viewCount: -1 }).limit(5).select('name viewCount thumbnail')
-    const campaignProducts = await Product.find({ branch: branchId, isCampaign: true }).select('name price campaignPrice thumbnail')  // YENİ
+    const campaignProducts = await Product.find({ branch: branchId, isCampaign: true }).select('name price campaignPrice thumbnail')
     
     const categoryStats = await Product.aggregate([
       { $match: { branch: new mongoose.Types.ObjectId(branchId) } },
@@ -466,9 +496,9 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
     res.json({
       counts: { 
         products: productCount, categories: categoryCount, reviews: reviewCount, 
-        glbFiles: glbCount, pendingReviews: pendingReviewCount, campaigns: campaignCount  // YENİ
+        glbFiles: glbCount, pendingReviews: pendingReviewCount, campaigns: campaignCount
       },
-      recentReviews, topProducts, categoryStats, campaignProducts,  // YENİ
+      recentReviews, topProducts, categoryStats, campaignProducts,
       averageRating: avgRating[0]?.avg || 0, ratingStats
     })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -543,7 +573,7 @@ app.post('/api/categories/:id/image', authMiddleware, upload.single('image'), as
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ==================== CATEGORY LAYOUTS (YENİ) ====================
+// ==================== CATEGORY LAYOUTS ====================
 app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, res) => {
   try {
     const layouts = await CategoryLayout.find({ branch: req.params.branchId })
@@ -696,20 +726,91 @@ app.post('/api/branches/:branchId/products/bulk', authMiddleware, async (req, re
 // ==================== GLB FILES ====================
 app.get('/api/branches/:branchId/glb', authMiddleware, async (req, res) => {
   try {
-    const files = await GlbFile.find({ $or: [{ branch: req.params.branchId }, { branch: null }] }).populate('assignedTo', 'name')
-    res.json(files.map(f => ({
-      filename: f.filename, size: f.size, sizeFormatted: formatBytes(f.size),
-      isAssigned: !!f.assignedTo, assignedTo: f.assignedTo?.name || null,
-      assignedToId: f.assignedTo?._id || null, uploadedAt: f.createdAt
-    })))
-  } catch (err) { res.status(500).json({ error: err.message }) }
+    const outputsDir = path.join(__dirname, 'outputs')
+    
+    // Klasör yoksa oluştur ve boş dön
+    if (!fs.existsSync(outputsDir)) {
+      fs.mkdirSync(outputsDir, { recursive: true })
+      return res.json([])
+    }
+
+    // Filesystem'den .glb dosyalarını oku
+    const files = fs.readdirSync(outputsDir).filter(f => f.toLowerCase().endsWith('.glb'))
+    
+    // Hangi dosyalar ürünlere atanmış?
+    const products = await Product.find({ 
+      branch: req.params.branchId, 
+      glbFile: { $ne: null } 
+    }).select('name glbFile')
+    
+    const assignedMap = {}
+    products.forEach(p => {
+      if (p.glbFile) assignedMap[p.glbFile] = p.name
+    })
+
+    // Dosya bilgilerini hazırla
+    const result = files.map(filename => {
+      const filePath = path.join(outputsDir, filename)
+      let stats = { size: 0, mtime: new Date() }
+      try {
+        stats = fs.statSync(filePath)
+      } catch (e) {}
+      
+      return {
+        filename,
+        size: stats.size,
+        sizeFormatted: formatBytes(stats.size),
+        uploadedAt: stats.mtime,
+        isAssigned: !!assignedMap[filename],
+        assignedTo: assignedMap[filename] || null
+      }
+    })
+
+    res.json(result)
+  } catch (err) {
+    console.error('GLB listesi hatası:', err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.get('/api/glb/list', apiKeyMiddleware, async (req, res) => {
   try {
-    const files = await GlbFile.find().populate('assignedTo', 'name')
-    res.json({ files: files.map(f => ({ name: f.filename, filename: f.filename, size: f.size, uploadedAt: f.createdAt, assignedTo: f.assignedTo?.name || null })) })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+    const outputsDir = path.join(__dirname, 'outputs')
+    
+    if (!fs.existsSync(outputsDir)) {
+      return res.json({ files: [] })
+    }
+
+    const files = fs.readdirSync(outputsDir).filter(f => f.toLowerCase().endsWith('.glb'))
+    
+    // Atanmış dosyaları bul
+    const products = await Product.find({ glbFile: { $ne: null } }).select('name glbFile')
+    const assignedMap = {}
+    products.forEach(p => {
+      if (p.glbFile) assignedMap[p.glbFile] = p.name
+    })
+
+    const result = files.map(filename => {
+      const filePath = path.join(outputsDir, filename)
+      let stats = { size: 0, mtime: new Date() }
+      try {
+        stats = fs.statSync(filePath)
+      } catch (e) {}
+      
+      return {
+        name: filename,
+        filename,
+        size: stats.size,
+        sizeFormatted: formatBytes(stats.size),
+        uploadedAt: stats.mtime,
+        assignedTo: assignedMap[filename] || null
+      }
+    })
+
+    res.json({ files: result })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.post('/api/glb/upload', apiKeyMiddleware, upload.single('file'), async (req, res) => {
