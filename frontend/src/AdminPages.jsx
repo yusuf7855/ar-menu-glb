@@ -111,7 +111,7 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
   )
 }
 
-// ==================== 3D MODEL VIEWER - YENİ ====================
+// ==================== 3D MODEL VIEWER ====================
 function ModelViewer3D({ glbFile, productName, size = 'medium' }) {
   const modelRef = useRef(null)
   const [loading, setLoading] = useState(true)
@@ -158,29 +158,18 @@ function ModelViewer3D({ glbFile, productName, size = 'medium' }) {
         onLoad={() => setLoading(false)}
       />
 
-      {/* Döndür İpucu */}
       <Box sx={{
         position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
         display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1,
         bgcolor: 'rgba(0,0,0,0.7)', borderRadius: 2,
         animation: 'pulse 2s infinite',
-        '@keyframes pulse': {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.5 }
-        }
+        '@keyframes pulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.5 } }
       }}>
-        <TouchApp sx={{ color: 'white', fontSize: 20, animation: 'swipe 1.5s ease-in-out infinite', '@keyframes swipe': { '0%, 100%': { transform: 'translateX(0) rotate(0deg)' }, '50%': { transform: 'translateX(10px) rotate(-15deg)' } } }} />
+        <TouchApp sx={{ color: 'white', fontSize: 20 }} />
         <Typography variant="caption" color="white">Döndürmek için sürükleyin</Typography>
       </Box>
 
-      {/* 3D Badge */}
-      <Chip
-        icon={<ThreeSixty />}
-        label="3D"
-        size="small"
-        color="info"
-        sx={{ position: 'absolute', top: 12, right: 12 }}
-      />
+      <Chip icon={<ThreeSixty />} label="3D" size="small" color="info" sx={{ position: 'absolute', top: 12, right: 12 }} />
 
       {error && (
         <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.paper' }}>
@@ -236,7 +225,6 @@ function StatCard({ title, value, icon, color = 'primary', subtitle, onClick }) 
   )
 }
 
-// ==================== PAGE WRAPPER - RESPONSIVE ====================
 function PageWrapper({ children }) {
   return (
     <Box sx={{ width: '100%', maxWidth: '100%', px: { xs: 2, sm: 3 } }}>
@@ -543,14 +531,9 @@ export function ProductsPage() {
                   )}
                   <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }} flexWrap="wrap">
                     {product.hasGlb && (
-                      <Chip 
-                        label="3D" 
-                        size="small" 
-                        color="info" 
-                        icon={<ViewInAr />} 
+                      <Chip label="3D" size="small" color="info" icon={<ViewInAr />} 
                         onClick={(e) => { e.stopPropagation(); setPreviewDialog({ open: true, product }) }}
-                        sx={{ cursor: 'pointer' }}
-                      />
+                        sx={{ cursor: 'pointer' }} />
                     )}
                     {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
                     {product.isCampaign && <Chip label="🔥" size="small" color="error" />}
@@ -599,7 +582,6 @@ export function ProductsPage() {
         <ConfirmDialog open={deleteDialog.open} title="Ürünü Sil" message={`"${deleteDialog.product?.name}" ürününü silmek istediğinize emin misiniz?`}
           onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, product: null })} />
 
-        {/* 3D Preview Dialog */}
         <Dialog open={previewDialog.open} onClose={() => setPreviewDialog({ open: false, product: null })} maxWidth="sm" fullWidth>
           <DialogTitle>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -636,31 +618,16 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
     if (open) {
       if (product) {
         setForm({
-          name: product.name || '', 
-          price: product.price || '', 
-          description: product.description || '',
-          categoryId: product.categoryId || product.category?._id || '', 
-          isActive: product.isActive !== false,
-          isFeatured: product.isFeatured || false, 
-          isCampaign: product.isCampaign || false,
-          campaignPrice: product.campaignPrice || '', 
-          glbFile: product.glbFile || '',
-          calories: product.calories || '', 
-          preparationTime: product.preparationTime || '',
-          allergens: product.allergens?.join(', ') || '', 
-          tags: product.tags?.join(', ') || ''
+          name: product.name || '', price: product.price || '', description: product.description || '',
+          categoryId: product.categoryId || product.category?._id || '', isActive: product.isActive !== false,
+          isFeatured: product.isFeatured || false, isCampaign: product.isCampaign || false,
+          campaignPrice: product.campaignPrice || '', glbFile: product.glbFile || '',
+          calories: product.calories || '', preparationTime: product.preparationTime || '',
+          allergens: product.allergens?.join(', ') || '', tags: product.tags?.join(', ') || ''
         })
-        if (product.thumbnail) {
-          setThumbnailPreview(getImageUrl(product.thumbnail))
-        } else {
-          setThumbnailPreview(null)
-        }
+        setThumbnailPreview(product.thumbnail ? getImageUrl(product.thumbnail) : null)
       } else {
-        setForm({ 
-          name: '', price: '', description: '', categoryId: '', isActive: true, 
-          isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '', 
-          calories: '', preparationTime: '', allergens: '', tags: '' 
-        })
+        setForm({ name: '', price: '', description: '', categoryId: '', isActive: true, isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '', calories: '', preparationTime: '', allergens: '', tags: '' })
         setThumbnailPreview(null)
       }
       setThumbnailFile(null)
@@ -671,27 +638,17 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
   const handleThumbnailChange = (file) => {
     if (!file) return
     setThumbnailFile(file)
-    const previewUrl = URL.createObjectURL(file)
-    setThumbnailPreview(previewUrl)
+    setThumbnailPreview(URL.createObjectURL(file))
   }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.price) { 
-      showSnackbar('Ürün adı ve fiyat zorunludur', 'error')
-      return 
-    }
-
+    if (!form.name || !form.price) { showSnackbar('Ürün adı ve fiyat zorunludur', 'error'); return }
     setSaving(true)
     try {
       const data = {
-        name: form.name, 
-        price: parseFloat(form.price), 
-        description: form.description,
-        categoryId: form.categoryId || null, 
-        isActive: form.isActive, 
-        isFeatured: form.isFeatured,
-        isCampaign: form.isCampaign, 
-        campaignPrice: form.campaignPrice ? parseFloat(form.campaignPrice) : null,
+        name: form.name, price: parseFloat(form.price), description: form.description,
+        categoryId: form.categoryId || null, isActive: form.isActive, isFeatured: form.isFeatured,
+        isCampaign: form.isCampaign, campaignPrice: form.campaignPrice ? parseFloat(form.campaignPrice) : null,
         calories: form.calories ? parseInt(form.calories) : null,
         preparationTime: form.preparationTime ? parseInt(form.preparationTime) : null,
         allergens: form.allergens ? form.allergens.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -746,12 +703,7 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
         {tab === 0 && (
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
-              <ImageUploader 
-                label="Ürün Görseli" 
-                value={thumbnailFile || thumbnailPreview} 
-                onChange={handleThumbnailChange} 
-                aspectRatio="1/1" 
-              />
+              <ImageUploader label="Ürün Görseli" value={thumbnailFile || thumbnailPreview} onChange={handleThumbnailChange} aspectRatio="1/1" />
             </Grid>
             <Grid item xs={12} md={8}>
               <Stack spacing={2.5}>
@@ -824,12 +776,9 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
                 </Select>
               </FormControl>
             ) : (
-              <Alert severity="warning">
-                Henüz GLB dosyası yüklenmemiş. backend/outputs klasörüne GLB dosyası ekleyin.
-              </Alert>
+              <Alert severity="warning">Henüz GLB dosyası yüklenmemiş. backend/outputs klasörüne GLB dosyası ekleyin.</Alert>
             )}
             
-            {/* 3D Model Önizleme */}
             {form.glbFile && (
               <Box>
                 <Typography variant="subtitle2" gutterBottom>3D Model Önizleme</Typography>
@@ -953,12 +902,7 @@ export function CategoriesPage() {
                   <Typography variant="subtitle2" fontWeight={700} noWrap>{category.icon} {category.name}</Typography>
                   <Typography variant="caption" color="text.secondary">{category.productCount || 0} ürün</Typography>
                   <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <Chip 
-                      label={getLayoutLabel(category.layoutSize)} 
-                      size="small" 
-                      variant="outlined"
-                      color="primary"
-                    />
+                    <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" />
                   </Stack>
                 </CardContent>
 
@@ -1002,13 +946,7 @@ function CategoryModal({ open, category, branchId, onClose, onSave }) {
   useEffect(() => {
     if (open) {
       if (category) {
-        setForm({ 
-          name: category.name || '', 
-          icon: category.icon || '📁', 
-          description: category.description || '', 
-          isActive: category.isActive !== false,
-          layoutSize: category.layoutSize || 'half'
-        })
+        setForm({ name: category.name || '', icon: category.icon || '📁', description: category.description || '', isActive: category.isActive !== false, layoutSize: category.layoutSize || 'half' })
       } else {
         setForm({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half' })
       }
@@ -1017,27 +955,16 @@ function CategoryModal({ open, category, branchId, onClose, onSave }) {
 
   const handleSubmit = async () => {
     if (!form.name) { showSnackbar('Kategori adı zorunludur', 'error'); return }
-
     setSaving(true)
     try {
-      const dataToSend = {
-        name: form.name,
-        icon: form.icon,
-        description: form.description,
-        isActive: form.isActive,
-        layoutSize: form.layoutSize
-      }
-      
       if (isEditing) {
-        await api.put(`/categories/${category.id}`, dataToSend)
+        await api.put(`/categories/${category.id}`, form)
       } else {
-        await api.post(`/branches/${branchId}/categories`, dataToSend)
+        await api.post(`/branches/${branchId}/categories`, form)
       }
       showSnackbar(isEditing ? 'Kategori güncellendi' : 'Kategori oluşturuldu', 'success')
       onSave()
-    } catch (err) { 
-      showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') 
-    }
+    } catch (err) { showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') }
     finally { setSaving(false) }
   }
 
@@ -1068,34 +995,11 @@ function CategoryModal({ open, category, branchId, onClose, onSave }) {
 
           <Box>
             <Typography variant="subtitle2" gutterBottom>Yerleşim Boyutu</Typography>
-            <ToggleButtonGroup 
-              value={form.layoutSize} 
-              exclusive 
-              onChange={(e, newValue) => { if (newValue !== null) setForm({ ...form, layoutSize: newValue }) }} 
-              fullWidth
-            >
-              <ToggleButton value="full">
-                <Stack alignItems="center" spacing={0.5}>
-                  <Fullscreen />
-                  <Typography variant="caption">Tam</Typography>
-                </Stack>
-              </ToggleButton>
-              <ToggleButton value="half">
-                <Stack alignItems="center" spacing={0.5}>
-                  <ViewModule />
-                  <Typography variant="caption">1/2</Typography>
-                </Stack>
-              </ToggleButton>
-              <ToggleButton value="third">
-                <Stack alignItems="center" spacing={0.5}>
-                  <GridView />
-                  <Typography variant="caption">1/3</Typography>
-                </Stack>
-              </ToggleButton>
+            <ToggleButtonGroup value={form.layoutSize} exclusive onChange={(e, v) => { if (v) setForm({ ...form, layoutSize: v }) }} fullWidth>
+              <ToggleButton value="full"><Stack alignItems="center" spacing={0.5}><Fullscreen /><Typography variant="caption">Tam</Typography></Stack></ToggleButton>
+              <ToggleButton value="half"><Stack alignItems="center" spacing={0.5}><ViewModule /><Typography variant="caption">1/2</Typography></Stack></ToggleButton>
+              <ToggleButton value="third"><Stack alignItems="center" spacing={0.5}><GridView /><Typography variant="caption">1/3</Typography></Stack></ToggleButton>
             </ToggleButtonGroup>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Seçili: {form.layoutSize === 'full' ? 'Tam Satır' : form.layoutSize === 'half' ? 'Yarım (1/2)' : 'Üçte Bir (1/3)'}
-            </Typography>
           </Box>
 
           <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
@@ -1137,10 +1041,7 @@ export function CategoryLayoutPage() {
       } else {
         setLayouts(lays.map(l => ({
           ...l,
-          categories: l.categories?.map(c => ({
-            category: c.category || c,
-            size: c.size || 'half'
-          })) || []
+          categories: l.categories?.map(c => ({ category: c.category || c, size: c.size || 'half' })) || []
         })))
       }
     } catch (err) { 
@@ -1253,7 +1154,6 @@ export function CategoryLayoutPage() {
 
       <Alert severity="info">Her satır maksimum 1 birim genişliğinde. Tam: 1, Yarım: 0.5, Üçte Bir: 0.33</Alert>
 
-      {/* Kullanılmamış Kategoriler */}
       <Card>
         <CardHeader title={`Kullanılmayan Kategoriler (${unusedCategories.length})`} />
         <CardContent>
@@ -1261,14 +1161,7 @@ export function CategoryLayoutPage() {
             <Grid container spacing={2}>
               {unusedCategories.map(cat => (
                 <Grid item xs={4} sm={3} md={2} key={cat.id}>
-                  <Paper
-                    variant="outlined"
-                    sx={{ 
-                      p: 1, 
-                      cursor: 'pointer', 
-                      transition: 'all 0.2s',
-                      '&:hover': { borderColor: 'primary.main', transform: 'scale(1.02)' }
-                    }}
+                  <Paper variant="outlined" sx={{ p: 1, cursor: 'pointer', transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', transform: 'scale(1.02)' } }}
                     onClick={() => {
                       if (layouts.length === 0) {
                         setLayouts([{ rowOrder: 0, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
@@ -1280,12 +1173,10 @@ export function CategoryLayoutPage() {
                           setLayouts([...layouts, { rowOrder: layouts.length, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
                         }
                       }
-                    }}
-                  >
+                    }}>
                     <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default', borderRadius: 1, overflow: 'hidden', mb: 1 }}>
                       {cat.image ? (
-                        <Box component="img" src={getImageUrl(cat.image)} alt={cat.name}
-                          sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Typography variant="h4">{cat.icon}</Typography>
@@ -1306,7 +1197,6 @@ export function CategoryLayoutPage() {
         </CardContent>
       </Card>
 
-      {/* Layout Satırları */}
       <Stack spacing={2}>
         {layouts.map((row, rowIndex) => (
           <Card key={rowIndex}>
@@ -1315,11 +1205,7 @@ export function CategoryLayoutPage() {
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <DragIndicator color="action" />
                   <Typography variant="subtitle2">Satır {rowIndex + 1}</Typography>
-                  <Chip 
-                    label={`${Math.round(getRowWidth(row) * 100)}%`} 
-                    size="small" 
-                    color={getRowWidth(row) > 1.01 ? 'error' : getRowWidth(row) >= 0.99 ? 'success' : 'warning'} 
-                  />
+                  <Chip label={`${Math.round(getRowWidth(row) * 100)}%`} size="small" color={getRowWidth(row) > 1.01 ? 'error' : getRowWidth(row) >= 0.99 ? 'success' : 'warning'} />
                 </Stack>
                 <Stack direction="row" spacing={0.5}>
                   <IconButton size="small" onClick={() => moveRow(rowIndex, -1)} disabled={rowIndex === 0}><ArrowUpward fontSize="small" /></IconButton>
@@ -1342,8 +1228,7 @@ export function CategoryLayoutPage() {
                           
                           <Box sx={{ position: 'relative', pt: item.size === 'full' ? '40%' : '60%', bgcolor: 'background.default' }}>
                             {cat.image ? (
-                              <Box component="img" src={getImageUrl(cat.image)} alt={cat.name}
-                                sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
                               <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)' }}>
                                 <Typography variant="h2">{cat.icon || '📁'}</Typography>
@@ -1391,191 +1276,6 @@ export function CategoryLayoutPage() {
       </Stack>
 
       <Button variant="outlined" startIcon={<Add />} onClick={addRow} fullWidth sx={{ py: 2 }}>Yeni Satır Ekle</Button>
-
-      {/* 📱 TELEFON ÖNİZLEMESİ */}
-      {layouts.length > 0 && (
-        <Card>
-          <CardHeader 
-            title="📱 Canlı Önizleme" 
-            subheader="Müşterilerinizin telefonlarında göreceği görünüm"
-          />
-          <CardContent sx={{ display: 'flex', justifyContent: 'center', py: 4, bgcolor: 'background.default' }}>
-            {/* Telefon Çerçevesi */}
-            <Box sx={{
-              position: 'relative',
-              width: 280,
-              height: 580,
-              bgcolor: '#1a1a1a',
-              borderRadius: '40px',
-              p: '12px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.1)',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: '12px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 80,
-                height: 24,
-                bgcolor: '#0a0a0a',
-                borderRadius: '0 0 16px 16px',
-                zIndex: 10
-              }
-            }}>
-              {/* Yan Butonlar */}
-              <Box sx={{ position: 'absolute', left: -2, top: 100, width: 3, height: 30, bgcolor: '#2a2a2a', borderRadius: '2px 0 0 2px' }} />
-              <Box sx={{ position: 'absolute', left: -2, top: 150, width: 3, height: 50, bgcolor: '#2a2a2a', borderRadius: '2px 0 0 2px' }} />
-              <Box sx={{ position: 'absolute', left: -2, top: 210, width: 3, height: 50, bgcolor: '#2a2a2a', borderRadius: '2px 0 0 2px' }} />
-              <Box sx={{ position: 'absolute', right: -2, top: 140, width: 3, height: 70, bgcolor: '#2a2a2a', borderRadius: '0 2px 2px 0' }} />
-
-              {/* Ekran */}
-              <Box sx={{
-                width: '100%',
-                height: '100%',
-                bgcolor: '#0a0a0a',
-                borderRadius: '32px',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
-                {/* Status Bar */}
-                <Box sx={{ 
-                  height: 44, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  px: 2,
-                  pt: 1
-                }}>
-                  <Typography variant="caption" color="white" fontWeight={600}>9:41</Typography>
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Box sx={{ width: 16, height: 10, border: '1px solid white', borderRadius: 1, position: 'relative' }}>
-                      <Box sx={{ position: 'absolute', right: 1, top: 1, bottom: 1, left: '30%', bgcolor: 'success.main', borderRadius: 0.5 }} />
-                    </Box>
-                  </Stack>
-                </Box>
-
-                {/* Header */}
-                <Box sx={{ 
-                  px: 2, 
-                  py: 1.5, 
-                  borderBottom: '1px solid rgba(255,255,255,0.1)',
-                  background: 'linear-gradient(180deg, rgba(229,57,53,0.2) 0%, transparent 100%)'
-                }}>
-                  <Typography variant="subtitle2" color="white" fontWeight={700} textAlign="center">
-                    🍽️ Menü
-                  </Typography>
-                </Box>
-
-                {/* İçerik - Kaydırılabilir */}
-                <Box sx={{ 
-                  height: 'calc(100% - 44px - 52px - 24px)', 
-                  overflow: 'auto',
-                  p: 1.5,
-                  '&::-webkit-scrollbar': { display: 'none' }
-                }}>
-                  <Stack spacing={1}>
-                    {layouts.map((row, rowIndex) => (
-                      <Box 
-                        key={rowIndex} 
-                        sx={{ 
-                          display: 'flex', 
-                          flexDirection: 'row',
-                          flexWrap: 'nowrap',
-                          gap: '6px',
-                          width: '100%'
-                        }}
-                      >
-                        {(row.categories || []).map((item, catIndex) => {
-                          const cat = item.category || {}
-                          const height = item.size === 'full' ? 70 : item.size === 'half' ? 85 : 85
-                          
-                          return (
-                            <Box 
-                              key={catIndex}
-                              sx={{ 
-                                flex: item.size === 'full' ? '1 1 100%' : item.size === 'half' ? '1 1 50%' : '1 1 33.333%',
-                                minWidth: 0,
-                                height, 
-                                borderRadius: 2, 
-                                overflow: 'hidden',
-                                position: 'relative',
-                                transition: 'transform 0.2s',
-                                '&:hover': { transform: 'scale(1.02)' }
-                              }}
-                            >
-                              {cat.image ? (
-                                <Box component="img" src={getImageUrl(cat.image)} alt={cat.name}
-                                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <Box sx={{ 
-                                  width: '100%', 
-                                  height: '100%', 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  justifyContent: 'center', 
-                                  background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)' 
-                                }}>
-                                  <Typography sx={{ fontSize: item.size === 'third' ? 20 : 28 }}>{cat.icon || '📁'}</Typography>
-                                </Box>
-                              )}
-                              <Box sx={{ 
-                                position: 'absolute', 
-                                inset: 0, 
-                                background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)' 
-                              }} />
-                              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1 }}>
-                                <Typography 
-                                  color="white" 
-                                  noWrap
-                                  fontWeight={600}
-                                  sx={{ 
-                                    fontSize: item.size === 'third' ? '0.6rem' : '0.7rem',
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                                  }}
-                                >
-                                  {cat.name}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          )
-                        })}
-                      </Box>
-                    ))}
-                  </Stack>
-
-                  {/* Örnek Alt Bilgi */}
-                  <Box sx={{ mt: 2, p: 1.5, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
-                    <Typography variant="caption" color="grey.500" textAlign="center" display="block">
-                      Kategoriye tıklayarak ürünleri görüntüleyin
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {/* Home Indicator */}
-                <Box sx={{ 
-                  position: 'absolute', 
-                  bottom: 8, 
-                  left: '50%', 
-                  transform: 'translateX(-50%)',
-                  width: 100,
-                  height: 4,
-                  bgcolor: 'rgba(255,255,255,0.3)',
-                  borderRadius: 2
-                }} />
-              </Box>
-            </Box>
-          </CardContent>
-
-          {/* Bilgi */}
-          <Box sx={{ px: 3, pb: 2 }}>
-            <Alert severity="success" variant="outlined" sx={{ bgcolor: 'transparent' }}>
-              <Typography variant="caption">
-                📐 Önizleme iPhone 14 boyutlarında gösterilmektedir (390×844 px ölçeklendirilmiş)
-              </Typography>
-            </Alert>
-          </Box>
-        </Card>
-      )}
     </Stack>
   )
 }
@@ -1636,9 +1336,7 @@ export function GlbFilesPage() {
           </Grid>
         </Grid>
 
-        <Alert severity="info" icon={<ViewInAr />}>
-          GLB dosyaları backend/outputs klasörüne yüklenmelidir.
-        </Alert>
+        <Alert severity="info" icon={<ViewInAr />}>GLB dosyaları backend/outputs klasörüne yüklenmelidir.</Alert>
 
         <Card>
           <CardHeader title="3D Model Dosyaları" action={<Button startIcon={<Refresh />} onClick={loadFiles}>Yenile</Button>} />
@@ -1656,21 +1354,12 @@ export function GlbFilesPage() {
                             <Typography variant="caption" color="text.secondary">{file.sizeFormatted}</Typography>
                           </Box>
                         </Stack>
-                        
                         {file.isAssigned ? (
                           <Chip label={`✓ ${file.assignedTo}`} color="success" variant="outlined" size="small" icon={<Restaurant />} />
                         ) : (
                           <Chip label="Atanmamış" color="warning" variant="outlined" size="small" />
                         )}
-
-                        <Button 
-                          variant="outlined" 
-                          size="small" 
-                          startIcon={<ThreeSixty />}
-                          onClick={() => setPreviewDialog({ open: true, file })}
-                        >
-                          3D Önizle
-                        </Button>
+                        <Button variant="outlined" size="small" startIcon={<ThreeSixty />} onClick={() => setPreviewDialog({ open: true, file })}>3D Önizle</Button>
                       </Stack>
                     </Paper>
                   </Grid>
@@ -1682,7 +1371,6 @@ export function GlbFilesPage() {
           </CardContent>
         </Card>
 
-        {/* 3D Preview Dialog */}
         <Dialog open={previewDialog.open} onClose={() => setPreviewDialog({ open: false, file: null })} maxWidth="sm" fullWidth>
           <DialogTitle>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -1958,7 +1646,7 @@ export function ReviewsPage() {
   )
 }
 
-// ==================== BRANCH SETTINGS PAGE ====================
+// ==================== BRANCH SETTINGS PAGE - DÜZGÜN GÖRSEL YÜKLEME ====================
 export function BranchSettingsPage() {
   const { branchId } = useParams()
   const { refreshBranch } = useBranch()
@@ -1966,7 +1654,16 @@ export function BranchSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [branch, setBranch] = useState(null)
-  const [form, setForm] = useState({ name: '', description: '', address: '', phone: '', whatsapp: '', instagram: '', workingHours: '', isActive: true })
+  const [form, setForm] = useState({ 
+    name: '', 
+    description: '', 
+    address: '', 
+    phone: '', 
+    whatsapp: '', 
+    instagram: '', 
+    workingHours: '', 
+    isActive: true 
+  })
 
   useEffect(() => { if (branchId) loadBranch() }, [branchId])
 
@@ -1974,7 +1671,16 @@ export function BranchSettingsPage() {
     try {
       const res = await api.get(`/branches/${branchId}`)
       setBranch(res.data)
-      setForm({ name: res.data.name || '', description: res.data.description || '', address: res.data.address || '', phone: res.data.phone || '', whatsapp: res.data.whatsapp || '', instagram: res.data.instagram || '', workingHours: res.data.workingHours || '', isActive: res.data.isActive !== false })
+      setForm({ 
+        name: res.data.name || '', 
+        description: res.data.description || '', 
+        address: res.data.address || '', 
+        phone: res.data.phone || '', 
+        whatsapp: res.data.whatsapp || '', 
+        instagram: res.data.instagram || '', 
+        workingHours: res.data.workingHours || '', 
+        isActive: res.data.isActive !== false 
+      })
     } catch { showSnackbar('Şube bilgileri yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
@@ -1982,7 +1688,12 @@ export function BranchSettingsPage() {
   const handleSave = async () => {
     if (!form.name) { showSnackbar('Şube adı zorunludur', 'error'); return }
     setSaving(true)
-    try { await api.put(`/branches/${branchId}`, form); showSnackbar('Ayarlar kaydedildi', 'success'); refreshBranch(); loadBranch() }
+    try { 
+      await api.put(`/branches/${branchId}`, form)
+      showSnackbar('Ayarlar kaydedildi', 'success')
+      refreshBranch()
+      loadBranch() 
+    }
     catch { showSnackbar('Kaydetme başarısız', 'error') }
     finally { setSaving(false) }
   }
@@ -2003,48 +1714,469 @@ export function BranchSettingsPage() {
   return (
     <PageWrapper>
       <Stack spacing={3}>
+        {/* Header */}
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
-          <Box><Typography variant="h6" fontWeight={700}>Şube Ayarları</Typography><Typography variant="body2" color="text.secondary">Şube bilgilerini ve görsellerini düzenleyin</Typography></Box>
-          <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>Şube Ayarları</Typography>
+            <Typography variant="body2" color="text.secondary">Şube bilgilerini ve görsellerini düzenleyin</Typography>
+          </Box>
+          <Button 
+            variant="contained" 
+            onClick={handleSave} 
+            disabled={saving} 
+            startIcon={saving ? <CircularProgress size={20} /> : <Check />}
+          >
+            {saving ? 'Kaydediliyor...' : 'Kaydet'}
+          </Button>
         </Stack>
 
+        {/* GÖRSELLER BÖLÜMÜ */}
         <Card>
-          <CardHeader title="Görseller" />
+          <CardHeader 
+            title="Görseller" 
+            subheader="Logo, şube görseli, banner ve menü üst görselini buradan yükleyin"
+          />
           <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={6} sm={3}><ImageUploader label="Logo" value={branch?.logo} onChange={(file) => handleImageUpload(file, 'logo')} aspectRatio="1/1" size="small" /></Grid>
-              <Grid item xs={6} sm={3}><ImageUploader label="Şube Görseli" value={branch?.image} onChange={(file) => handleImageUpload(file, 'image')} aspectRatio="16/9" size="small" /></Grid>
-              <Grid item xs={6} sm={3}><ImageUploader label="Banner" value={branch?.banner} onChange={(file) => handleImageUpload(file, 'banner')} aspectRatio="21/9" size="small" /></Grid>
-              <Grid item xs={6} sm={3}><ImageUploader label="Menü Üst Görseli" value={branch?.homepageImage} onChange={(file) => handleImageUpload(file, 'homepageImage')} aspectRatio="16/9" size="small" /></Grid>
+            <Grid container spacing={3}>
+              {/* Logo */}
+              <Grid item xs={6} sm={6} md={3}>
+                <Box sx={{ height: '100%' }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Logo</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
+                    Şube logosu (kare format)
+                  </Typography>
+                  <Box
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '100%',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: '2px dashed',
+                      borderColor: branch?.logo ? 'transparent' : 'divider',
+                      bgcolor: 'background.default',
+                      '&:hover .overlay': { opacity: 1 }
+                    }}
+                  >
+                    {branch?.logo ? (
+                      <>
+                        <Box
+                          component="img"
+                          src={getImageUrl(branch.logo)}
+                          alt="Logo"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        <Box
+                          className="overlay"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            bgcolor: 'rgba(0,0,0,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0,
+                            transition: 'opacity 0.2s'
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={0.5}>
+                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
+                            <Typography variant="caption" color="white">Değiştir</Typography>
+                          </Stack>
+                        </Box>
+                      </>
+                    ) : (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Stack alignItems="center" spacing={0.5}>
+                          <CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary">Yükle</Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,.heic"
+                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'logo')}
+                    />
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* Şube Görseli */}
+              <Grid item xs={6} sm={6} md={3}>
+                <Box sx={{ height: '100%' }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Şube Görseli</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
+                    Şube seçim sayfasında
+                  </Typography>
+                  <Box
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '56.25%',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: '2px dashed',
+                      borderColor: branch?.image ? 'transparent' : 'divider',
+                      bgcolor: 'background.default',
+                      '&:hover .overlay': { opacity: 1 }
+                    }}
+                  >
+                    {branch?.image ? (
+                      <>
+                        <Box
+                          component="img"
+                          src={getImageUrl(branch.image)}
+                          alt="Şube"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        <Box
+                          className="overlay"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            bgcolor: 'rgba(0,0,0,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0,
+                            transition: 'opacity 0.2s'
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={0.5}>
+                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
+                            <Typography variant="caption" color="white">Değiştir</Typography>
+                          </Stack>
+                        </Box>
+                      </>
+                    ) : (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Stack alignItems="center" spacing={0.5}>
+                          <CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary">Yükle</Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,.heic"
+                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'image')}
+                    />
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* Banner */}
+              <Grid item xs={6} sm={6} md={3}>
+                <Box sx={{ height: '100%' }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Banner</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
+                    Geniş format banner
+                  </Typography>
+                  <Box
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '42.86%',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: '2px dashed',
+                      borderColor: branch?.banner ? 'transparent' : 'divider',
+                      bgcolor: 'background.default',
+                      '&:hover .overlay': { opacity: 1 }
+                    }}
+                  >
+                    {branch?.banner ? (
+                      <>
+                        <Box
+                          component="img"
+                          src={getImageUrl(branch.banner)}
+                          alt="Banner"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        <Box
+                          className="overlay"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            bgcolor: 'rgba(0,0,0,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0,
+                            transition: 'opacity 0.2s'
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={0.5}>
+                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
+                            <Typography variant="caption" color="white">Değiştir</Typography>
+                          </Stack>
+                        </Box>
+                      </>
+                    ) : (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Stack alignItems="center" spacing={0.5}>
+                          <CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary">Yükle</Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,.heic"
+                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'banner')}
+                    />
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* Menü Üst Görseli - Vurgulu */}
+              <Grid item xs={6} sm={6} md={3}>
+                <Box sx={{ height: '100%' }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom color="primary.main">
+                    📱 Menü Üst Görseli
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
+                    Menüde en üstte görünür
+                  </Typography>
+                  <Box
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '56.25%',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: '2px solid',
+                      borderColor: branch?.homepageImage ? 'success.main' : 'primary.main',
+                      bgcolor: branch?.homepageImage ? 'background.default' : alpha('#e53935', 0.05),
+                      '&:hover .overlay': { opacity: 1 }
+                    }}
+                  >
+                    {branch?.homepageImage ? (
+                      <>
+                        <Box
+                          component="img"
+                          src={getImageUrl(branch.homepageImage)}
+                          alt="Menü Üst Görseli"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        <Box
+                          className="overlay"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            bgcolor: 'rgba(0,0,0,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0,
+                            transition: 'opacity 0.2s'
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={0.5}>
+                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
+                            <Typography variant="caption" color="white">Değiştir</Typography>
+                          </Stack>
+                        </Box>
+                        <Chip
+                          label="Aktif"
+                          color="success"
+                          size="small"
+                          sx={{ position: 'absolute', top: 8, right: 8 }}
+                        />
+                      </>
+                    ) : (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Stack alignItems="center" spacing={0.5}>
+                          <CloudUpload sx={{ fontSize: 32, color: 'primary.main' }} />
+                          <Typography variant="caption" color="primary.main" fontWeight={600}>Yükle</Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,.heic"
+                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'homepageImage')}
+                    />
+                  </Box>
+                </Box>
+              </Grid>
             </Grid>
+
+            {/* Görsel Açıklamaları */}
+            <Alert severity="info" sx={{ mt: 3 }}>
+              <Typography variant="subtitle2" gutterBottom>Görsel Kullanım Alanları:</Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2, '& li': { mb: 0.5 } }}>
+                <li><Typography variant="body2"><strong>Logo:</strong> Menüde sol üstte ve şube kartlarında</Typography></li>
+                <li><Typography variant="body2"><strong>Şube Görseli:</strong> Ana sayfadaki şube seçim kartlarında</Typography></li>
+                <li><Typography variant="body2"><strong>Banner:</strong> Yedek olarak menü üstünde</Typography></li>
+                <li><Typography variant="body2"><strong>Menü Üst Görseli:</strong> Müşteri menüsünün en üstündeki büyük görsel</Typography></li>
+              </Box>
+            </Alert>
           </CardContent>
         </Card>
 
+        {/* TEMEL BİLGİLER */}
         <Card>
           <CardHeader title="Temel Bilgiler" />
           <CardContent>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}><TextField fullWidth label="Şube Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></Grid>
-              <Grid item xs={12} md={6}><TextField fullWidth label="URL Slug" value={branch?.slug || ''} disabled helperText="Değiştirilemez" /></Grid>
-              <Grid item xs={12}><TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3} /></Grid>
-              <Grid item xs={12}><TextField fullWidth label="Adres" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }} /></Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth label="Şube Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth label="URL Slug" value={branch?.slug || ''} disabled helperText="Değiştirilemez" />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} />
+              </Grid>
             </Grid>
           </CardContent>
         </Card>
 
+        {/* İLETİŞİM BİLGİLERİ */}
         <Card>
           <CardHeader title="İletişim Bilgileri" />
           <CardContent>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Telefon" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="WhatsApp" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><WhatsApp /></InputAdornment> }} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Instagram" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><Instagram /></InputAdornment> }} placeholder="@kullaniciadi" /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Çalışma Saatleri" value={form.workingHours} onChange={e => setForm({ ...form, workingHours: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><AccessTime /></InputAdornment> }} placeholder="09:00 - 22:00" /></Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Adres" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} multiline rows={2}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Telefon" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="WhatsApp" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><WhatsApp /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Instagram" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} placeholder="@kullaniciadi"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><Instagram /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Çalışma Saatleri" value={form.workingHours} onChange={e => setForm({ ...form, workingHours: e.target.value })} placeholder="09:00 - 22:00"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><AccessTime /></InputAdornment> }} />
+              </Grid>
             </Grid>
           </CardContent>
         </Card>
 
-        <Card><CardHeader title="Durum" /><CardContent><FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif (Şube seçim ekranında görünsün)" /></CardContent></Card>
+        {/* DURUM */}
+        <Card>
+          <CardContent>
+            <FormControlLabel
+              control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
+              label={
+                <Box>
+                  <Typography fontWeight={600}>Şube Aktif</Typography>
+                  <Typography variant="caption" color="text.secondary">Pasif şubeler müşterilere görünmez</Typography>
+                </Box>
+              }
+            />
+          </CardContent>
+        </Card>
       </Stack>
     </PageWrapper>
   )

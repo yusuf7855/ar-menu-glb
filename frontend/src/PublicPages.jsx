@@ -13,7 +13,8 @@ import {
   Restaurant, Store, Phone, LocationOn, AccessTime, Instagram, WhatsApp,
   KeyboardArrowRight, ViewInAr, Close, ShoppingBag, Star, Search,
   Person, Lock, Visibility, VisibilityOff, Email, Login as LoginIcon,
-  Send, ArrowBack, ExpandMore, LocalOffer, Info, RateReview, ChevronLeft, ChevronRight
+  Send, ArrowBack, ExpandMore, LocalOffer, Info, RateReview, ChevronLeft, ChevronRight,
+  Language
 } from '@mui/icons-material'
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
 import { useAuth, API_URL, api, formatPrice, getImageUrl, getGlbUrl } from './App'
@@ -262,8 +263,25 @@ export function MenuPage() {
   const [reviewForm, setReviewForm] = useState({ customerName: '', rating: 5, comment: '', contact: '' })
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
+  
+  // Duyuru slider state
+  const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0)
+  
+  // Arama state
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => { if (slug) loadData() }, [slug])
+  
+  // Duyuru otomatik geçiş
+  useEffect(() => {
+    if (announcements.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentAnnouncementIndex(prev => (prev + 1) % announcements.length)
+      }, 4000)
+      return () => clearInterval(interval)
+    }
+  }, [announcements.length])
 
   const loadData = async () => {
     try {
@@ -285,6 +303,7 @@ export function MenuPage() {
       
       // Layouts - Backend'den gelen veriyi işle
       const lays = layoutsRes.data || []
+      console.log('Layouts from API:', lays)
       setLayouts(lays)
       
       setAnnouncements(announcementsRes.data || [])
@@ -317,22 +336,28 @@ export function MenuPage() {
     [products]
   )
 
-  // Kategori bazlı ürün sayısı hesaplama - DÜZELTME: String() karşılaştırması
+  // Kategori bazlı ürün sayısı hesaplama
   const getCategoryProductCount = (categoryId) => {
     if (!categoryId) return 0
-    return products.filter(p => String(p.categoryId) === String(categoryId)).length
+    return products.filter(p => {
+      const pCatId = p.categoryId || p.category?._id || p.category?.id || p.category
+      return pCatId === categoryId || String(pCatId) === String(categoryId)
+    }).length
   }
 
-  // Seçili kategorinin ürünleri - DÜZELTME: String() karşılaştırması
+  // Seçili kategorinin ürünleri
   const categoryProducts = useMemo(() => {
     if (!selectedCategory) return []
-    return products.filter(p => String(p.categoryId) === String(selectedCategory))
+    return products.filter(p => {
+      const pCatId = p.categoryId || p.category?._id || p.category?.id || p.category
+      return pCatId === selectedCategory || String(pCatId) === String(selectedCategory)
+    })
   }, [products, selectedCategory])
 
   // Seçili kategori bilgisi
   const selectedCategoryInfo = useMemo(() => {
     if (!selectedCategory) return null
-    return categories.find(c => String(c.id) === String(selectedCategory))
+    return categories.find(c => c.id === selectedCategory || String(c.id) === String(selectedCategory))
   }, [categories, selectedCategory])
 
   // Kampanya scroll fonksiyonları
@@ -342,6 +367,16 @@ export function MenuPage() {
       campaignScrollRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' })
     }
   }
+  
+  // Arama sonuçları
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return []
+    const query = searchQuery.toLowerCase().trim()
+    return products.filter(p => 
+      p.name?.toLowerCase().includes(query) || 
+      p.description?.toLowerCase().includes(query)
+    )
+  }, [products, searchQuery])
 
   if (loading) {
     return (
@@ -374,6 +409,48 @@ export function MenuPage() {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
+
+        {/* ========== HEADER BAR - Dil & Arama ========== */}
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          zIndex: 10,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 1.5
+        }}>
+          {/* Sol - Dil Seçeneği */}
+          <IconButton 
+            sx={{ 
+              bgcolor: 'rgba(0,0,0,0.5)', 
+              backdropFilter: 'blur(10px)',
+              color: 'white',
+              width: 40,
+              height: 40,
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+            }}
+          >
+            TR
+          </IconButton>
+          
+          {/* Sağ - Arama */}
+          <IconButton 
+            onClick={() => setShowSearch(true)}
+            sx={{ 
+              bgcolor: 'rgba(0,0,0,0.5)', 
+              backdropFilter: 'blur(10px)',
+              color: 'white',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+            }}
+          >
+            <Search />
+          </IconButton>
+        </Box>
 
         {/* ========== 1. HOMEPAGE IMAGE ========== */}
         <Box sx={{ position: 'relative', width: '100%', height: isMobile ? 220 : 320, overflow: 'hidden' }}>
@@ -408,25 +485,23 @@ export function MenuPage() {
           </Box>
         </Box>
 
-        {/* ========== 2. GÖRÜŞ & YORUMLARINIZ BUTONU ========== */}
-        <Box sx={{ px: 2, py: 2 }}>
-          <Button
-            fullWidth
-            variant="contained"
-            size="large"
-            startIcon={<RateReview />}
+        {/* ========== 2. GÖRÜŞ & YORUMLARINIZ - Minimal ========== */}
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography
             onClick={() => setShowReviewForm(true)}
             sx={{
-              py: 1.5,
-              background: 'linear-gradient(135deg, #e53935 0%, #c62828 100%)',
-              fontSize: '1rem',
-              fontWeight: 700,
-              borderRadius: 3,
-              boxShadow: '0 4px 20px rgba(229,57,53,0.4)'
+              color: 'grey.400',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.5,
+              '&:hover': { color: 'white' },
+              transition: 'color 0.2s'
             }}
           >
-            Görüş & Yorumlarınız
-          </Button>
+            💬 Görüş & Yorumlarınız
+          </Typography>
           
           {/* Başarı mesajı */}
           {reviewSubmitted && (
@@ -438,18 +513,75 @@ export function MenuPage() {
           )}
         </Box>
 
-        {/* ========== 3. DUYURULAR ========== */}
+        {/* ========== 3. DUYURULAR - Kayan Slider ========== */}
         {announcements.length > 0 && (
           <Box sx={{ px: 2, pb: 2 }}>
-            <Stack spacing={1}>
-              {announcements.map(ann => (
-                <Alert key={ann.id} severity={ann.type === 'promo' ? 'error' : ann.type} icon={<Typography>{ann.icon}</Typography>}
-                  sx={{ '& .MuiAlert-message': { width: '100%' }, borderRadius: 2 }}>
-                  <Typography fontWeight={600}>{ann.title}</Typography>
-                  <Typography variant="body2">{ann.message}</Typography>
-                </Alert>
-              ))}
-            </Stack>
+            <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+              {/* Slider Container */}
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  transition: 'transform 0.5s ease-in-out',
+                  transform: `translateX(-${currentAnnouncementIndex * 100}%)`
+                }}
+              >
+                {announcements.map((ann, index) => (
+                  <Box 
+                    key={ann.id || index} 
+                    sx={{ 
+                      minWidth: '100%',
+                      px: 0.5
+                    }}
+                  >
+                    <Box sx={{
+                      bgcolor: ann.type === 'promo' ? 'rgba(229,57,53,0.15)' : 
+                               ann.type === 'warning' ? 'rgba(255,152,0,0.15)' : 
+                               ann.type === 'info' ? 'rgba(30,136,229,0.15)' : 'rgba(255,255,255,0.05)',
+                      borderRadius: 2,
+                      p: 2,
+                      borderLeft: '3px solid',
+                      borderColor: ann.type === 'promo' ? 'error.main' : 
+                                   ann.type === 'warning' ? 'warning.main' : 
+                                   ann.type === 'info' ? 'info.main' : 'grey.600'
+                    }}>
+                      <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                        <Typography sx={{ fontSize: '1.2rem' }}>{ann.icon || '📢'}</Typography>
+                        <Box>
+                          <Typography fontWeight={600} color="white" sx={{ fontSize: '0.9rem' }}>{ann.title}</Typography>
+                          <Typography variant="body2" color="grey.400" sx={{ mt: 0.25 }}>{ann.message}</Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+              
+              {/* Dots Indicator */}
+              {announcements.length > 1 && (
+                <Stack 
+                  direction="row" 
+                  spacing={0.75} 
+                  justifyContent="center" 
+                  sx={{ mt: 1.5 }}
+                >
+                  {announcements.map((_, index) => (
+                    <Box
+                      key={index}
+                      onClick={() => setCurrentAnnouncementIndex(index)}
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: currentAnnouncementIndex === index ? 'primary.main' : 'grey.700',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s',
+                        '&:hover': { bgcolor: currentAnnouncementIndex === index ? 'primary.main' : 'grey.500' }
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Box>
           </Box>
         )}
 
@@ -457,10 +589,7 @@ export function MenuPage() {
         {campaignProducts.length > 0 && (
           <Box sx={{ py: 2 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <LocalOffer color="error" />
-                <Typography variant="h6" fontWeight={700}>🔥 Kampanyalar</Typography>
-              </Stack>
+              <Typography variant="h6" fontWeight={700}>Kampanyalar</Typography>
               {/* Scroll Butonları - Desktop */}
               {!isMobile && campaignProducts.length > 3 && (
                 <Stack direction="row" spacing={1}>
@@ -478,7 +607,7 @@ export function MenuPage() {
               ref={campaignScrollRef}
               sx={{ 
                 display: 'flex', 
-                gap: 2, 
+                gap: 1.5, 
                 overflowX: 'auto', 
                 px: 2,
                 pb: 1,
@@ -489,49 +618,91 @@ export function MenuPage() {
               }}
             >
               {campaignProducts.map(product => (
-                <Card 
+                <Box 
                   key={product.id} 
                   onClick={() => setSelectedProduct(product)}
                   sx={{ 
-                    minWidth: 180, 
-                    maxWidth: 180, 
+                    minWidth: 160, 
+                    width: 160, 
                     cursor: 'pointer', 
                     flexShrink: 0, 
                     scrollSnapAlign: 'start',
-                    border: '2px solid', 
-                    borderColor: 'error.main',
-                    borderRadius: 3,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    position: 'relative',
+                    aspectRatio: '1 / 1',
                     transition: 'transform 0.2s, box-shadow 0.2s', 
-                    '&:hover': { transform: 'scale(1.03)', boxShadow: '0 8px 24px rgba(229,57,53,0.3)' } 
+                    '&:hover': { transform: 'scale(1.03)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' } 
                   }}
                 >
-                  <Box sx={{ position: 'relative', pt: '100%' }}>
-                    {product.thumbnail ? (
-                      <CardMedia component="img" image={getImageUrl(product.thumbnail)} alt={product.name}
-                        sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-                        <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
-                      </Box>
-                    )}
-                    <Chip 
-                      label={`%${Math.round((1 - product.campaignPrice / product.price) * 100)} İNDİRİM`} 
-                      size="small" 
-                      color="error" 
-                      sx={{ position: 'absolute', top: 8, left: 8, fontWeight: 700, fontSize: '0.7rem' }} 
+                  {/* Ürün Görseli */}
+                  {product.thumbnail ? (
+                    <Box 
+                      component="img" 
+                      src={getImageUrl(product.thumbnail)} 
+                      alt={product.name}
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     />
-                    {product.hasGlb && (
-                      <Chip icon={<ViewInAr sx={{ fontSize: 14 }} />} label="3D" size="small" color="info" sx={{ position: 'absolute', top: 8, right: 8 }} />
-                    )}
-                  </Box>
-                  <CardContent sx={{ p: 1.5 }}>
-                    <Typography variant="subtitle2" fontWeight={600} noWrap>{product.name}</Typography>
-                    <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mt: 0.5 }}>
-                      <Typography variant="h6" color="error.main" fontWeight={700}>{formatPrice(product.campaignPrice)}</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>{formatPrice(product.price)}</Typography>
+                  ) : (
+                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.paper' }}>
+                      <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
+                    </Box>
+                  )}
+                  
+                  {/* Gradient Overlay */}
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    inset: 0, 
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' 
+                  }} />
+                  
+                  {/* İndirim Badge */}
+                  <Chip 
+                    label={`%${Math.round((1 - product.campaignPrice / product.price) * 100)}`} 
+                    size="small" 
+                    color="error" 
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 8, 
+                      left: 8, 
+                      fontWeight: 700, 
+                      fontSize: '0.7rem',
+                      height: 22
+                    }} 
+                  />
+                  
+                  {/* 3D Badge */}
+                  {product.hasGlb && (
+                    <Chip 
+                      icon={<ViewInAr sx={{ fontSize: 14 }} />} 
+                      label="3D" 
+                      size="small" 
+                      color="info" 
+                      sx={{ position: 'absolute', top: 8, right: 8, height: 22 }} 
+                    />
+                  )}
+                  
+                  {/* İsim ve Fiyat - Resim üzerinde */}
+                  <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
+                    <Typography 
+                      variant="subtitle2" 
+                      fontWeight={600} 
+                      color="white"
+                      noWrap
+                      sx={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+                    >
+                      {product.name}
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mt: 0.25 }}>
+                      <Typography variant="body1" color="error.main" fontWeight={700}>
+                        {formatPrice(product.campaignPrice)}
+                      </Typography>
+                      <Typography variant="caption" color="grey.500" sx={{ textDecoration: 'line-through' }}>
+                        {formatPrice(product.price)}
+                      </Typography>
                     </Stack>
-                  </CardContent>
-                </Card>
+                  </Box>
+                </Box>
               ))}
             </Box>
           </Box>
@@ -539,9 +710,9 @@ export function MenuPage() {
 
         {/* ========== 5. KATEGORİLER (Bölümler) ========== */}
         <Box sx={{ px: 2, py: 2 }}>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>📂 Bölümler</Typography>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Bölümler</Typography>
           
-          {layouts.length > 0 ? (
+          {layouts && layouts.length > 0 ? (
             // Layout var - Admin panelinden ayarlanan düzende göster
             <Stack spacing={1.5}>
               {layouts.map((row, rowIndex) => {
@@ -550,55 +721,62 @@ export function MenuPage() {
                 
                 return (
                   <Box 
-                    key={row.id || rowIndex} 
+                    key={row.id || row._id || `row-${rowIndex}`} 
                     sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'row',
-                      flexWrap: 'nowrap',
-                      gap: '8px',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(12, 1fr)',
+                      gap: 1.5,
                       width: '100%'
                     }}
                   >
                     {rowCategories.map((item, catIndex) => {
-                      // Kategori bilgisini al - nested object veya direkt obje olabilir
-                      const category = item.category || {}
+                      const category = item.category || item
                       const categoryId = category.id || category._id
                       
-                      // Kategori bulunamadıysa atla
                       if (!categoryId && !category.name) return null
                       
-                      const size = item.size || 'half'
+                      const size = item.size || category.layoutSize || 'half'
                       const productCount = getCategoryProductCount(categoryId)
                       
-                      // Boyuta göre yükseklik
-                      const height = size === 'full' ? 100 : size === 'half' ? 120 : 130
+                      // Grid span değerleri
+                      const gridSpan = size === 'full' ? 12 : size === 'half' ? 6 : 4
                       
-                      // Flex değerleri
-                      const flexValue = size === 'full' 
-                        ? '1 1 100%' 
-                        : size === 'half' 
-                          ? '1 1 calc(50% - 4px)' 
-                          : '1 1 calc(33.333% - 5.33px)'
+                      // Aspect ratio - full için dikdörtgen, half ve third için kare
+                      const aspectRatio = size === 'full' ? '16 / 9' : '1 / 1'
                       
                       return (
                         <Box 
-                          key={categoryId || catIndex}
+                          key={categoryId || `cat-${catIndex}`}
                           onClick={() => setSelectedCategory(categoryId)}
                           sx={{ 
-                            flex: flexValue,
-                            minWidth: 0,
-                            height, 
+                            gridColumn: `span ${gridSpan}`,
+                            aspectRatio,
                             borderRadius: 2, 
                             overflow: 'hidden',
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'transform 0.2s, box-shadow 0.2s',
-                            '&:hover': { transform: 'scale(1.02)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }
+                            '&:hover': { 
+                              transform: 'scale(1.02)', 
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.3)' 
+                            },
+                            '&:active': {
+                              transform: 'scale(0.98)'
+                            }
                           }}
                         >
+                          {/* Görsel veya Icon */}
                           {category.image ? (
-                            <Box component="img" src={getImageUrl(category.image)} alt={category.name}
-                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <Box 
+                              component="img" 
+                              src={getImageUrl(category.image)} 
+                              alt={category.name}
+                              sx={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover' 
+                              }} 
+                            />
                           ) : (
                             <Box sx={{ 
                               width: '100%', 
@@ -608,23 +786,27 @@ export function MenuPage() {
                               justifyContent: 'center', 
                               background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)' 
                             }}>
-                              <Typography sx={{ fontSize: size === 'third' ? 32 : 48 }}>
+                              <Typography sx={{ fontSize: gridSpan === 4 ? 32 : gridSpan === 6 ? 48 : 56 }}>
                                 {category.icon || '📁'}
                               </Typography>
                             </Box>
                           )}
+                          
+                          {/* Gradient Overlay */}
                           <Box sx={{ 
                             position: 'absolute', 
                             inset: 0, 
                             background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)' 
                           }} />
+                          
+                          {/* İsim ve Ürün Sayısı */}
                           <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
                             <Typography 
                               color="white" 
                               fontWeight={700}
                               noWrap
                               sx={{ 
-                                fontSize: size === 'third' ? '0.75rem' : '0.9rem',
+                                fontSize: gridSpan === 4 ? '0.75rem' : gridSpan === 6 ? '0.85rem' : '1rem',
                                 textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                               }}
                             >
@@ -642,41 +824,61 @@ export function MenuPage() {
               })}
             </Stack>
           ) : categories.length > 0 ? (
-            // Layout yok - Basit 2'li grid göster
-            <Grid container spacing={1.5}>
+            // Layout yok - Varsayılan 2'li grid göster
+            <Box sx={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: 1.5
+            }}>
               {categories.map(cat => {
                 const productCount = getCategoryProductCount(cat.id)
+                
                 return (
-                  <Grid item xs={6} key={cat.id}>
-                    <Card 
-                      onClick={() => setSelectedCategory(cat.id)}
-                      sx={{ 
-                        height: 120, 
-                        cursor: 'pointer', 
-                        position: 'relative', 
-                        overflow: 'hidden',
-                        transition: 'transform 0.2s',
-                        '&:hover': { transform: 'scale(1.02)' }
-                      }}
-                    >
-                      {cat.image ? (
-                        <CardMedia component="img" image={getImageUrl(cat.image)} alt={cat.name}
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-                          <Typography variant="h2">{cat.icon}</Typography>
-                        </Box>
-                      )}
-                      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)' }} />
-                      <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
-                        <Typography variant="subtitle2" fontWeight={700} color="white">{cat.icon} {cat.name}</Typography>
-                        <Typography variant="caption" color="grey.400">{productCount} ürün</Typography>
+                  <Box 
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    sx={{ 
+                      aspectRatio: '1 / 1',
+                      cursor: 'pointer', 
+                      position: 'relative', 
+                      overflow: 'hidden',
+                      borderRadius: 2,
+                      transition: 'transform 0.2s',
+                      '&:hover': { transform: 'scale(1.02)' },
+                      '&:active': { transform: 'scale(0.98)' }
+                    }}
+                  >
+                    {cat.image ? (
+                      <Box 
+                        component="img" 
+                        src={getImageUrl(cat.image)} 
+                        alt={cat.name}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <Box sx={{ 
+                        height: '100%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)'
+                      }}>
+                        <Typography sx={{ fontSize: 48 }}>{cat.icon || '📁'}</Typography>
                       </Box>
-                    </Card>
-                  </Grid>
+                    )}
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      inset: 0, 
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)' 
+                    }} />
+                    <Box sx={{ position: 'absolute', bottom: 8, left: 12, right: 12 }}>
+                      <Typography color="white" fontWeight={700} noWrap>{cat.name}</Typography>
+                      <Typography variant="caption" color="grey.400">{productCount} ürün</Typography>
+                    </Box>
+                  </Box>
                 )
               })}
-            </Grid>
+            </Box>
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography color="text.secondary">Henüz kategori eklenmemiş</Typography>
@@ -687,16 +889,23 @@ export function MenuPage() {
         {/* ========== 6. FOOTER ========== */}
         <Box sx={{ mt: 4, pt: 4, pb: 6, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
           <Box sx={{ px: 2, maxWidth: 600, mx: 'auto' }}>
-            {/* Logo ve İsim */}
+            {/* Logo - Genişletilmiş, Text yok */}
             <Stack alignItems="center" spacing={2} sx={{ mb: 3 }}>
               {branch?.logo ? (
-                <Avatar src={getImageUrl(branch.logo)} sx={{ width: 60, height: 60 }} />
+                <Avatar 
+                  src={getImageUrl(branch.logo)} 
+                  sx={{ 
+                    width: 100, 
+                    height: 100,
+                    '& img': { objectFit: 'contain' }
+                  }} 
+                  variant="rounded"
+                />
               ) : (
-                <Box sx={{ width: 60, height: 60, borderRadius: '50%', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Restaurant sx={{ fontSize: 30, color: 'white' }} />
+                <Box sx={{ width: 100, height: 100, borderRadius: 2, bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Restaurant sx={{ fontSize: 50, color: 'white' }} />
                 </Box>
               )}
-              <Typography variant="h6" fontWeight={700}>{branch?.name}</Typography>
             </Stack>
 
             {/* İletişim Bilgileri */}
@@ -716,7 +925,7 @@ export function MenuPage() {
                   <Phone color="primary" />
                   <Box>
                     <Typography variant="caption" color="text.secondary">Telefon</Typography>
-                    <Typography variant="body2" component="a" href={`tel:${branch.phone}`} sx={{ color: 'white', textDecoration: 'none' }}>
+                    <Typography variant="body2" component="a" href={`tel:${branch.phone}`} sx={{ color: 'white', textDecoration: 'none', display: 'block' }}>
                       {branch.phone}
                     </Typography>
                   </Box>
@@ -767,11 +976,97 @@ export function MenuPage() {
             {/* Copyright */}
             <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
               <Typography variant="caption" color="text.secondary">
-                AR Menu ile oluşturuldu • © {new Date().getFullYear()} {branch?.name}
+                AR Menu © {new Date().getFullYear()}
               </Typography>
             </Box>
           </Box>
         </Box>
+
+        {/* ========== ARAMA MODAL ========== */}
+        <Dialog 
+          open={showSearch} 
+          onClose={() => { setShowSearch(false); setSearchQuery(''); }} 
+          fullScreen={isMobile}
+          maxWidth="sm" 
+          fullWidth
+          PaperProps={{ sx: { bgcolor: 'background.default' } }}
+        >
+          <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider', pb: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <IconButton onClick={() => { setShowSearch(false); setSearchQuery(''); }} edge="start">
+                <Close />
+              </IconButton>
+              <TextField 
+                fullWidth
+                placeholder="Ürün ara..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                autoFocus
+                variant="standard"
+                InputProps={{
+                  disableUnderline: true,
+                  sx: { fontSize: '1.1rem' }
+                }}
+              />
+            </Stack>
+          </DialogTitle>
+          <DialogContent sx={{ p: 2 }}>
+            {searchQuery.trim() ? (
+              searchResults.length > 0 ? (
+                <Grid container spacing={2}>
+                  {searchResults.map(product => (
+                    <Grid item xs={6} sm={4} key={product.id}>
+                      <Box 
+                        onClick={() => { setSelectedProduct(product); setShowSearch(false); setSearchQuery(''); }}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                          position: 'relative',
+                          aspectRatio: '1 / 1',
+                          transition: 'transform 0.2s', 
+                          '&:hover': { transform: 'scale(1.02)' } 
+                        }}
+                      >
+                        {product.thumbnail ? (
+                          <Box 
+                            component="img" 
+                            src={getImageUrl(product.thumbnail)} 
+                            alt={product.name}
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                          />
+                        ) : (
+                          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.paper' }}>
+                            <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
+                          </Box>
+                        )}
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          inset: 0, 
+                          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%)' 
+                        }} />
+                        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
+                          <Typography variant="subtitle2" fontWeight={600} color="white" noWrap>{product.name}</Typography>
+                          <Typography variant="body2" color="primary.main" fontWeight={700}>{formatPrice(product.price)}</Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 6 }}>
+                  <Search sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                  <Typography color="text.secondary">"{searchQuery}" için sonuç bulunamadı</Typography>
+                </Box>
+              )
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Search sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography color="text.secondary">Ürün adı yazarak arama yapın</Typography>
+              </Box>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* ========== KATEGORİ ÜRÜN MODAL ========== */}
         <Dialog 
@@ -801,43 +1096,59 @@ export function MenuPage() {
             <Grid container spacing={2}>
               {categoryProducts.map(product => (
                 <Grid item xs={6} sm={4} key={product.id}>
-                  <Card 
+                  <Box 
                     onClick={() => setSelectedProduct(product)}
                     sx={{ 
-                      height: '100%', 
                       cursor: 'pointer', 
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      position: 'relative',
+                      aspectRatio: '1 / 1',
                       transition: 'transform 0.2s', 
                       '&:hover': { transform: 'scale(1.02)' } 
                     }}
                   >
-                    <Box sx={{ position: 'relative', pt: '100%' }}>
-                      {product.thumbnail ? (
-                        <CardMedia component="img" image={getImageUrl(product.thumbnail)} alt={product.name}
-                          sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-                          <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
-                        </Box>
-                      )}
-                      <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }}>
-                        {product.hasGlb && <Chip icon={<ViewInAr />} label="AR" size="small" color="info" />}
-                      </Stack>
-                      {product.isCampaign && product.campaignPrice && (
-                        <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" sx={{ position: 'absolute', top: 8, left: 8 }} />
-                      )}
-                    </Box>
-                    <CardContent sx={{ p: 1.5 }}>
-                      <Typography variant="subtitle2" fontWeight={600} noWrap>{product.name}</Typography>
+                    {product.thumbnail ? (
+                      <Box 
+                        component="img" 
+                        src={getImageUrl(product.thumbnail)} 
+                        alt={product.name}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.paper' }}>
+                        <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
+                      </Box>
+                    )}
+                    
+                    {/* Gradient Overlay */}
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      inset: 0, 
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' 
+                    }} />
+                    
+                    {/* Badges */}
+                    <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }}>
+                      {product.hasGlb && <Chip icon={<ViewInAr />} label="AR" size="small" color="info" />}
+                    </Stack>
+                    {product.isCampaign && product.campaignPrice && (
+                      <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" sx={{ position: 'absolute', top: 8, left: 8 }} />
+                    )}
+                    
+                    {/* İsim ve Fiyat - Resim üzerinde */}
+                    <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
+                      <Typography variant="subtitle2" fontWeight={600} color="white" noWrap>{product.name}</Typography>
                       {product.isCampaign && product.campaignPrice ? (
                         <Stack direction="row" spacing={1} alignItems="baseline">
-                          <Typography variant="h6" color="error.main" fontWeight={700}>{formatPrice(product.campaignPrice)}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>{formatPrice(product.price)}</Typography>
+                          <Typography variant="body1" color="error.main" fontWeight={700}>{formatPrice(product.campaignPrice)}</Typography>
+                          <Typography variant="caption" color="grey.500" sx={{ textDecoration: 'line-through' }}>{formatPrice(product.price)}</Typography>
                         </Stack>
                       ) : (
-                        <Typography variant="h6" color="primary.main" fontWeight={700}>{formatPrice(product.price)}</Typography>
+                        <Typography variant="body1" color="primary.main" fontWeight={700}>{formatPrice(product.price)}</Typography>
                       )}
-                    </CardContent>
-                  </Card>
+                    </Box>
+                  </Box>
                 </Grid>
               ))}
             </Grid>

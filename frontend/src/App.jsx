@@ -22,8 +22,8 @@ import {
 import { LoginPage, BranchSelectionPage, MenuPage } from './PublicPages'
 
 // ==================== CONFIG ====================
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-export const FILES_URL = import.meta.env.VITE_FILES_URL || 'http://localhost:3001'
+export const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.134:3001/api'
+export const FILES_URL = import.meta.env.VITE_FILES_URL || 'http://192.168.1.134:3001'
 
 // ==================== AXIOS ====================
 export const api = axios.create({ baseURL: API_URL })

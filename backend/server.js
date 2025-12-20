@@ -216,15 +216,28 @@ app.get('/api/public/branches/:slug', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    
     res.json({
-      id: branch._id, name: branch.name, slug: branch.slug, description: branch.description,
-      image: branch.image, logo: branch.logo, banner: branch.banner,
-      homepageImage: branch.homepageImage,
-      address: branch.address, phone: branch.phone, whatsapp: branch.whatsapp, 
-      instagram: branch.instagram, workingHours: branch.workingHours, theme: branch.theme
+      id: branch._id,
+      name: branch.name,
+      slug: branch.slug,
+      description: branch.description,
+      image: branch.image,
+      logo: branch.logo,
+      banner: branch.banner,
+      homepageImage: branch.homepageImage, // ÖNEMLİ
+      address: branch.address,
+      phone: branch.phone,
+      whatsapp: branch.whatsapp,
+      instagram: branch.instagram,
+      workingHours: branch.workingHours,
+      theme: branch.theme
     })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { 
+    res.status(500).json({ error: err.message }) 
+  }
 })
+
 
 // Get categories with layout info
 app.get('/api/public/branches/:slug/categories', async (req, res) => {
@@ -244,13 +257,15 @@ app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    
     const layouts = await CategoryLayout.find({ branch: branch._id })
       .populate('categories.category', 'name icon image description')
       .sort({ rowOrder: 1 })
     
     // Frontend için uygun formata dönüştür
-    res.json(layouts.map(l => ({
+    const result = layouts.map(l => ({
       id: l._id,
+      _id: l._id,
       rowOrder: l.rowOrder,
       categories: l.categories.map(c => ({
         category: c.category ? {
@@ -261,10 +276,14 @@ app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
           image: c.category.image,
           description: c.category.description
         } : null,
-        size: c.size
-      })).filter(c => c.category)
-    })))
-  } catch (err) { res.status(500).json({ error: err.message }) }
+        size: c.size // ÖNEMLİ: size bilgisi mutlaka döndürülmeli
+      })).filter(c => c.category) // null kategorileri filtrele
+    }))
+    
+    res.json(result)
+  } catch (err) { 
+    res.status(500).json({ error: err.message }) 
+  }
 })
 
 // Get products - DÜZELTİLDİ: categoryId, allergens, tags eklendi
@@ -402,8 +421,32 @@ app.get('/api/branches/:id', authMiddleware, async (req, res) => {
   try {
     const branch = await Branch.findById(req.params.id)
     if (!branch) return res.status(404).json({ error: 'Not found' })
-    res.json({ ...branch.toObject(), id: branch._id })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+    
+    // Tüm alanları döndür
+    res.json({
+      id: branch._id,
+      _id: branch._id,
+      name: branch.name,
+      slug: branch.slug,
+      description: branch.description,
+      image: branch.image,
+      logo: branch.logo,
+      banner: branch.banner,
+      homepageImage: branch.homepageImage, // ÖNEMLİ: Bu alan mutlaka olmalı
+      address: branch.address,
+      phone: branch.phone,
+      whatsapp: branch.whatsapp,
+      instagram: branch.instagram,
+      workingHours: branch.workingHours,
+      isActive: branch.isActive,
+      order: branch.order,
+      theme: branch.theme,
+      createdAt: branch.createdAt,
+      updatedAt: branch.updatedAt
+    })
+  } catch (err) { 
+    res.status(500).json({ error: err.message }) 
+  }
 })
 
 app.post('/api/branches', authMiddleware, async (req, res) => {
@@ -449,11 +492,28 @@ app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), asyn
   try {
     const field = req.query.type || 'image'  // image, logo, banner, homepageImage
     const allowedFields = ['image', 'logo', 'banner', 'homepageImage']
-    if (!allowedFields.includes(field)) return res.status(400).json({ error: 'Invalid image type' })
     
-    const branch = await Branch.findByIdAndUpdate(req.params.id, { [field]: req.file.filename }, { new: true })
-    res.json({ ...branch.toObject(), id: branch._id })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+    if (!allowedFields.includes(field)) {
+      return res.status(400).json({ error: 'Invalid image type' })
+    }
+    
+    const branch = await Branch.findByIdAndUpdate(
+      req.params.id, 
+      { [field]: req.file.filename }, 
+      { new: true }
+    )
+    
+    if (!branch) {
+      return res.status(404).json({ error: 'Branch not found' })
+    }
+    
+    res.json({ 
+      ...branch.toObject(), 
+      id: branch._id 
+    })
+  } catch (err) { 
+    res.status(500).json({ error: err.message }) 
+  }
 })
 
 // ==================== DASHBOARD ====================
@@ -608,7 +668,10 @@ app.delete('/api/category-layouts/:id', authMiddleware, async (req, res) => {
 // Tüm layout'ları tek seferde kaydet
 app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    if (!checkBranchAccess(req.user, req.params.branchId)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    
     const { layouts } = req.body
     
     // Mevcut layout'ları sil
@@ -616,14 +679,31 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
     
     // Yeni layout'ları ekle
     if (layouts && layouts.length > 0) {
-      await CategoryLayout.insertMany(layouts.map(l => ({ ...l, branch: req.params.branchId })))
+      const layoutsToInsert = layouts.map((l, index) => ({
+        branch: req.params.branchId,
+        rowOrder: l.rowOrder !== undefined ? l.rowOrder : index,
+        categories: l.categories.map(c => ({
+          category: c.category?.id || c.category?._id || c.category,
+          size: c.size || 'half'
+        }))
+      }))
+      
+      await CategoryLayout.insertMany(layoutsToInsert)
     }
     
+    // Güncel layout'ları döndür
     const newLayouts = await CategoryLayout.find({ branch: req.params.branchId })
       .populate('categories.category', 'name icon image')
       .sort({ rowOrder: 1 })
-    res.json(newLayouts)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+    
+    res.json(newLayouts.map(l => ({ 
+      ...l.toObject(), 
+      id: l._id 
+    })))
+  } catch (err) { 
+    console.error('Layout kaydetme hatası:', err)
+    res.status(500).json({ error: err.message }) 
+  }
 })
 
 // ==================== PRODUCTS ====================
@@ -949,7 +1029,7 @@ mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ MongoDB connected')
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server: http://localhost:${PORT}`)
+      console.log(`🚀 Server: http://192.168.1.134:${PORT}`)
     })
   })
   .catch(err => { console.error('❌ MongoDB error:', err); process.exit(1) })
