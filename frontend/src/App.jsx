@@ -1,29 +1,22 @@
-import { useState, useEffect, createContext, useContext, useMemo, useCallback } from 'react'
+import { useState, useEffect, createContext, useContext, useMemo, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import {
   ThemeProvider, createTheme, CssBaseline,
   Box, Drawer, AppBar, Toolbar, Typography, IconButton, Avatar, Menu, MenuItem, Divider,
   List, ListItem, ListItemIcon, ListItemText, ListItemButton,
-  Button, Stack, Chip, Tooltip, Alert, Snackbar, CircularProgress,
+  Button, Stack, Chip, Tooltip, Alert, Snackbar, CircularProgress, Paper,
   useMediaQuery, alpha
 } from '@mui/material'
 import {
   Menu as MenuIcon, Dashboard, Restaurant, Category, ViewInAr, Campaign, RateReview,
-  Settings, People, Logout, Store, Check, DarkMode, LightMode, ExpandMore, Preview
+  Settings, People, Logout, Store, Check, DarkMode, LightMode, ExpandMore, Preview,
+  Phone, Refresh
 } from '@mui/icons-material'
 
-// Pages
-import {
-  DashboardPage, ProductsPage, CategoriesPage, CategoryLayoutPage,
-  GlbFilesPage, AnnouncementsPage, ReviewsPage, BranchSettingsPage,
-  BranchesPage, UsersPage
-} from './AdminPages'
-import { LoginPage, BranchSelectionPage, MenuPage } from './PublicPages'
-
 // ==================== CONFIG ====================
-export const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.134:3001/api'
-export const FILES_URL = import.meta.env.VITE_FILES_URL || 'http://192.168.1.134:3001'
+export const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.3:3001/api'
+export const FILES_URL = import.meta.env.VITE_FILES_URL || 'http://192.168.1.3:3001'
 
 // ==================== AXIOS ====================
 export const api = axios.create({ baseURL: API_URL })
@@ -35,7 +28,10 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(res => res, err => {
   if (err.response?.status === 401) {
     localStorage.removeItem('token')
-    window.location.href = '/login'
+    // Sadece admin sayfalarındaysa login'e yönlendir
+    if (window.location.pathname.startsWith('/admin')) {
+      window.location.href = '/login'
+    }
   }
   return Promise.reject(err)
 })
@@ -382,6 +378,173 @@ function Sidebar({ open, onClose, isMobile }) {
   )
 }
 
+// ==================== PROTECTED ROUTE ====================
+function ProtectedRoute({ children }) {
+  const { user } = useAuth()
+  const location = useLocation()
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  return children
+}
+
+// ==================== LIVE PREVIEW PHONE ====================
+function LivePreviewPhone() {
+  const { currentBranch } = useBranch()
+  const iframeRef = useRef(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const handleRefresh = () => {
+    if (iframeRef.current) {
+      setIsLoading(true)
+      iframeRef.current.src = iframeRef.current.src
+    }
+  }
+
+  if (!currentBranch?.slug) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        p: 2 
+      }}>
+        <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'background.default' }}>
+          <Phone sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography color="text.secondary">Şube seçin</Typography>
+        </Paper>
+      </Box>
+    )
+  }
+
+  return (
+    <Box sx={{ 
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      height: '100%',
+      py: 2
+    }}>
+      {/* Header */}
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%', maxWidth: 280, mb: 1, px: 1 }}>
+        <Phone sx={{ color: 'primary.main', fontSize: 20 }} />
+        <Typography variant="subtitle2" fontWeight={600} sx={{ flex: 1 }}>Canlı Önizleme</Typography>
+        <Tooltip title="Yenile">
+          <IconButton size="small" onClick={handleRefresh}>
+            <Refresh fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Yeni Sekmede Aç">
+          <IconButton size="small" component="a" href={`/menu/${currentBranch.slug}`} target="_blank">
+            <Store fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+
+      {/* Phone Frame */}
+      <Box sx={{
+        position: 'relative',
+        width: 280,
+        height: 'calc(100vh - 180px)',
+        maxHeight: 600,
+        minHeight: 400,
+        borderRadius: '36px',
+        bgcolor: '#1a1a1a',
+        p: '10px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }}>
+        {/* Notch */}
+        <Box sx={{
+          position: 'absolute',
+          top: 10,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 80,
+          height: 24,
+          bgcolor: '#1a1a1a',
+          borderRadius: '0 0 16px 16px',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 1
+        }}>
+          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#333' }} />
+          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#333' }} />
+        </Box>
+
+        {/* Screen */}
+        <Box sx={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '26px',
+          overflow: 'hidden',
+          bgcolor: '#000',
+          position: 'relative'
+        }}>
+          {isLoading && (
+            <Box sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'background.paper',
+              zIndex: 5
+            }}>
+              <CircularProgress size={32} />
+            </Box>
+          )}
+          <Box
+            component="iframe"
+            ref={iframeRef}
+            src={`/menu/${currentBranch.slug}?preview=1`}
+            sx={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              display: 'block',
+              // Scrollbar gizleme
+              '&::-webkit-scrollbar': { display: 'none' },
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}
+            onLoad={() => setIsLoading(false)}
+            title="Menu Preview"
+          />
+        </Box>
+
+        {/* Home Indicator */}
+        <Box sx={{
+          position: 'absolute',
+          bottom: 6,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 100,
+          height: 4,
+          bgcolor: 'rgba(255,255,255,0.3)',
+          borderRadius: 2
+        }} />
+      </Box>
+
+      {/* Branch Info */}
+      <Chip 
+        label={currentBranch.name} 
+        size="small" 
+        color="primary" 
+        variant="outlined"
+        icon={<Store fontSize="small" />}
+        sx={{ mt: 1 }}
+      />
+    </Box>
+  )
+}
+
 // ==================== ADMIN LAYOUT ====================
 function AdminLayout({ children }) {
   const { user } = useAuth()
@@ -389,6 +552,7 @@ function AdminLayout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useMediaQuery('(max-width:900px)')
+  const isLargeScreen = useMediaQuery('(min-width:1200px)')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') !== 'false')
 
@@ -406,8 +570,6 @@ function AdminLayout({ children }) {
 
   const toggleDarkMode = () => { setDarkMode(!darkMode); localStorage.setItem('darkMode', (!darkMode).toString()) }
 
-  if (!user) return <Navigate to="/login" replace />
-
   const getPageTitle = () => {
     const path = location.pathname
     if (path.includes('/dashboard')) return 'Dashboard'
@@ -423,9 +585,17 @@ function AdminLayout({ children }) {
     return 'AR Menu Admin'
   }
 
+  // Branches ve Users sayfalarında preview gösterme
+  const showPreview = isLargeScreen && currentBranch && !location.pathname.includes('/branches') && !location.pathname.includes('/users')
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      {/* Global scrollbar gizleme için iframe içi */}
+      <style>{`
+        iframe::-webkit-scrollbar { display: none !important; }
+        iframe { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+      `}</style>
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -441,12 +611,50 @@ function AdminLayout({ children }) {
               </Tooltip>
             </Toolbar>
           </AppBar>
-          <Box component="main" sx={{ flex: 1, p: 3, bgcolor: 'background.default', overflow: 'auto' }}>{children}</Box>
+          
+          {/* Main Content with Preview */}
+          <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            {/* Content Area */}
+            <Box 
+              component="main" 
+              sx={{ 
+                flex: 1, 
+                p: 3, 
+                bgcolor: 'background.default', 
+                overflow: 'auto',
+                minWidth: 0
+              }}
+            >
+              {children}
+            </Box>
+            
+            {/* Phone Preview - Sabit kalır, sayfa değişse bile yeniden yüklenmez */}
+            {showPreview && (
+              <Box sx={{ 
+                width: 320, 
+                borderLeft: 1, 
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                flexShrink: 0,
+                overflow: 'hidden'
+              }}>
+                <LivePreviewPhone />
+              </Box>
+            )}
+          </Box>
         </Box>
       </Box>
     </ThemeProvider>
   )
 }
+
+// ==================== PAGES IMPORT ====================
+import {
+  DashboardPage, ProductsPage, CategoriesPage, CategoryLayoutPage,
+  GlbFilesPage, AnnouncementsPage, ReviewsPage, BranchSettingsPage,
+  BranchesPage, UsersPage
+} from './AdminPages'
+import { LoginPage, BranchSelectionPage, MenuPage } from './PublicPages'
 
 // ==================== APP ====================
 function App() {
@@ -456,25 +664,78 @@ function App() {
         <AuthProvider>
           <BranchProvider>
             <Routes>
-              {/* Public */}
+              {/* ===== PUBLIC ROUTES - Auth gerektirmez ===== */}
               <Route path="/" element={<BranchSelectionPage />} />
               <Route path="/menu/:slug" element={<MenuPage />} />
               <Route path="/login" element={<LoginPage />} />
 
-              {/* Admin */}
-              <Route path="/admin" element={<AdminLayout><Navigate to="/admin/branches" replace /></AdminLayout>} />
-              <Route path="/admin/branches" element={<AdminLayout><BranchesPage /></AdminLayout>} />
-              <Route path="/admin/users" element={<AdminLayout><UsersPage /></AdminLayout>} />
+              {/* ===== ADMIN ROUTES - Auth gerektirir ===== */}
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <AdminLayout><Navigate to="/admin/branches" replace /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branches" element={
+                <ProtectedRoute>
+                  <AdminLayout><BranchesPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/users" element={
+                <ProtectedRoute>
+                  <AdminLayout><UsersPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
 
               {/* Branch Routes */}
-              <Route path="/admin/branch/:branchId/dashboard" element={<AdminLayout><DashboardPage /></AdminLayout>} />
-              <Route path="/admin/branch/:branchId/products" element={<AdminLayout><ProductsPage /></AdminLayout>} />
-              <Route path="/admin/branch/:branchId/categories" element={<AdminLayout><CategoriesPage /></AdminLayout>} />
-              <Route path="/admin/branch/:branchId/category-layout" element={<AdminLayout><CategoryLayoutPage /></AdminLayout>} />
-              <Route path="/admin/branch/:branchId/glb" element={<AdminLayout><GlbFilesPage /></AdminLayout>} />
-              <Route path="/admin/branch/:branchId/announcements" element={<AdminLayout><AnnouncementsPage /></AdminLayout>} />
-              <Route path="/admin/branch/:branchId/reviews" element={<AdminLayout><ReviewsPage /></AdminLayout>} />
-              <Route path="/admin/branch/:branchId/settings" element={<AdminLayout><BranchSettingsPage /></AdminLayout>} />
+              <Route path="/admin/branch/:branchId/dashboard" element={
+                <ProtectedRoute>
+                  <AdminLayout><DashboardPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/products" element={
+                <ProtectedRoute>
+                  <AdminLayout><ProductsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/categories" element={
+                <ProtectedRoute>
+                  <AdminLayout><CategoriesPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/category-layout" element={
+                <ProtectedRoute>
+                  <AdminLayout><CategoryLayoutPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/glb" element={
+                <ProtectedRoute>
+                  <AdminLayout><GlbFilesPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/announcements" element={
+                <ProtectedRoute>
+                  <AdminLayout><AnnouncementsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/reviews" element={
+                <ProtectedRoute>
+                  <AdminLayout><ReviewsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/settings" element={
+                <ProtectedRoute>
+                  <AdminLayout><BranchSettingsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

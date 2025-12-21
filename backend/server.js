@@ -36,10 +36,10 @@ const branchSchema = new mongoose.Schema({
   name: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
   description: { type: String, default: '' },
-  image: { type: String, default: null },           // Şube ana görseli
-  logo: { type: String, default: null },            // Şube logosu
-  banner: { type: String, default: null },          // Banner görseli
-  homepageImage: { type: String, default: null },   // Menü sayfası üst görsel
+  image: { type: String, default: null },
+  logo: { type: String, default: null },
+  banner: { type: String, default: null },
+  homepageImage: { type: String, default: null },
   address: { type: String, default: '' },
   phone: { type: String, default: '' },
   whatsapp: { type: String, default: '' },
@@ -53,52 +53,77 @@ const branchSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-// Category
-const categorySchema = new mongoose.Schema({
+// Section (Bölüm) - YENİ: Restoran içi alanlar (Bahçe, Teras, VIP vb.)
+const sectionSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   name: { type: String, required: true },
+  slug: { type: String, required: true },
+  description: { type: String, default: '' },
+  icon: { type: String, default: '📍' },
+  image: { type: String, default: null },           // Bölüm seçim kartı görseli
+  homepageImage: { type: String, default: null },   // Bölüm menü üst görseli
+  isActive: { type: Boolean, default: true },
+  order: { type: Number, default: 0 },
+  color: { type: String, default: '#e53935' }
+}, { timestamps: true })
+
+// Category - Section desteği eklendi
+const categorySchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ: null = tüm bölümlerde
+  name: { type: String, required: true },
   icon: { type: String, default: '📁' },
-  image: { type: String, default: null },           // Kategori görseli
+  image: { type: String, default: null },
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   description: { type: String, default: '' },
   layoutSize: { type: String, enum: ['full', 'half', 'third'], default: 'half' }
 }, { timestamps: true })
 
-// CategoryLayout - Satır bazlı kategori düzeni
+// CategoryLayout - Section desteği eklendi
 const categoryLayoutSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
-  rowOrder: { type: Number, default: 0 },           // Satır sırası
-  categories: [{                                     // Bu satırdaki kategoriler
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ
+  rowOrder: { type: Number, default: 0 },
+  categories: [{
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     size: { type: String, enum: ['full', 'half', 'third'], default: 'half' }
   }]
 }, { timestamps: true })
 
-// Product
+// Product - Section desteği eklendi
 const productSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ: null = tüm bölümlerde
   name: { type: String, required: true },
   price: { type: Number, required: true },
   description: { type: String, default: '' },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
-  thumbnail: { type: String, default: null },       // Ürün görseli
-  images: [{ type: String }],                       // Ek görseller
-  glbFile: { type: String, default: null },         // 3D model dosyası
+  thumbnail: { type: String, default: null },
+  images: [{ type: String }],
+  glbFile: { type: String, default: null },
   isActive: { type: Boolean, default: true },
-  isFeatured: { type: Boolean, default: false },    // Öne çıkan ürün
-  isCampaign: { type: Boolean, default: false },    // Kampanyalı mı?
-  campaignPrice: { type: Number, default: null },   // Kampanya fiyatı
+  isFeatured: { type: Boolean, default: false },
+  isCampaign: { type: Boolean, default: false },
+  campaignPrice: { type: Number, default: null },
   calories: { type: Number, default: null },
   preparationTime: { type: Number, default: null },
   allergens: [{ type: String }],
   tags: [{ type: String }],
-  viewCount: { type: Number, default: 0 }
+  viewCount: { type: Number, default: 0 },
+  // YENİ: Bölüm bazlı farklı fiyatlar
+  sectionPrices: [{
+    section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section' },
+    price: { type: Number, required: true },
+    campaignPrice: { type: Number, default: null },
+    isActive: { type: Boolean, default: true }
+  }]
 }, { timestamps: true })
 
-// Announcement
+// Announcement - Section desteği eklendi
 const announcementSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ
   title: { type: String, required: true },
   message: { type: String, required: true },
   icon: { type: String, default: '📢' },
@@ -107,16 +132,17 @@ const announcementSchema = new mongoose.Schema({
   order: { type: Number, default: 0 }
 }, { timestamps: true })
 
-// Review (Görüş ve Yorumlar)
+// Review
 const reviewSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   rating: { type: Number, required: true, min: 1, max: 5 },
   comment: { type: String, default: '' },
-  contact: { type: String, default: '' },           // İletişim bilgisi (telefon/email)
+  contact: { type: String, default: '' },
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
   customerName: { type: String, default: 'Anonim' },
-  isApproved: { type: Boolean, default: false },    // Onay durumu
-  reply: { type: String, default: '' },             // İşletme yanıtı
+  isApproved: { type: Boolean, default: false },
+  reply: { type: String, default: '' },
   repliedAt: { type: Date, default: null }
 }, { timestamps: true })
 
@@ -144,6 +170,7 @@ const userSchema = new mongoose.Schema({
 
 // Models
 const Branch = mongoose.model('Branch', branchSchema)
+const Section = mongoose.model('Section', sectionSchema)
 const Category = mongoose.model('Category', categorySchema)
 const CategoryLayout = mongoose.model('CategoryLayout', categoryLayoutSchema)
 const Product = mongoose.model('Product', productSchema)
@@ -165,7 +192,7 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } })
 
-// ==================== MIDDLEWARE ====================
+// ==================== HELPERS ====================
 const authMiddleware = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '')
@@ -198,6 +225,14 @@ const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+// YENİ: Türkçe karakterleri slug'a çevir
+const createSlug = (text) => {
+  return text.toLowerCase()
+    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+    .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
 // ==================== PUBLIC ROUTES ====================
 
 // Get all branches for selection screen
@@ -211,11 +246,14 @@ app.get('/api/public/branches', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get branch details
+// Get branch details with sections
 app.get('/api/public/branches/:slug', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    
+    // YENİ: Bölümleri de getir
+    const sections = await Section.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
     
     res.json({
       id: branch._id,
@@ -225,19 +263,36 @@ app.get('/api/public/branches/:slug', async (req, res) => {
       image: branch.image,
       logo: branch.logo,
       banner: branch.banner,
-      homepageImage: branch.homepageImage, // ÖNEMLİ
+      homepageImage: branch.homepageImage,
       address: branch.address,
       phone: branch.phone,
       whatsapp: branch.whatsapp,
       instagram: branch.instagram,
       workingHours: branch.workingHours,
-      theme: branch.theme
+      theme: branch.theme,
+      sections: sections.map(s => ({
+        id: s._id, name: s.name, slug: s.slug, description: s.description,
+        icon: s.icon, image: s.image, homepageImage: s.homepageImage, color: s.color
+      }))
     })
   } catch (err) { 
     res.status(500).json({ error: err.message }) 
   }
 })
 
+// YENİ: Get sections for a branch
+app.get('/api/public/branches/:slug/sections', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    
+    const sections = await Section.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
+    res.json(sections.map(s => ({
+      id: s._id, name: s.name, slug: s.slug, description: s.description,
+      icon: s.icon, image: s.image, homepageImage: s.homepageImage, color: s.color
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
 
 // Get categories with layout info
 app.get('/api/public/branches/:slug/categories', async (req, res) => {
@@ -252,7 +307,7 @@ app.get('/api/public/branches/:slug/categories', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get category layouts (PUBLIC) - DÜZELTİLDİ: id alanları eklendi
+// Get category layouts (PUBLIC)
 app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
@@ -262,7 +317,6 @@ app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
       .populate('categories.category', 'name icon image description')
       .sort({ rowOrder: 1 })
     
-    // Frontend için uygun formata dönüştür
     const result = layouts.map(l => ({
       id: l._id,
       _id: l._id,
@@ -276,8 +330,8 @@ app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
           image: c.category.image,
           description: c.category.description
         } : null,
-        size: c.size // ÖNEMLİ: size bilgisi mutlaka döndürülmeli
-      })).filter(c => c.category) // null kategorileri filtrele
+        size: c.size
+      })).filter(c => c.category)
     }))
     
     res.json(result)
@@ -286,7 +340,7 @@ app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
   }
 })
 
-// Get products - DÜZELTİLDİ: categoryId, allergens, tags eklendi
+// Get products
 app.get('/api/public/branches/:slug/products', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
@@ -311,12 +365,123 @@ app.get('/api/public/branches/:slug/products', async (req, res) => {
       preparationTime: p.preparationTime,
       allergens: p.allergens || [],
       tags: p.tags || [],
-      // Kategori bilgileri - Frontend için gerekli
       categoryId: p.category?._id || null,
       categoryName: p.category?.name || null,
       categoryIcon: p.category?.icon || null,
-      category: p.category ? { id: p.category._id, name: p.category.name, icon: p.category.icon } : null
+      category: p.category ? { id: p.category._id, name: p.category.name, icon: p.category.icon } : null,
+      sectionPrices: p.sectionPrices || []
     })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// YENİ: Get menu with section filter - Bölüm bazlı menü
+app.get('/api/public/branches/:slug/menu', async (req, res) => {
+  try {
+    const { section: sectionSlug } = req.query
+    const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+
+    // Section bilgisi
+    let selectedSection = null
+    if (sectionSlug) {
+      selectedSection = await Section.findOne({ branch: branch._id, slug: sectionSlug, isActive: true })
+    }
+
+    // Categories - bölüme göre filtrele (null = genel, section = bölüme özel)
+    const categoryFilter = { branch: branch._id, isActive: true }
+    if (selectedSection) {
+      categoryFilter.$or = [{ section: null }, { section: selectedSection._id }]
+    }
+    const categories = await Category.find(categoryFilter).sort({ order: 1 })
+
+    // Products - bölüme göre filtrele
+    const productFilter = { branch: branch._id, isActive: true }
+    if (selectedSection) {
+      productFilter.$or = [{ section: null }, { section: selectedSection._id }]
+    }
+    const products = await Product.find(productFilter)
+      .populate('category', 'name icon')
+      .populate('sectionPrices.section', 'name slug')
+      .sort({ isFeatured: -1, createdAt: -1 })
+
+    // Announcements - bölüme göre filtrele
+    const announcementFilter = { branch: branch._id, isActive: true }
+    if (selectedSection) {
+      announcementFilter.$or = [{ section: null }, { section: selectedSection._id }]
+    }
+    const announcements = await Announcement.find(announcementFilter).sort({ order: 1 })
+
+    // Layouts - bölüme göre filtrele
+    const layoutFilter = { branch: branch._id }
+    if (selectedSection) {
+      layoutFilter.$or = [{ section: null }, { section: selectedSection._id }]
+    }
+    const layouts = await CategoryLayout.find(layoutFilter)
+      .populate('categories.category', 'name icon image')
+      .sort({ rowOrder: 1 })
+
+    // Ürünleri işle - section bazlı fiyat uygula
+    const processedProducts = products.map(p => {
+      const product = p.toObject()
+      product.id = p._id
+      product.categoryId = p.category?._id
+      product.categoryName = p.category?.name
+      product.categoryIcon = p.category?.icon
+      product.hasGlb = !!p.glbFile
+      
+      // Section bazlı fiyat kontrolü
+      if (selectedSection && product.sectionPrices?.length > 0) {
+        const sectionPrice = product.sectionPrices.find(
+          sp => sp.section?._id?.toString() === selectedSection._id.toString() && sp.isActive
+        )
+        if (sectionPrice) {
+          product.price = sectionPrice.price
+          if (sectionPrice.campaignPrice) {
+            product.campaignPrice = sectionPrice.campaignPrice
+            product.isCampaign = true
+          }
+        }
+      }
+      
+      return product
+    })
+
+    // Homepage image - section varsa section'ınkini kullan
+    let homepageImage = branch.homepageImage
+    if (selectedSection?.homepageImage) {
+      homepageImage = selectedSection.homepageImage
+    }
+
+    res.json({
+      branch: {
+        id: branch._id, name: branch.name, logo: branch.logo,
+        banner: branch.banner, homepageImage: homepageImage,
+        phone: branch.phone, whatsapp: branch.whatsapp,
+        instagram: branch.instagram, address: branch.address,
+        workingHours: branch.workingHours, theme: branch.theme
+      },
+      categories: categories.map(c => ({ 
+        id: c._id, name: c.name, icon: c.icon, image: c.image, description: c.description
+      })),
+      products: processedProducts,
+      announcements: announcements.map(a => ({
+        id: a._id, title: a.title, message: a.message, icon: a.icon, type: a.type
+      })),
+      layouts: layouts.map(l => ({
+        id: l._id, rowOrder: l.rowOrder,
+        categories: l.categories.map(c => ({
+          category: c.category ? {
+            id: c.category._id, name: c.category.name,
+            icon: c.category.icon, image: c.category.image
+          } : null,
+          size: c.size
+        })).filter(c => c.category)
+      })),
+      selectedSection: selectedSection ? {
+        id: selectedSection._id, name: selectedSection.name,
+        slug: selectedSection.slug, homepageImage: selectedSection.homepageImage
+      } : null
+    })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
@@ -413,7 +578,16 @@ app.get('/api/branches', authMiddleware, async (req, res) => {
     const countMap = {}
     counts.forEach(c => { if (c._id) countMap[c._id.toString()] = c.count })
     
-    res.json(branches.map(b => ({ ...b.toObject(), id: b._id, productCount: countMap[b._id.toString()] || 0 })))
+    // YENİ: Section sayılarını da ekle
+    const sectionCounts = await Section.aggregate([{ $group: { _id: '$branch', count: { $sum: 1 } } }])
+    const sectionCountMap = {}
+    sectionCounts.forEach(c => { if (c._id) sectionCountMap[c._id.toString()] = c.count })
+    
+    res.json(branches.map(b => ({ 
+      ...b.toObject(), id: b._id, 
+      productCount: countMap[b._id.toString()] || 0,
+      sectionCount: sectionCountMap[b._id.toString()] || 0
+    })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
@@ -422,7 +596,6 @@ app.get('/api/branches/:id', authMiddleware, async (req, res) => {
     const branch = await Branch.findById(req.params.id)
     if (!branch) return res.status(404).json({ error: 'Not found' })
     
-    // Tüm alanları döndür
     res.json({
       id: branch._id,
       _id: branch._id,
@@ -432,7 +605,7 @@ app.get('/api/branches/:id', authMiddleware, async (req, res) => {
       image: branch.image,
       logo: branch.logo,
       banner: branch.banner,
-      homepageImage: branch.homepageImage, // ÖNEMLİ: Bu alan mutlaka olmalı
+      homepageImage: branch.homepageImage,
       address: branch.address,
       phone: branch.phone,
       whatsapp: branch.whatsapp,
@@ -452,7 +625,7 @@ app.get('/api/branches/:id', authMiddleware, async (req, res) => {
 app.post('/api/branches', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
-    let slug = req.body.slug || req.body.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+    let slug = req.body.slug || createSlug(req.body.name)
     if (await Branch.findOne({ slug })) slug = slug + '-' + Date.now()
     const branch = await Branch.create({ ...req.body, slug })
     res.status(201).json({ ...branch.toObject(), id: branch._id })
@@ -476,6 +649,7 @@ app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
     const branch = await Branch.findById(req.params.id)
     if (!branch) return res.status(404).json({ error: 'Not found' })
     await Promise.all([
+      Section.deleteMany({ branch: branch._id }), // YENİ
       Category.deleteMany({ branch: branch._id }),
       CategoryLayout.deleteMany({ branch: branch._id }),
       Product.deleteMany({ branch: branch._id }),
@@ -487,10 +661,9 @@ app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Branch image upload - tüm görsel tipleri için
 app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const field = req.query.type || 'image'  // image, logo, banner, homepageImage
+    const field = req.query.type || 'image'
     const allowedFields = ['image', 'logo', 'banner', 'homepageImage']
     
     if (!allowedFields.includes(field)) {
@@ -516,15 +689,100 @@ app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), asyn
   }
 })
 
+// ==================== SECTIONS (YENİ) ====================
+app.get('/api/branches/:branchId/sections', authMiddleware, async (req, res) => {
+  try {
+    const sections = await Section.find({ branch: req.params.branchId }).sort({ order: 1 })
+    
+    // Her section için istatistikler
+    const sectionsWithCounts = await Promise.all(sections.map(async s => {
+      const productCount = await Product.countDocuments({ 
+        branch: req.params.branchId,
+        $or: [{ section: null }, { section: s._id }]
+      })
+      const categoryCount = await Category.countDocuments({ 
+        branch: req.params.branchId,
+        $or: [{ section: null }, { section: s._id }]
+      })
+      return { ...s.toObject(), id: s._id, productCount, categoryCount }
+    }))
+    
+    res.json(sectionsWithCounts)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/branches/:branchId/sections', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    
+    const slug = req.body.slug || createSlug(req.body.name)
+    const order = await Section.countDocuments({ branch: req.params.branchId })
+    
+    const section = await Section.create({ 
+      ...req.body, slug, order, branch: req.params.branchId 
+    })
+    res.status(201).json({ ...section.toObject(), id: section._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/sections/:id', authMiddleware, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.id)
+    if (!section) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    if (req.body.name && !req.body.slug) req.body.slug = createSlug(req.body.name)
+    
+    Object.assign(section, req.body)
+    await section.save()
+    res.json({ ...section.toObject(), id: section._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/sections/:id', authMiddleware, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.id)
+    if (!section) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    // Bu bölüme ait verileri genel bölüme taşı (section: null)
+    await Product.updateMany({ section: section._id }, { section: null })
+    await Category.updateMany({ section: section._id }, { section: null })
+    await Announcement.updateMany({ section: section._id }, { section: null })
+    await CategoryLayout.deleteMany({ section: section._id })
+    
+    await section.deleteOne()
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/sections/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const type = req.query.type || 'image' // image veya homepageImage
+    const section = await Section.findByIdAndUpdate(req.params.id, { [type]: req.file.filename }, { new: true })
+    res.json({ ...section.toObject(), id: section._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/branches/:branchId/sections/reorder', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const { sectionIds } = req.body
+    await Promise.all(sectionIds.map((id, index) => Section.findByIdAndUpdate(id, { order: index })))
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
 // ==================== DASHBOARD ====================
 app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) => {
   try {
     const { branchId } = req.params
     if (!checkBranchAccess(req.user, branchId)) return res.status(403).json({ error: 'Access denied' })
     
-    const [productCount, categoryCount, reviewCount, glbCount, pendingReviewCount, campaignCount] = await Promise.all([
+    const [productCount, categoryCount, sectionCount, reviewCount, glbCount, pendingReviewCount, campaignCount] = await Promise.all([
       Product.countDocuments({ branch: branchId }),
       Category.countDocuments({ branch: branchId }),
+      Section.countDocuments({ branch: branchId }), // YENİ
       Review.countDocuments({ branch: branchId }),
       GlbFile.countDocuments({ branch: branchId }),
       Review.countDocuments({ branch: branchId, isApproved: false }),
@@ -555,8 +813,9 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
 
     res.json({
       counts: { 
-        products: productCount, categories: categoryCount, reviews: reviewCount, 
-        glbFiles: glbCount, pendingReviews: pendingReviewCount, campaigns: campaignCount
+        products: productCount, categories: categoryCount, sections: sectionCount, // YENİ
+        reviews: reviewCount, glbFiles: glbCount, pendingReviews: pendingReviewCount, 
+        campaigns: campaignCount
       },
       recentReviews, topProducts, categoryStats, campaignProducts,
       averageRating: avgRating[0]?.avg || 0, ratingStats
@@ -567,8 +826,9 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
 app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
-    const [branchCount, productCount, categoryCount, reviewCount, userCount] = await Promise.all([
-      Branch.countDocuments(), Product.countDocuments(), Category.countDocuments(), Review.countDocuments(), User.countDocuments()
+    const [branchCount, productCount, categoryCount, sectionCount, reviewCount, userCount] = await Promise.all([
+      Branch.countDocuments(), Product.countDocuments(), Category.countDocuments(), 
+      Section.countDocuments(), Review.countDocuments(), User.countDocuments()
     ])
     const branchStats = await Product.aggregate([
       { $group: { _id: '$branch', count: { $sum: 1 } } },
@@ -576,14 +836,21 @@ app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
       { $unwind: '$branch' },
       { $project: { name: '$branch.name', count: 1 } }
     ])
-    res.json({ counts: { branches: branchCount, products: productCount, categories: categoryCount, reviews: reviewCount, users: userCount }, branchStats })
+    res.json({ 
+      counts: { branches: branchCount, products: productCount, categories: categoryCount, sections: sectionCount, reviews: reviewCount, users: userCount }, 
+      branchStats 
+    })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ==================== CATEGORIES ====================
 app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) => {
   try {
-    const categories = await Category.find({ branch: req.params.branchId }).sort({ order: 1 })
+    const { section } = req.query
+    const filter = { branch: req.params.branchId }
+    if (section) filter.section = section === 'null' ? null : section
+    
+    const categories = await Category.find(filter).populate('section', 'name').sort({ order: 1 })
     const counts = await Product.aggregate([
       { $match: { branch: new mongoose.Types.ObjectId(req.params.branchId) } },
       { $group: { _id: '$category', count: { $sum: 1 } } }
@@ -591,7 +858,9 @@ app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) =
     const countMap = {}
     counts.forEach(c => { if (c._id) countMap[c._id.toString()] = c.count })
     res.json(categories.map(c => ({ 
-      ...c.toObject(), id: c._id, productCount: countMap[c._id.toString()] || 0 
+      ...c.toObject(), id: c._id, 
+      productCount: countMap[c._id.toString()] || 0,
+      sectionName: c.section?.name || 'Tüm Bölümler'
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -599,7 +868,8 @@ app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) =
 app.post('/api/branches/:branchId/categories', authMiddleware, async (req, res) => {
   try {
     if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
-    const category = await Category.create({ ...req.body, branch: req.params.branchId })
+    const order = await Category.countDocuments({ branch: req.params.branchId })
+    const category = await Category.create({ ...req.body, order, branch: req.params.branchId })
     res.status(201).json({ ...category.toObject(), id: category._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -636,7 +906,12 @@ app.post('/api/categories/:id/image', authMiddleware, upload.single('image'), as
 // ==================== CATEGORY LAYOUTS ====================
 app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, res) => {
   try {
-    const layouts = await CategoryLayout.find({ branch: req.params.branchId })
+    const { section } = req.query
+    const filter = { branch: req.params.branchId }
+    if (section) filter.section = section === 'null' ? null : section
+    else filter.section = null
+    
+    const layouts = await CategoryLayout.find(filter)
       .populate('categories.category', 'name icon image')
       .sort({ rowOrder: 1 })
     res.json(layouts.map(l => ({ ...l.toObject(), id: l._id })))
@@ -665,22 +940,24 @@ app.delete('/api/category-layouts/:id', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Tüm layout'ları tek seferde kaydet
 app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (req, res) => {
   try {
     if (!checkBranchAccess(req.user, req.params.branchId)) {
       return res.status(403).json({ error: 'Access denied' })
     }
     
-    const { layouts } = req.body
+    const { layouts, section } = req.body
     
     // Mevcut layout'ları sil
-    await CategoryLayout.deleteMany({ branch: req.params.branchId })
+    const filter = { branch: req.params.branchId }
+    filter.section = section || null
+    await CategoryLayout.deleteMany(filter)
     
     // Yeni layout'ları ekle
     if (layouts && layouts.length > 0) {
       const layoutsToInsert = layouts.map((l, index) => ({
         branch: req.params.branchId,
+        section: section || null,
         rowOrder: l.rowOrder !== undefined ? l.rowOrder : index,
         categories: l.categories.map(c => ({
           category: c.category?.id || c.category?._id || c.category,
@@ -692,7 +969,7 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
     }
     
     // Güncel layout'ları döndür
-    const newLayouts = await CategoryLayout.find({ branch: req.params.branchId })
+    const newLayouts = await CategoryLayout.find(filter)
       .populate('categories.category', 'name icon image')
       .sort({ rowOrder: 1 })
     
@@ -709,9 +986,10 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
 // ==================== PRODUCTS ====================
 app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => {
   try {
-    const { category, search, isActive, isFeatured, isCampaign, hasGlb, page = 1, limit = 50 } = req.query
+    const { category, section, search, isActive, isFeatured, isCampaign, hasGlb, page = 1, limit = 50 } = req.query
     const filter = { branch: req.params.branchId }
     if (category) filter.category = category
+    if (section) filter.section = section === 'null' ? null : section
     if (isActive !== undefined) filter.isActive = isActive === 'true'
     if (isFeatured !== undefined) filter.isFeatured = isFeatured === 'true'
     if (isCampaign !== undefined) filter.isCampaign = isCampaign === 'true'
@@ -721,14 +999,21 @@ app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => 
     
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const [products, total] = await Promise.all([
-      Product.find(filter).populate('category', 'name icon').sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+      Product.find(filter)
+        .populate('category', 'name icon')
+        .populate('section', 'name icon')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
       Product.countDocuments(filter)
     ])
     
     res.json({
       products: products.map(p => ({
-        ...p.toObject(), id: p._id, categoryId: p.category?._id, categoryName: p.category?.name,
-        categoryIcon: p.category?.icon, hasGlb: !!p.glbFile
+        ...p.toObject(), id: p._id, 
+        categoryId: p.category?._id, categoryName: p.category?.name, categoryIcon: p.category?.icon,
+        sectionId: p.section?._id, sectionName: p.section?.name || 'Tüm Bölümler',
+        hasGlb: !!p.glbFile
       })),
       pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) }
     })
@@ -740,6 +1025,7 @@ app.post('/api/branches/:branchId/products', authMiddleware, async (req, res) =>
     if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
     const data = { ...req.body, branch: req.params.branchId }
     if (data.categoryId) { data.category = data.categoryId; delete data.categoryId }
+    if (data.sectionId) { data.section = data.sectionId; delete data.sectionId }
     const product = await Product.create(data)
     res.status(201).json({ ...product.toObject(), id: product._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -752,6 +1038,7 @@ app.put('/api/products/:id', authMiddleware, async (req, res) => {
     if (!checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
     const data = { ...req.body }
     if (data.categoryId !== undefined) { data.category = data.categoryId || null; delete data.categoryId }
+    if (data.sectionId !== undefined) { data.section = data.sectionId || null; delete data.sectionId }
     Object.assign(product, data)
     await product.save()
     res.json({ ...product.toObject(), id: product._id })
@@ -793,6 +1080,18 @@ app.put('/api/products/:id/assign-glb', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
+// YENİ: Section bazlı fiyatları güncelle
+app.put('/api/products/:id/section-prices', authMiddleware, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+    if (!product) return res.status(404).json({ error: 'Not found' })
+    if (!checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    product.sectionPrices = req.body.sectionPrices || []
+    await product.save()
+    res.json({ ...product.toObject(), id: product._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
 app.post('/api/branches/:branchId/products/bulk', authMiddleware, async (req, res) => {
   try {
     if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
@@ -808,16 +1107,13 @@ app.get('/api/branches/:branchId/glb', authMiddleware, async (req, res) => {
   try {
     const outputsDir = path.join(__dirname, 'outputs')
     
-    // Klasör yoksa oluştur ve boş dön
     if (!fs.existsSync(outputsDir)) {
       fs.mkdirSync(outputsDir, { recursive: true })
       return res.json([])
     }
 
-    // Filesystem'den .glb dosyalarını oku
     const files = fs.readdirSync(outputsDir).filter(f => f.toLowerCase().endsWith('.glb'))
     
-    // Hangi dosyalar ürünlere atanmış?
     const products = await Product.find({ 
       branch: req.params.branchId, 
       glbFile: { $ne: null } 
@@ -828,7 +1124,6 @@ app.get('/api/branches/:branchId/glb', authMiddleware, async (req, res) => {
       if (p.glbFile) assignedMap[p.glbFile] = p.name
     })
 
-    // Dosya bilgilerini hazırla
     const result = files.map(filename => {
       const filePath = path.join(outputsDir, filename)
       let stats = { size: 0, mtime: new Date() }
@@ -863,7 +1158,6 @@ app.get('/api/glb/list', apiKeyMiddleware, async (req, res) => {
 
     const files = fs.readdirSync(outputsDir).filter(f => f.toLowerCase().endsWith('.glb'))
     
-    // Atanmış dosyaları bul
     const products = await Product.find({ glbFile: { $ne: null } }).select('name glbFile')
     const assignedMap = {}
     products.forEach(p => {
@@ -908,11 +1202,13 @@ app.post('/api/glb/upload', apiKeyMiddleware, upload.single('file'), async (req,
 app.delete('/api/glb/:filename', apiKeyMiddleware, async (req, res) => {
   try {
     const glbFile = await GlbFile.findOne({ filename: req.params.filename })
-    if (!glbFile) return res.status(404).json({ error: 'Not found' })
-    if (glbFile.assignedTo) await Product.findByIdAndUpdate(glbFile.assignedTo, { glbFile: null })
+    if (glbFile) {
+      if (glbFile.assignedTo) await Product.findByIdAndUpdate(glbFile.assignedTo, { glbFile: null })
+      await glbFile.deleteOne()
+    }
     const filePath = path.join(__dirname, 'outputs', req.params.filename)
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-    await glbFile.deleteOne()
+    await Product.updateMany({ glbFile: req.params.filename }, { glbFile: null })
     res.json({ success: true })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -920,8 +1216,15 @@ app.delete('/api/glb/:filename', apiKeyMiddleware, async (req, res) => {
 // ==================== ANNOUNCEMENTS ====================
 app.get('/api/branches/:branchId/announcements', authMiddleware, async (req, res) => {
   try {
-    const announcements = await Announcement.find({ branch: req.params.branchId }).sort({ order: 1, createdAt: -1 })
-    res.json(announcements.map(a => ({ ...a.toObject(), id: a._id })))
+    const { section } = req.query
+    const filter = { branch: req.params.branchId }
+    if (section) filter.section = section === 'null' ? null : section
+    
+    const announcements = await Announcement.find(filter).populate('section', 'name').sort({ order: 1, createdAt: -1 })
+    res.json(announcements.map(a => ({ 
+      ...a.toObject(), id: a._id,
+      sectionName: a.section?.name || 'Tüm Bölümler'
+    })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
@@ -1029,7 +1332,7 @@ mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ MongoDB connected')
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server: http://192.168.1.134:${PORT}`)
+      console.log(`🚀 Server: http://localhost:${PORT}`)
     })
   })
   .catch(err => { console.error('❌ MongoDB error:', err); process.exit(1) })

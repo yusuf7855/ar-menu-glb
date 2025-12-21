@@ -15,15 +15,24 @@ import {
   PhotoCamera, CloudUpload, LocalOffer, ThreeDRotation,
   Phone, LocationOn, AccessTime, Instagram, WhatsApp,
   GridView, ViewModule, Fullscreen, ArrowUpward, ArrowDownward,
-  DragIndicator, Reply, Lock, Star, TouchApp, ThreeSixty
+  DragIndicator, Reply, Lock, Star, TouchApp, ThreeSixty, Place
 } from '@mui/icons-material'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useDropzone } from 'react-dropzone'
 import {
   api, useAuth, useSnackbar, useBranch,
   formatBytes, formatDate, formatPrice, formatRelativeTime,
-  getImageUrl, getGlbUrl, isHeicFile, convertHeicToJpg
+  getImageUrl, getGlbUrl, isHeicFile, convertHeicToJpg, FILES_URL
 } from './App'
+
+// ==================== PAGE WRAPPER ====================
+function PageWrapper({ children }) {
+  return (
+    <Box sx={{ width: '100%', maxWidth: '100%' }}>
+      {children}
+    </Box>
+  )
+}
 
 // ==================== IMAGE UPLOADER ====================
 function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'medium' }) {
@@ -117,11 +126,7 @@ function ModelViewer3D({ glbFile, productName, size = 'medium' }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
-  const sizes = {
-    small: { height: 200 },
-    medium: { height: 300 },
-    large: { height: 400 }
-  }
+  const sizes = { small: { height: 200 }, medium: { height: 300 }, large: { height: 400 } }
 
   useEffect(() => {
     setLoading(true)
@@ -225,13 +230,6 @@ function StatCard({ title, value, icon, color = 'primary', subtitle, onClick }) 
   )
 }
 
-function PageWrapper({ children }) {
-  return (
-    <Box sx={{ width: '100%', maxWidth: '100%', px: { xs: 2, sm: 3 } }}>
-      {children}
-    </Box>
-  )
-}
 
 // ==================== DASHBOARD PAGE ====================
 export function DashboardPage() {
@@ -410,6 +408,234 @@ export function DashboardPage() {
   )
 }
 
+// ==================== SECTIONS PAGE ====================
+export function SectionsPage() {
+  const { branchId } = useParams()
+  const showSnackbar = useSnackbar()
+  const [sections, setSections] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingSection, setEditingSection] = useState(null)
+  const [deleteDialog, setDeleteDialog] = useState(null)
+
+  useEffect(() => { if (branchId) loadSections() }, [branchId])
+
+  const loadSections = async () => {
+    try {
+      const res = await api.get(`/branches/${branchId}/sections`)
+      setSections(res.data)
+    } catch { showSnackbar('Bölümler yüklenemedi', 'error') }
+    finally { setLoading(false) }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/sections/${deleteDialog.id}`)
+      showSnackbar('Bölüm silindi', 'success')
+      setDeleteDialog(null)
+      loadSections()
+    } catch { showSnackbar('Silinemedi', 'error') }
+  }
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+
+  return (
+    <PageWrapper>
+      <Stack spacing={3}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h5" fontWeight={700}>Bölümler</Typography>
+            <Typography color="text.secondary">Restoran içi farklı alanları yönetin (Bahçe, Teras, VIP vb.)</Typography>
+          </Box>
+          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingSection(null); setModalOpen(true) }}>Yeni Bölüm</Button>
+        </Stack>
+
+        {sections.length > 0 ? (
+          <Grid container spacing={3}>
+            {sections.map((section, index) => (
+              <Grid item xs={12} sm={6} md={4} key={section.id}>
+                <Card sx={{ height: '100%', position: 'relative', overflow: 'visible' }}>
+                  {section.image ? (
+                    <CardMedia component="img" height="160" image={getImageUrl(section.image)} alt={section.name} sx={{ objectFit: 'cover' }} />
+                  ) : (
+                    <Box sx={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: section.color || 'primary.main', color: 'white' }}>
+                      <Typography variant="h1">{section.icon}</Typography>
+                    </Box>
+                  )}
+                  
+                  <Chip label={section.isActive ? 'Aktif' : 'Pasif'} size="small" color={section.isActive ? 'success' : 'default'} 
+                    sx={{ position: 'absolute', top: 12, right: 12 }} />
+                  
+                  <CardContent>
+                    <Stack spacing={1}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="h6" fontWeight={600}>{section.icon} {section.name}</Typography>
+                      </Stack>
+                      
+                      {section.description && (
+                        <Typography variant="body2" color="text.secondary" sx={{ 
+                          overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' 
+                        }}>{section.description}</Typography>
+                      )}
+                      
+                      <Stack direction="row" spacing={2}>
+                        <Chip icon={<Restaurant fontSize="small" />} label={`${section.productCount || 0} ürün`} size="small" variant="outlined" />
+                        <Chip icon={<Category fontSize="small" />} label={`${section.categoryCount || 0} kategori`} size="small" variant="outlined" />
+                      </Stack>
+                      
+                      <Typography variant="caption" color="text.secondary">Slug: /{section.slug}</Typography>
+                    </Stack>
+                  </CardContent>
+                  
+                  <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
+                    <Tooltip title="Düzenle"><IconButton size="small" onClick={() => { setEditingSection(section); setModalOpen(true) }}><Edit fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title="Sil"><IconButton size="small" color="error" onClick={() => setDeleteDialog(section)}><Delete fontSize="small" /></IconButton></Tooltip>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <EmptyState icon={<Store sx={{ fontSize: 64 }} />} title="Henüz bölüm yok" description="Restoran içi farklı alanlar için bölümler oluşturun" 
+            action={<Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>İlk Bölümü Ekle</Button>} />
+        )}
+      </Stack>
+
+      <SectionModal open={modalOpen} onClose={() => setModalOpen(false)} section={editingSection} branchId={branchId} onSuccess={loadSections} />
+      
+      <ConfirmDialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)} onConfirm={handleDelete}
+        title="Bölümü Sil" message={`"${deleteDialog?.name}" bölümünü silmek istediğinize emin misiniz? Bu bölüme ait ürün ve kategoriler genel bölüme taşınacak.`} />
+    </PageWrapper>
+  )
+}
+
+// Section Modal
+function SectionModal({ open, onClose, section, branchId, onSuccess }) {
+  const showSnackbar = useSnackbar()
+  const isEditing = !!section
+  const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [form, setForm] = useState({
+    name: '', slug: '', description: '', icon: '📍', color: '#e53935', isActive: true, image: null, homepageImage: null
+  })
+
+  useEffect(() => {
+    if (section) {
+      setForm({
+        name: section.name || '', slug: section.slug || '', description: section.description || '',
+        icon: section.icon || '📍', color: section.color || '#e53935', isActive: section.isActive !== false,
+        image: section.image || null, homepageImage: section.homepageImage || null
+      })
+    } else {
+      setForm({ name: '', slug: '', description: '', icon: '📍', color: '#e53935', isActive: true, image: null, homepageImage: null })
+    }
+  }, [section, open])
+
+  const handleSubmit = async () => {
+    if (!form.name.trim()) return showSnackbar('Bölüm adı gerekli', 'error')
+    setSaving(true)
+    try {
+      if (isEditing) {
+        await api.put(`/sections/${section.id}`, form)
+        showSnackbar('Bölüm güncellendi', 'success')
+      } else {
+        await api.post(`/branches/${branchId}/sections`, form)
+        showSnackbar('Bölüm eklendi', 'success')
+      }
+      onSuccess()
+      onClose()
+    } catch { showSnackbar('Kaydedilemedi', 'error') }
+    finally { setSaving(false) }
+  }
+
+  const handleImageUpload = async (file, type = 'image') => {
+    if (!isEditing) return showSnackbar('Önce bölümü kaydedin', 'warning')
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await api.post(`/sections/${section.id}/image?type=${type}`, formData)
+      setForm(prev => ({ ...prev, [type]: res.data[type] }))
+      showSnackbar('Görsel yüklendi', 'success')
+      onSuccess()
+    } catch { showSnackbar('Yüklenemedi', 'error') }
+    finally { setUploadingImage(false) }
+  }
+
+  const icons = ['📍', '🏠', '🌳', '☀️', '🌙', '🎉', '👑', '🍽️', '🪴', '🏖️', '🎪', '🎭', '🎨', '🌺', '🍀', '⭐', '💎', '🔥']
+  const colors = ['#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab', '#1e88e5', '#00acc1', '#00897b', '#43a047', '#7cb342', '#c0ca33', '#fdd835', '#ffb300', '#fb8c00', '#f4511e', '#6d4c41']
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>{isEditing ? 'Bölümü Düzenle' : 'Yeni Bölüm'}</DialogTitle>
+      <DialogContent>
+        <Grid container spacing={3} sx={{ mt: 0 }}>
+          <Grid item xs={12} md={6}>
+            <Stack spacing={2}>
+              <TextField fullWidth label="Bölüm Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Bahçe, Teras, VIP Salon..." />
+              <TextField fullWidth label="Slug (URL)" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} helperText="Boş bırakılırsa otomatik oluşturulur" placeholder="bahce, teras, vip-salon..." />
+              <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} placeholder="Bölüm hakkında kısa açıklama..." />
+              
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>İkon</Typography>
+                <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                  {icons.map(icon => (
+                    <Button key={icon} variant={form.icon === icon ? 'contained' : 'outlined'} onClick={() => setForm({ ...form, icon })} 
+                      sx={{ minWidth: 44, height: 44, fontSize: 20 }}>{icon}</Button>
+                  ))}
+                </Stack>
+              </Box>
+              
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Renk</Typography>
+                <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                  {colors.map(color => (
+                    <Button key={color} onClick={() => setForm({ ...form, color })} 
+                      sx={{ minWidth: 32, height: 32, bgcolor: color, border: form.color === color ? '3px solid' : 'none', borderColor: 'primary.main',
+                        '&:hover': { bgcolor: color, opacity: 0.8 } }} />
+                  ))}
+                </Stack>
+              </Box>
+              
+              <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
+            </Stack>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Bölüm Görseli</Typography>
+                <ImageUploader value={form.image} onChange={(file) => handleImageUpload(file, 'image')} label="Bölüm görseli" disabled={!isEditing || uploadingImage} />
+                {!isEditing && <Typography variant="caption" color="text.secondary">Görsel yüklemek için önce bölümü kaydedin</Typography>}
+              </Box>
+              
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Anasayfa Görseli</Typography>
+                <ImageUploader value={form.homepageImage} onChange={(file) => handleImageUpload(file, 'homepageImage')} label="Anasayfa görseli" disabled={!isEditing || uploadingImage} />
+                <Typography variant="caption" color="text.secondary">Bu bölüm seçildiğinde menüde gösterilecek görsel</Typography>
+              </Box>
+              
+              <Paper sx={{ p: 2, bgcolor: form.color, color: 'white', borderRadius: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Typography variant="h2">{form.icon}</Typography>
+                  <Box>
+                    <Typography variant="h6" fontWeight={600}>{form.name || 'Bölüm Adı'}</Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.8 }}>{form.description || 'Açıklama...'}</Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Stack>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={onClose}>İptal</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={saving}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
 // ==================== PRODUCTS PAGE ====================
 export function ProductsPage() {
   const { branchId } = useParams()
@@ -417,10 +643,12 @@ export function ProductsPage() {
   const showSnackbar = useSnackbar()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
+  const [sections, setSections] = useState([])
   const [glbFiles, setGlbFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
+  const [filterSection, setFilterSection] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
@@ -437,13 +665,15 @@ export function ProductsPage() {
 
   const loadData = async () => {
     try {
-      const [productsRes, categoriesRes, glbRes] = await Promise.all([
+      const [productsRes, categoriesRes, sectionsRes, glbRes] = await Promise.all([
         api.get(`/branches/${branchId}/products`),
         api.get(`/branches/${branchId}/categories`),
+        api.get(`/branches/${branchId}/sections`),
         api.get(`/branches/${branchId}/glb`)
       ])
       setProducts(productsRes.data.products || productsRes.data)
       setCategories(categoriesRes.data)
+      setSections(sectionsRes.data)
       setGlbFiles(glbRes.data || [])
     } catch (err) { 
       console.error(err)
@@ -464,6 +694,8 @@ export function ProductsPage() {
   const filteredProducts = products.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
     if (filterCategory && p.categoryId !== filterCategory) return false
+    if (filterSection === 'null' && p.sectionId) return false
+    if (filterSection && filterSection !== 'null' && p.sectionId !== filterSection) return false
     if (filterStatus === 'active' && !p.isActive) return false
     if (filterStatus === 'inactive' && p.isActive) return false
     if (filterStatus === 'featured' && !p.isFeatured) return false
@@ -490,6 +722,16 @@ export function ProductsPage() {
                     {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.icon} {cat.name}</MenuItem>)}
                   </Select>
                 </FormControl>
+                {sections.length > 0 && (
+                  <FormControl size="small" sx={{ minWidth: 150 }}>
+                    <InputLabel>Bölüm</InputLabel>
+                    <Select value={filterSection} label="Bölüm" onChange={e => setFilterSection(e.target.value)}>
+                      <MenuItem value="">Tümü</MenuItem>
+                      <MenuItem value="null">Genel (Bölümsüz)</MenuItem>
+                      {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                )}
                 <FormControl size="small" sx={{ minWidth: 150 }}>
                   <InputLabel>Durum</InputLabel>
                   <Select value={filterStatus} label="Durum" onChange={e => setFilterStatus(e.target.value)}>
@@ -518,7 +760,7 @@ export function ProductsPage() {
 
         <Grid container spacing={2}>
           {filteredProducts.map(product => (
-            <Grid item xs={6} sm={4} md={3} lg={2.4} key={product.id}>
+            <Grid item xs={6} sm={4} md={3} key={product.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ position: 'relative', pt: '100%', bgcolor: 'background.default' }}>
                   {product.thumbnail ? (
@@ -575,7 +817,7 @@ export function ProductsPage() {
           )}
         </Grid>
 
-        <ProductModal open={modalOpen} product={editingProduct} categories={categories} glbFiles={glbFiles} branchId={branchId}
+        <ProductModal open={modalOpen} product={editingProduct} categories={categories} sections={sections} glbFiles={glbFiles} branchId={branchId}
           onClose={() => { setModalOpen(false); setEditingProduct(null) }}
           onSave={() => { setModalOpen(false); setEditingProduct(null); loadData() }} />
 
@@ -601,13 +843,14 @@ export function ProductsPage() {
 }
 
 // ==================== PRODUCT MODAL ====================
-function ProductModal({ open, product, categories, glbFiles, branchId, onClose, onSave }) {
+function ProductModal({ open, product, categories, sections = [], glbFiles, branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
+  
   const isEditing = !!product?.id
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState(0)
   const [form, setForm] = useState({
-    name: '', price: '', description: '', categoryId: '', isActive: true,
+    name: '', price: '', description: '', categoryId: '', sectionId: '', isActive: true,
     isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '',
     calories: '', preparationTime: '', allergens: '', tags: ''
   })
@@ -619,7 +862,9 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
       if (product) {
         setForm({
           name: product.name || '', price: product.price || '', description: product.description || '',
-          categoryId: product.categoryId || product.category?._id || '', isActive: product.isActive !== false,
+          categoryId: product.categoryId || product.category?._id || '', 
+          sectionId: product.sectionId || product.section?._id || '',
+          isActive: product.isActive !== false,
           isFeatured: product.isFeatured || false, isCampaign: product.isCampaign || false,
           campaignPrice: product.campaignPrice || '', glbFile: product.glbFile || '',
           calories: product.calories || '', preparationTime: product.preparationTime || '',
@@ -627,7 +872,7 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
         })
         setThumbnailPreview(product.thumbnail ? getImageUrl(product.thumbnail) : null)
       } else {
-        setForm({ name: '', price: '', description: '', categoryId: '', isActive: true, isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '', calories: '', preparationTime: '', allergens: '', tags: '' })
+        setForm({ name: '', price: '', description: '', categoryId: '', sectionId: '', isActive: true, isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '', calories: '', preparationTime: '', allergens: '', tags: '' })
         setThumbnailPreview(null)
       }
       setThumbnailFile(null)
@@ -647,7 +892,8 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
     try {
       const data = {
         name: form.name, price: parseFloat(form.price), description: form.description,
-        categoryId: form.categoryId || null, isActive: form.isActive, isFeatured: form.isFeatured,
+        categoryId: form.categoryId || null, section: form.sectionId || null,
+        isActive: form.isActive, isFeatured: form.isFeatured,
         isCampaign: form.isCampaign, campaignPrice: form.campaignPrice ? parseFloat(form.campaignPrice) : null,
         calories: form.calories ? parseInt(form.calories) : null,
         preparationTime: form.preparationTime ? parseInt(form.preparationTime) : null,
@@ -674,6 +920,7 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
       }
 
       showSnackbar(isEditing ? 'Ürün güncellendi' : 'Ürün oluşturuldu', 'success')
+      
       onSave()
     } catch (err) { 
       console.error(err)
@@ -719,6 +966,15 @@ function ProductModal({ open, product, categories, glbFiles, branchId, onClose, 
                     </Select>
                   </FormControl>
                 </Stack>
+                {sections.length > 0 && (
+                  <FormControl fullWidth>
+                    <InputLabel>Bölüm</InputLabel>
+                    <Select value={form.sectionId} label="Bölüm" onChange={e => setForm({ ...form, sectionId: e.target.value })}>
+                      <MenuItem value="">Genel (Tüm Bölümler)</MenuItem>
+                      {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                )}
                 <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3} />
                 <Divider />
                 <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
@@ -805,23 +1061,29 @@ export function CategoriesPage() {
   const location = useLocation()
   const showSnackbar = useSnackbar()
   const [categories, setCategories] = useState([])
+  const [sections, setSections] = useState([])
+  const [filterSection, setFilterSection] = useState('')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, category: null })
 
-  useEffect(() => { if (branchId) loadCategories() }, [branchId])
+  useEffect(() => { if (branchId) loadData() }, [branchId])
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     if (params.get('action') === 'new') { setEditingCategory(null); setModalOpen(true) }
   }, [location.search])
 
-  const loadCategories = async () => {
+  const loadData = async () => {
     try {
-      const res = await api.get(`/branches/${branchId}/categories`)
-      setCategories(res.data)
-    } catch { showSnackbar('Kategoriler yüklenemedi', 'error') }
+      const [catRes, secRes] = await Promise.all([
+        api.get(`/branches/${branchId}/categories`),
+        api.get(`/branches/${branchId}/sections`)
+      ])
+      setCategories(catRes.data)
+      setSections(secRes.data)
+    } catch { showSnackbar('Veriler yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
 
@@ -830,7 +1092,7 @@ export function CategoriesPage() {
       await api.delete(`/categories/${deleteDialog.category.id}`)
       showSnackbar('Kategori silindi', 'success')
       setDeleteDialog({ open: false, category: null })
-      loadCategories()
+      loadData()
     } catch { showSnackbar('Silme başarısız', 'error') }
   }
 
@@ -841,7 +1103,7 @@ export function CategoriesPage() {
       formData.append('image', file)
       await api.post(`/categories/${categoryId}/image`, formData)
       showSnackbar('Görsel yüklendi', 'success')
-      loadCategories()
+      loadData()
     } catch { showSnackbar('Yükleme başarısız', 'error') }
   }
 
@@ -854,6 +1116,12 @@ export function CategoriesPage() {
     }
   }
 
+  const filteredCategories = categories.filter(c => {
+    if (filterSection === 'null' && c.section) return false
+    if (filterSection && filterSection !== 'null' && c.section !== filterSection) return false
+    return true
+  })
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
   return (
@@ -861,10 +1129,22 @@ export function CategoriesPage() {
       <Stack spacing={3}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
-            <Typography variant="h6" fontWeight={700}>{categories.length} Kategori</Typography>
+            <Typography variant="h6" fontWeight={700}>{filteredCategories.length} Kategori</Typography>
             <Typography variant="body2" color="text.secondary">Kategorileri düzenleyin ve yerleşimlerini ayarlayın</Typography>
           </Box>
-          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>Yeni Kategori</Button>
+          <Stack direction="row" spacing={2} alignItems="center">
+            {sections.length > 0 && (
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Bölüm</InputLabel>
+                <Select value={filterSection} label="Bölüm" onChange={e => setFilterSection(e.target.value)}>
+                  <MenuItem value="">Tümü</MenuItem>
+                  <MenuItem value="null">Genel (Bölümsüz)</MenuItem>
+                  {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+            )}
+            <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>Yeni Kategori</Button>
+          </Stack>
         </Stack>
 
         <Alert severity="info">
@@ -877,8 +1157,8 @@ export function CategoriesPage() {
         </Alert>
 
         <Grid container spacing={2}>
-          {categories.map(category => (
-            <Grid item xs={6} sm={4} md={3} lg={2.4} key={category.id}>
+          {filteredCategories.map(category => (
+            <Grid item xs={6} sm={4} md={3} key={category.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default' }}>
                   {category.image ? (
@@ -922,9 +1202,9 @@ export function CategoriesPage() {
           )}
         </Grid>
 
-        <CategoryModal open={modalOpen} category={editingCategory} branchId={branchId}
+        <CategoryModal open={modalOpen} category={editingCategory} sections={sections} branchId={branchId}
           onClose={() => { setModalOpen(false); setEditingCategory(null) }}
-          onSave={() => { setModalOpen(false); setEditingCategory(null); loadCategories() }} />
+          onSave={() => { setModalOpen(false); setEditingCategory(null); loadData() }} />
 
         <ConfirmDialog open={deleteDialog.open} title="Kategori Sil"
           message={<><Typography>"{deleteDialog.category?.name}" kategorisini silmek istediğinize emin misiniz?</Typography><Alert severity="warning" sx={{ mt: 2 }}>Bu kategorideki ürünler kategorisiz kalacak.</Alert></>}
@@ -935,20 +1215,25 @@ export function CategoriesPage() {
 }
 
 // ==================== CATEGORY MODAL ====================
-function CategoryModal({ open, category, branchId, onClose, onSave }) {
+function CategoryModal({ open, category, sections = [], branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
+  
   const isEditing = !!category?.id
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half' })
+  const [form, setForm] = useState({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half', section: '' })
 
   const icons = ['🍕', '🍔', '🌮', '🍜', '🍣', '🥗', '🍰', '☕', '🍺', '🥤', '🍳', '🥪', '🍝', '🥘', '🍱', '🧁', '🍦', '🥩', '🍗', '🥙']
 
   useEffect(() => {
     if (open) {
       if (category) {
-        setForm({ name: category.name || '', icon: category.icon || '📁', description: category.description || '', isActive: category.isActive !== false, layoutSize: category.layoutSize || 'half' })
+        setForm({ 
+          name: category.name || '', icon: category.icon || '📁', 
+          description: category.description || '', isActive: category.isActive !== false, 
+          layoutSize: category.layoutSize || 'half', section: category.section || ''
+        })
       } else {
-        setForm({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half' })
+        setForm({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half', section: '' })
       }
     }
   }, [open, category])
@@ -957,12 +1242,14 @@ function CategoryModal({ open, category, branchId, onClose, onSave }) {
     if (!form.name) { showSnackbar('Kategori adı zorunludur', 'error'); return }
     setSaving(true)
     try {
+      const data = { ...form, section: form.section || null }
       if (isEditing) {
-        await api.put(`/categories/${category.id}`, form)
+        await api.put(`/categories/${category.id}`, data)
       } else {
-        await api.post(`/branches/${branchId}/categories`, form)
+        await api.post(`/branches/${branchId}/categories`, data)
       }
       showSnackbar(isEditing ? 'Kategori güncellendi' : 'Kategori oluşturuldu', 'success')
+      
       onSave()
     } catch (err) { showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') }
     finally { setSaving(false) }
@@ -980,6 +1267,16 @@ function CategoryModal({ open, category, branchId, onClose, onSave }) {
         <Stack spacing={3} sx={{ mt: 1 }}>
           <TextField fullWidth label="Kategori Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
           <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} />
+
+          {sections.length > 0 && (
+            <FormControl fullWidth>
+              <InputLabel>Bölüm</InputLabel>
+              <Select value={form.section} label="Bölüm" onChange={e => setForm({ ...form, section: e.target.value })}>
+                <MenuItem value="">Genel (Tüm Bölümler)</MenuItem>
+                {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          )}
 
           <Box>
             <Typography variant="subtitle2" gutterBottom>İkon Seçin</Typography>
@@ -1138,145 +1435,147 @@ export function CategoryLayoutPage() {
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
   return (
-    <Stack spacing={3}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
-        <Box>
-          <Typography variant="h6" fontWeight={700}>Kategori Düzeni</Typography>
-          <Typography variant="body2" color="text.secondary">Menüde kategorilerin görünümünü ayarlayın</Typography>
-        </Box>
-        <Stack direction="row" spacing={1}>
-          <Button onClick={loadData} startIcon={<Refresh />}>Yenile</Button>
-          <Button variant="contained" onClick={saveLayouts} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>
-            {saving ? 'Kaydediliyor...' : 'Kaydet'}
-          </Button>
+    <PageWrapper>
+      <Stack spacing={3}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>Kategori Düzeni</Typography>
+            <Typography variant="body2" color="text.secondary">Menüde kategorilerin görünümünü ayarlayın</Typography>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button onClick={loadData} startIcon={<Refresh />}>Yenile</Button>
+            <Button variant="contained" onClick={saveLayouts} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Stack>
         </Stack>
-      </Stack>
 
-      <Alert severity="info">Her satır maksimum 1 birim genişliğinde. Tam: 1, Yarım: 0.5, Üçte Bir: 0.33</Alert>
+        <Alert severity="info">Her satır maksimum 1 birim genişliğinde. Tam: 1, Yarım: 0.5, Üçte Bir: 0.33</Alert>
 
-      <Card>
-        <CardHeader title={`Kullanılmayan Kategoriler (${unusedCategories.length})`} />
-        <CardContent>
-          {unusedCategories.length > 0 ? (
-            <Grid container spacing={2}>
-              {unusedCategories.map(cat => (
-                <Grid item xs={4} sm={3} md={2} key={cat.id}>
-                  <Paper variant="outlined" sx={{ p: 1, cursor: 'pointer', transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', transform: 'scale(1.02)' } }}
-                    onClick={() => {
-                      if (layouts.length === 0) {
-                        setLayouts([{ rowOrder: 0, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
-                      } else {
-                        const lastRowIndex = layouts.length - 1
-                        if (getRowWidth(layouts[lastRowIndex]) < 0.99) {
-                          addCategoryToRow(lastRowIndex, cat, cat.layoutSize || 'half')
+        <Card>
+          <CardHeader title={`Kullanılmayan Kategoriler (${unusedCategories.length})`} />
+          <CardContent>
+            {unusedCategories.length > 0 ? (
+              <Grid container spacing={2}>
+                {unusedCategories.map(cat => (
+                  <Grid item xs={4} sm={3} md={2} key={cat.id}>
+                    <Paper variant="outlined" sx={{ p: 1, cursor: 'pointer', transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', transform: 'scale(1.02)' } }}
+                      onClick={() => {
+                        if (layouts.length === 0) {
+                          setLayouts([{ rowOrder: 0, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
                         } else {
-                          setLayouts([...layouts, { rowOrder: layouts.length, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
+                          const lastRowIndex = layouts.length - 1
+                          if (getRowWidth(layouts[lastRowIndex]) < 0.99) {
+                            addCategoryToRow(lastRowIndex, cat, cat.layoutSize || 'half')
+                          } else {
+                            setLayouts([...layouts, { rowOrder: layouts.length, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
+                          }
                         }
-                      }
-                    }}>
-                    <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default', borderRadius: 1, overflow: 'hidden', mb: 1 }}>
-                      {cat.image ? (
-                        <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Typography variant="h4">{cat.icon}</Typography>
-                        </Box>
-                      )}
-                      <IconButton size="small" sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}>
-                        <Add fontSize="small" />
-                      </IconButton>
-                    </Box>
-                    <Typography variant="caption" fontWeight={600} noWrap display="block" textAlign="center">{cat.name}</Typography>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Typography color="text.secondary" textAlign="center">Tüm kategoriler düzene eklenmiş ✓</Typography>
-          )}
-        </CardContent>
-      </Card>
+                      }}>
+                      <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default', borderRadius: 1, overflow: 'hidden', mb: 1 }}>
+                        {cat.image ? (
+                          <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Typography variant="h4">{cat.icon}</Typography>
+                          </Box>
+                        )}
+                        <IconButton size="small" sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}>
+                          <Add fontSize="small" />
+                        </IconButton>
+                      </Box>
+                      <Typography variant="caption" fontWeight={600} noWrap display="block" textAlign="center">{cat.name}</Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Typography color="text.secondary" textAlign="center">Tüm kategoriler düzene eklenmiş ✓</Typography>
+            )}
+          </CardContent>
+        </Card>
 
-      <Stack spacing={2}>
-        {layouts.map((row, rowIndex) => (
-          <Card key={rowIndex}>
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <DragIndicator color="action" />
-                  <Typography variant="subtitle2">Satır {rowIndex + 1}</Typography>
-                  <Chip label={`${Math.round(getRowWidth(row) * 100)}%`} size="small" color={getRowWidth(row) > 1.01 ? 'error' : getRowWidth(row) >= 0.99 ? 'success' : 'warning'} />
+        <Stack spacing={2}>
+          {layouts.map((row, rowIndex) => (
+            <Card key={rowIndex}>
+              <CardContent>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <DragIndicator color="action" />
+                    <Typography variant="subtitle2">Satır {rowIndex + 1}</Typography>
+                    <Chip label={`${Math.round(getRowWidth(row) * 100)}%`} size="small" color={getRowWidth(row) > 1.01 ? 'error' : getRowWidth(row) >= 0.99 ? 'success' : 'warning'} />
+                  </Stack>
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small" onClick={() => moveRow(rowIndex, -1)} disabled={rowIndex === 0}><ArrowUpward fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => moveRow(rowIndex, 1)} disabled={rowIndex === layouts.length - 1}><ArrowDownward fontSize="small" /></IconButton>
+                    <IconButton size="small" color="error" onClick={() => removeRow(rowIndex)}><Delete fontSize="small" /></IconButton>
+                  </Stack>
                 </Stack>
-                <Stack direction="row" spacing={0.5}>
-                  <IconButton size="small" onClick={() => moveRow(rowIndex, -1)} disabled={rowIndex === 0}><ArrowUpward fontSize="small" /></IconButton>
-                  <IconButton size="small" onClick={() => moveRow(rowIndex, 1)} disabled={rowIndex === layouts.length - 1}><ArrowDownward fontSize="small" /></IconButton>
-                  <IconButton size="small" color="error" onClick={() => removeRow(rowIndex)}><Delete fontSize="small" /></IconButton>
-                </Stack>
-              </Stack>
 
-              {(row.categories || []).length > 0 ? (
-                <Grid container spacing={2}>
-                  {row.categories.map((item, catIndex) => {
-                    const gridSize = getGridSize(item.size)
-                    const cat = item.category || {}
-                    return (
-                      <Grid item xs={gridSize} key={catIndex}>
-                        <Paper variant="outlined" sx={{ position: 'relative', overflow: 'hidden' }}>
-                          <IconButton size="small" sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'error.main' } }} onClick={() => removeCategoryFromRow(rowIndex, catIndex)}>
-                            <Close fontSize="small" sx={{ color: 'white' }} />
-                          </IconButton>
-                          
-                          <Box sx={{ position: 'relative', pt: item.size === 'full' ? '40%' : '60%', bgcolor: 'background.default' }}>
-                            {cat.image ? (
-                              <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)' }}>
-                                <Typography variant="h2">{cat.icon || '📁'}</Typography>
+                {(row.categories || []).length > 0 ? (
+                  <Grid container spacing={2}>
+                    {row.categories.map((item, catIndex) => {
+                      const gridSize = getGridSize(item.size)
+                      const cat = item.category || {}
+                      return (
+                        <Grid item xs={gridSize} key={catIndex}>
+                          <Paper variant="outlined" sx={{ position: 'relative', overflow: 'hidden' }}>
+                            <IconButton size="small" sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'error.main' } }} onClick={() => removeCategoryFromRow(rowIndex, catIndex)}>
+                              <Close fontSize="small" sx={{ color: 'white' }} />
+                            </IconButton>
+                            
+                            <Box sx={{ position: 'relative', pt: item.size === 'full' ? '40%' : '60%', bgcolor: 'background.default' }}>
+                              {cat.image ? (
+                                <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)' }}>
+                                  <Typography variant="h2">{cat.icon || '📁'}</Typography>
+                                </Box>
+                              )}
+                              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)' }} />
+                              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 2 }}>
+                                <Typography variant="subtitle1" fontWeight={700} color="white">{cat.icon} {cat.name || 'Kategori'}</Typography>
                               </Box>
-                            )}
-                            <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)' }} />
-                            <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 2 }}>
-                              <Typography variant="subtitle1" fontWeight={700} color="white">{cat.icon} {cat.name || 'Kategori'}</Typography>
                             </Box>
-                          </Box>
 
-                          <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
-                            <Typography variant="caption" color="text.secondary" gutterBottom display="block">Boyut:</Typography>
-                            <ToggleButtonGroup size="small" value={item.size} exclusive onChange={(e, v) => v && changeCategorySize(rowIndex, catIndex, v)} fullWidth>
-                              <ToggleButton value="full"><Fullscreen fontSize="small" /></ToggleButton>
-                              <ToggleButton value="half"><ViewModule fontSize="small" /></ToggleButton>
-                              <ToggleButton value="third"><GridView fontSize="small" /></ToggleButton>
-                            </ToggleButtonGroup>
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    )
-                  })}
-                </Grid>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '2px dashed', borderColor: 'divider', borderRadius: 2 }}>
-                  <Typography>Yukarıdan kategori seçerek ekleyin</Typography>
-                </Box>
-              )}
+                            <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
+                              <Typography variant="caption" color="text.secondary" gutterBottom display="block">Boyut:</Typography>
+                              <ToggleButtonGroup size="small" value={item.size} exclusive onChange={(e, v) => v && changeCategorySize(rowIndex, catIndex, v)} fullWidth>
+                                <ToggleButton value="full"><Fullscreen fontSize="small" /></ToggleButton>
+                                <ToggleButton value="half"><ViewModule fontSize="small" /></ToggleButton>
+                                <ToggleButton value="third"><GridView fontSize="small" /></ToggleButton>
+                              </ToggleButtonGroup>
+                            </Box>
+                          </Paper>
+                        </Grid>
+                      )
+                    })}
+                  </Grid>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '2px dashed', borderColor: 'divider', borderRadius: 2 }}>
+                    <Typography>Yukarıdan kategori seçerek ekleyin</Typography>
+                  </Box>
+                )}
 
-              {getRowWidth(row) < 0.99 && unusedCategories.length > 0 && (
-                <FormControl size="small" sx={{ mt: 2, minWidth: 200 }}>
-                  <InputLabel>Kategori Ekle</InputLabel>
-                  <Select value="" label="Kategori Ekle" onChange={(e) => {
-                    const cat = categories.find(c => c.id === e.target.value)
-                    if (cat) addCategoryToRow(rowIndex, cat, cat.layoutSize || 'half')
-                  }}>
-                    {unusedCategories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.icon} {cat.name}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                {getRowWidth(row) < 0.99 && unusedCategories.length > 0 && (
+                  <FormControl size="small" sx={{ mt: 2, minWidth: 200 }}>
+                    <InputLabel>Kategori Ekle</InputLabel>
+                    <Select value="" label="Kategori Ekle" onChange={(e) => {
+                      const cat = categories.find(c => c.id === e.target.value)
+                      if (cat) addCategoryToRow(rowIndex, cat, cat.layoutSize || 'half')
+                    }}>
+                      {unusedCategories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.icon} {cat.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
+
+        <Button variant="outlined" startIcon={<Add />} onClick={addRow} fullWidth sx={{ py: 2 }}>Yeni Satır Ekle</Button>
       </Stack>
-
-      <Button variant="outlined" startIcon={<Add />} onClick={addRow} fullWidth sx={{ py: 2 }}>Yeni Satır Ekle</Button>
-    </Stack>
+    </PageWrapper>
   )
 }
 
@@ -1486,6 +1785,7 @@ export function AnnouncementsPage() {
 // ==================== ANNOUNCEMENT MODAL ====================
 function AnnouncementModal({ open, announcement, branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
+  
   const isEditing = !!announcement?.id
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ title: '', message: '', icon: '📢', type: 'info', isActive: true })
@@ -1507,6 +1807,7 @@ function AnnouncementModal({ open, announcement, branchId, onClose, onSave }) {
       if (isEditing) await api.put(`/announcements/${announcement.id}`, form)
       else await api.post(`/branches/${branchId}/announcements`, form)
       showSnackbar(isEditing ? 'Duyuru güncellendi' : 'Duyuru oluşturuldu', 'success')
+      
       onSave()
     } catch (err) { showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') }
     finally { setSaving(false) }
@@ -1646,24 +1947,16 @@ export function ReviewsPage() {
   )
 }
 
-// ==================== BRANCH SETTINGS PAGE - DÜZGÜN GÖRSEL YÜKLEME ====================
+// ==================== BRANCH SETTINGS PAGE ====================
 export function BranchSettingsPage() {
   const { branchId } = useParams()
   const { refreshBranch } = useBranch()
   const showSnackbar = useSnackbar()
+  
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [branch, setBranch] = useState(null)
-  const [form, setForm] = useState({ 
-    name: '', 
-    description: '', 
-    address: '', 
-    phone: '', 
-    whatsapp: '', 
-    instagram: '', 
-    workingHours: '', 
-    isActive: true 
-  })
+  const [form, setForm] = useState({ name: '', description: '', address: '', phone: '', whatsapp: '', instagram: '', workingHours: '', isActive: true })
 
   useEffect(() => { if (branchId) loadBranch() }, [branchId])
 
@@ -1671,16 +1964,7 @@ export function BranchSettingsPage() {
     try {
       const res = await api.get(`/branches/${branchId}`)
       setBranch(res.data)
-      setForm({ 
-        name: res.data.name || '', 
-        description: res.data.description || '', 
-        address: res.data.address || '', 
-        phone: res.data.phone || '', 
-        whatsapp: res.data.whatsapp || '', 
-        instagram: res.data.instagram || '', 
-        workingHours: res.data.workingHours || '', 
-        isActive: res.data.isActive !== false 
-      })
+      setForm({ name: res.data.name || '', description: res.data.description || '', address: res.data.address || '', phone: res.data.phone || '', whatsapp: res.data.whatsapp || '', instagram: res.data.instagram || '', workingHours: res.data.workingHours || '', isActive: res.data.isActive !== false })
     } catch { showSnackbar('Şube bilgileri yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
@@ -1692,6 +1976,7 @@ export function BranchSettingsPage() {
       await api.put(`/branches/${branchId}`, form)
       showSnackbar('Ayarlar kaydedildi', 'success')
       refreshBranch()
+      
       loadBranch() 
     }
     catch { showSnackbar('Kaydetme başarısız', 'error') }
@@ -1705,6 +1990,7 @@ export function BranchSettingsPage() {
       formData.append('image', file)
       await api.post(`/branches/${branchId}/image?type=${type}`, formData)
       showSnackbar('Görsel yüklendi', 'success')
+      
       loadBranch()
     } catch { showSnackbar('Yükleme başarısız', 'error') }
   }
@@ -1714,405 +2000,102 @@ export function BranchSettingsPage() {
   return (
     <PageWrapper>
       <Stack spacing={3}>
-        {/* Header */}
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
             <Typography variant="h6" fontWeight={700}>Şube Ayarları</Typography>
             <Typography variant="body2" color="text.secondary">Şube bilgilerini ve görsellerini düzenleyin</Typography>
           </Box>
-          <Button 
-            variant="contained" 
-            onClick={handleSave} 
-            disabled={saving} 
-            startIcon={saving ? <CircularProgress size={20} /> : <Check />}
-          >
+          <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>
         </Stack>
 
-        {/* GÖRSELLER BÖLÜMÜ */}
+        {/* GÖRSELLER */}
         <Card>
-          <CardHeader 
-            title="Görseller" 
-            subheader="Logo, şube görseli, banner ve menü üst görselini buradan yükleyin"
-          />
+          <CardHeader title="Görseller" subheader="Logo, şube görseli, banner ve menü üst görselini buradan yükleyin" />
           <CardContent>
             <Grid container spacing={3}>
               {/* Logo */}
-              <Grid item xs={6} sm={6} md={3}>
-                <Box sx={{ height: '100%' }}>
-                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Logo</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
-                    Şube logosu (kare format)
-                  </Typography>
-                  <Box
-                    component="label"
-                    sx={{
-                      display: 'block',
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '100%',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      border: '2px dashed',
-                      borderColor: branch?.logo ? 'transparent' : 'divider',
-                      bgcolor: 'background.default',
-                      '&:hover .overlay': { opacity: 1 }
-                    }}
-                  >
-                    {branch?.logo ? (
-                      <>
-                        <Box
-                          component="img"
-                          src={getImageUrl(branch.logo)}
-                          alt="Logo"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <Box
-                          className="overlay"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            bgcolor: 'rgba(0,0,0,0.6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: 0,
-                            transition: 'opacity 0.2s'
-                          }}
-                        >
-                          <Stack alignItems="center" spacing={0.5}>
-                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
-                            <Typography variant="caption" color="white">Değiştir</Typography>
-                          </Stack>
-                        </Box>
-                      </>
-                    ) : (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Stack alignItems="center" spacing={0.5}>
-                          <CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary">Yükle</Typography>
-                        </Stack>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Logo</Typography>
+                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '100%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px dashed', borderColor: branch?.logo ? 'transparent' : 'divider', bgcolor: 'background.default', '&:hover .overlay': { opacity: 1 } }}>
+                  {branch?.logo ? (
+                    <>
+                      <Box component="img" src={getImageUrl(branch.logo)} alt="Logo" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
+                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
                       </Box>
-                    )}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*,.heic"
-                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'logo')}
-                    />
-                  </Box>
+                    </>
+                  ) : (
+                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} /><Typography variant="caption" color="text.secondary">Yükle</Typography></Stack>
+                    </Box>
+                  )}
+                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'logo')} />
                 </Box>
               </Grid>
 
               {/* Şube Görseli */}
-              <Grid item xs={6} sm={6} md={3}>
-                <Box sx={{ height: '100%' }}>
-                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Şube Görseli</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
-                    Şube seçim sayfasında
-                  </Typography>
-                  <Box
-                    component="label"
-                    sx={{
-                      display: 'block',
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '56.25%',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      border: '2px dashed',
-                      borderColor: branch?.image ? 'transparent' : 'divider',
-                      bgcolor: 'background.default',
-                      '&:hover .overlay': { opacity: 1 }
-                    }}
-                  >
-                    {branch?.image ? (
-                      <>
-                        <Box
-                          component="img"
-                          src={getImageUrl(branch.image)}
-                          alt="Şube"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <Box
-                          className="overlay"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            bgcolor: 'rgba(0,0,0,0.6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: 0,
-                            transition: 'opacity 0.2s'
-                          }}
-                        >
-                          <Stack alignItems="center" spacing={0.5}>
-                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
-                            <Typography variant="caption" color="white">Değiştir</Typography>
-                          </Stack>
-                        </Box>
-                      </>
-                    ) : (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Stack alignItems="center" spacing={0.5}>
-                          <CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary">Yükle</Typography>
-                        </Stack>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Şube Görseli</Typography>
+                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px dashed', borderColor: branch?.image ? 'transparent' : 'divider', bgcolor: 'background.default', '&:hover .overlay': { opacity: 1 } }}>
+                  {branch?.image ? (
+                    <>
+                      <Box component="img" src={getImageUrl(branch.image)} alt="Şube" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
+                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
                       </Box>
-                    )}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*,.heic"
-                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'image')}
-                    />
-                  </Box>
+                    </>
+                  ) : (
+                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} /><Typography variant="caption" color="text.secondary">Yükle</Typography></Stack>
+                    </Box>
+                  )}
+                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'image')} />
                 </Box>
               </Grid>
 
               {/* Banner */}
-              <Grid item xs={6} sm={6} md={3}>
-                <Box sx={{ height: '100%' }}>
-                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>Banner</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
-                    Geniş format banner
-                  </Typography>
-                  <Box
-                    component="label"
-                    sx={{
-                      display: 'block',
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '42.86%',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      border: '2px dashed',
-                      borderColor: branch?.banner ? 'transparent' : 'divider',
-                      bgcolor: 'background.default',
-                      '&:hover .overlay': { opacity: 1 }
-                    }}
-                  >
-                    {branch?.banner ? (
-                      <>
-                        <Box
-                          component="img"
-                          src={getImageUrl(branch.banner)}
-                          alt="Banner"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <Box
-                          className="overlay"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            bgcolor: 'rgba(0,0,0,0.6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: 0,
-                            transition: 'opacity 0.2s'
-                          }}
-                        >
-                          <Stack alignItems="center" spacing={0.5}>
-                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
-                            <Typography variant="caption" color="white">Değiştir</Typography>
-                          </Stack>
-                        </Box>
-                      </>
-                    ) : (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Stack alignItems="center" spacing={0.5}>
-                          <CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary">Yükle</Typography>
-                        </Stack>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Banner</Typography>
+                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '42.86%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px dashed', borderColor: branch?.banner ? 'transparent' : 'divider', bgcolor: 'background.default', '&:hover .overlay': { opacity: 1 } }}>
+                  {branch?.banner ? (
+                    <>
+                      <Box component="img" src={getImageUrl(branch.banner)} alt="Banner" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
+                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
                       </Box>
-                    )}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*,.heic"
-                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'banner')}
-                    />
-                  </Box>
+                    </>
+                  ) : (
+                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} /><Typography variant="caption" color="text.secondary">Yükle</Typography></Stack>
+                    </Box>
+                  )}
+                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'banner')} />
                 </Box>
               </Grid>
 
-              {/* Menü Üst Görseli - Vurgulu */}
-              <Grid item xs={6} sm={6} md={3}>
-                <Box sx={{ height: '100%' }}>
-                  <Typography variant="subtitle2" fontWeight={600} gutterBottom color="primary.main">
-                    📱 Menü Üst Görseli
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.3 }}>
-                    Menüde en üstte görünür
-                  </Typography>
-                  <Box
-                    component="label"
-                    sx={{
-                      display: 'block',
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '56.25%',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      border: '2px solid',
-                      borderColor: branch?.homepageImage ? 'success.main' : 'primary.main',
-                      bgcolor: branch?.homepageImage ? 'background.default' : alpha('#e53935', 0.05),
-                      '&:hover .overlay': { opacity: 1 }
-                    }}
-                  >
-                    {branch?.homepageImage ? (
-                      <>
-                        <Box
-                          component="img"
-                          src={getImageUrl(branch.homepageImage)}
-                          alt="Menü Üst Görseli"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <Box
-                          className="overlay"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            bgcolor: 'rgba(0,0,0,0.6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: 0,
-                            transition: 'opacity 0.2s'
-                          }}
-                        >
-                          <Stack alignItems="center" spacing={0.5}>
-                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
-                            <Typography variant="caption" color="white">Değiştir</Typography>
-                          </Stack>
-                        </Box>
-                        <Chip
-                          label="Aktif"
-                          color="success"
-                          size="small"
-                          sx={{ position: 'absolute', top: 8, right: 8 }}
-                        />
-                      </>
-                    ) : (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Stack alignItems="center" spacing={0.5}>
-                          <CloudUpload sx={{ fontSize: 32, color: 'primary.main' }} />
-                          <Typography variant="caption" color="primary.main" fontWeight={600}>Yükle</Typography>
-                        </Stack>
+              {/* Menü Üst Görseli */}
+              <Grid item xs={6} sm={3}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom color="primary.main">📱 Menü Üst Görseli</Typography>
+                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px solid', borderColor: branch?.homepageImage ? 'success.main' : 'primary.main', bgcolor: branch?.homepageImage ? 'background.default' : alpha('#e53935', 0.05), '&:hover .overlay': { opacity: 1 } }}>
+                  {branch?.homepageImage ? (
+                    <>
+                      <Box component="img" src={getImageUrl(branch.homepageImage)} alt="Menü Üst Görseli" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
+                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
                       </Box>
-                    )}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*,.heic"
-                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'homepageImage')}
-                    />
-                  </Box>
+                      <Chip label="Aktif" color="success" size="small" sx={{ position: 'absolute', top: 8, right: 8 }} />
+                    </>
+                  ) : (
+                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'primary.main' }} /><Typography variant="caption" color="primary.main" fontWeight={600}>Yükle</Typography></Stack>
+                    </Box>
+                  )}
+                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'homepageImage')} />
                 </Box>
               </Grid>
             </Grid>
-
-            {/* Görsel Açıklamaları */}
-            <Alert severity="info" sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>Görsel Kullanım Alanları:</Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2, '& li': { mb: 0.5 } }}>
-                <li><Typography variant="body2"><strong>Logo:</strong> Menüde sol üstte ve şube kartlarında</Typography></li>
-                <li><Typography variant="body2"><strong>Şube Görseli:</strong> Ana sayfadaki şube seçim kartlarında</Typography></li>
-                <li><Typography variant="body2"><strong>Banner:</strong> Yedek olarak menü üstünde</Typography></li>
-                <li><Typography variant="body2"><strong>Menü Üst Görseli:</strong> Müşteri menüsünün en üstündeki büyük görsel</Typography></li>
-              </Box>
-            </Alert>
           </CardContent>
         </Card>
 
@@ -2121,15 +2104,9 @@ export function BranchSettingsPage() {
           <CardHeader title="Temel Bilgiler" />
           <CardContent>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Şube Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="URL Slug" value={branch?.slug || ''} disabled helperText="Değiştirilemez" />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} />
-              </Grid>
+              <Grid item xs={12} md={6}><TextField fullWidth label="Şube Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></Grid>
+              <Grid item xs={12} md={6}><TextField fullWidth label="URL Slug" value={branch?.slug || ''} disabled helperText="Değiştirilemez" /></Grid>
+              <Grid item xs={12}><TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} /></Grid>
             </Grid>
           </CardContent>
         </Card>
@@ -2139,26 +2116,11 @@ export function BranchSettingsPage() {
           <CardHeader title="İletişim Bilgileri" />
           <CardContent>
             <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Adres" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} multiline rows={2}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Telefon" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="WhatsApp" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><WhatsApp /></InputAdornment> }} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Instagram" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} placeholder="@kullaniciadi"
-                  InputProps={{ startAdornment: <InputAdornment position="start"><Instagram /></InputAdornment> }} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Çalışma Saatleri" value={form.workingHours} onChange={e => setForm({ ...form, workingHours: e.target.value })} placeholder="09:00 - 22:00"
-                  InputProps={{ startAdornment: <InputAdornment position="start"><AccessTime /></InputAdornment> }} />
-              </Grid>
+              <Grid item xs={12}><TextField fullWidth label="Adres" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} multiline rows={2} InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }} /></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth label="Telefon" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }} /></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth label="WhatsApp" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><WhatsApp /></InputAdornment> }} /></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth label="Instagram" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} placeholder="@kullaniciadi" InputProps={{ startAdornment: <InputAdornment position="start"><Instagram /></InputAdornment> }} /></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth label="Çalışma Saatleri" value={form.workingHours} onChange={e => setForm({ ...form, workingHours: e.target.value })} placeholder="09:00 - 22:00" InputProps={{ startAdornment: <InputAdornment position="start"><AccessTime /></InputAdornment> }} /></Grid>
             </Grid>
           </CardContent>
         </Card>
@@ -2166,15 +2128,8 @@ export function BranchSettingsPage() {
         {/* DURUM */}
         <Card>
           <CardContent>
-            <FormControlLabel
-              control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
-              label={
-                <Box>
-                  <Typography fontWeight={600}>Şube Aktif</Typography>
-                  <Typography variant="caption" color="text.secondary">Pasif şubeler müşterilere görünmez</Typography>
-                </Box>
-              }
-            />
+            <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
+              label={<Box><Typography fontWeight={600}>Şube Aktif</Typography><Typography variant="caption" color="text.secondary">Pasif şubeler müşterilere görünmez</Typography></Box>} />
           </CardContent>
         </Card>
       </Stack>
@@ -2399,6 +2354,7 @@ export function UsersPage() {
     </PageWrapper>
   )
 }
+
 
 // ==================== USER MODAL ====================
 function UserModal({ open, user, branches, onClose, onSave }) {
