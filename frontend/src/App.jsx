@@ -11,7 +11,7 @@ import {
 import {
   Menu as MenuIcon, Dashboard, Restaurant, Category, ViewInAr, Campaign, RateReview,
   Settings, People, Logout, Store, Check, DarkMode, LightMode, ExpandMore, Preview,
-  Phone, Refresh
+  Phone, Refresh, Place, Add, LocalOffer
 } from '@mui/icons-material'
 
 // ==================== CONFIG ====================
@@ -28,7 +28,6 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(res => res, err => {
   if (err.response?.status === 401) {
     localStorage.removeItem('token')
-    // Sadece admin sayfalarındaysa login'e yönlendir
     if (window.location.pathname.startsWith('/admin')) {
       window.location.href = '/login'
     }
@@ -163,6 +162,7 @@ function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('currentBranch')
+    localStorage.removeItem('currentSection')
     setUser(null)
   }
 
@@ -185,12 +185,15 @@ function AuthProvider({ children }) {
   return <AuthContext.Provider value={{ user, login, logout, setup, checkAuth }}>{children}</AuthContext.Provider>
 }
 
-// ==================== BRANCH PROVIDER ====================
+// ==================== BRANCH PROVIDER (with Sections) ====================
 function BranchProvider({ children }) {
   const [currentBranch, setCurrentBranch] = useState(null)
   const [branches, setBranches] = useState([])
+  const [currentSection, setCurrentSection] = useState(null)
+  const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(false)
 
+  // Load branches
   const loadBranches = useCallback(async () => {
     setLoading(true)
     try {
@@ -205,9 +208,61 @@ function BranchProvider({ children }) {
     finally { setLoading(false) }
   }, [currentBranch])
 
+  // Load sections for current branch
+  const loadSections = useCallback(async (branchId) => {
+    if (!branchId) {
+      setSections([])
+      setCurrentSection(null)
+      return
+    }
+    try {
+      const res = await api.get(`/branches/${branchId}/sections`)
+      setSections(res.data || [])
+      
+      // Restore saved section or select first one
+      const savedSection = localStorage.getItem('currentSection')
+      const found = res.data.find(s => s.id === savedSection)
+      if (found) {
+        setCurrentSection(found)
+      } else if (res.data.length > 0) {
+        setCurrentSection(res.data[0])
+        localStorage.setItem('currentSection', res.data[0].id)
+      } else {
+        setCurrentSection(null)
+        localStorage.removeItem('currentSection')
+      }
+    } catch (err) { 
+      console.error(err)
+      setSections([])
+      setCurrentSection(null)
+    }
+  }, [])
+
+  // When branch changes, load its sections
+  useEffect(() => {
+    if (currentBranch?.id) {
+      loadSections(currentBranch.id)
+    } else {
+      setSections([])
+      setCurrentSection(null)
+    }
+  }, [currentBranch?.id, loadSections])
+
   const selectBranch = useCallback((branch) => {
     setCurrentBranch(branch)
+    setCurrentSection(null) // Reset section when branch changes
+    setSections([])
     localStorage.setItem('currentBranch', branch.id)
+    localStorage.removeItem('currentSection')
+  }, [])
+
+  const selectSection = useCallback((section) => {
+    setCurrentSection(section)
+    if (section) {
+      localStorage.setItem('currentSection', section.id)
+    } else {
+      localStorage.removeItem('currentSection')
+    }
   }, [])
 
   const refreshBranch = useCallback(async () => {
@@ -218,8 +273,18 @@ function BranchProvider({ children }) {
     } catch (err) { console.error(err) }
   }, [currentBranch])
 
+  const refreshSections = useCallback(async () => {
+    if (currentBranch?.id) {
+      await loadSections(currentBranch.id)
+    }
+  }, [currentBranch?.id, loadSections])
+
   return (
-    <BranchContext.Provider value={{ currentBranch, branches, loadBranches, selectBranch, setCurrentBranch, refreshBranch, loading }}>
+    <BranchContext.Provider value={{ 
+      currentBranch, branches, loadBranches, selectBranch, setCurrentBranch, refreshBranch, 
+      currentSection, sections, selectSection, setCurrentSection, refreshSections, loadSections,
+      loading 
+    }}>
       {children}
     </BranchContext.Provider>
   )
@@ -236,6 +301,11 @@ const menuItems = [
   { path: 'glb', icon: <ViewInAr />, label: '3D Modeller' },
   { path: 'announcements', icon: <Campaign />, label: 'Duyurular' },
   { path: 'reviews', icon: <RateReview />, label: 'Yorumlar' },
+]
+
+const branchSettingsItems = [
+  { path: 'sections', icon: <Place />, label: 'Bölümler' },
+  { path: 'tags', icon: <LocalOffer />, label: 'Etiketler' },
   { path: 'settings', icon: <Settings />, label: 'Şube Ayarları' },
 ]
 
@@ -248,27 +318,37 @@ function Sidebar({ open, onClose, isMobile }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { currentBranch, branches, selectBranch } = useBranch()
+  const { currentBranch, branches, selectBranch, currentSection, sections, selectSection, refreshSections } = useBranch()
   const [branchMenuAnchor, setBranchMenuAnchor] = useState(null)
+  const [sectionMenuAnchor, setSectionMenuAnchor] = useState(null)
 
   const handleLogout = () => { logout(); navigate('/login') }
 
   const handleBranchChange = (branch) => {
     selectBranch(branch)
     setBranchMenuAnchor(null)
-    navigate(`/admin/branch/${branch.id}/dashboard`)
+    // Şube seçilince bölüm seçim sayfasına git
+    navigate(`/admin/branch/${branch.id}/select-section`)
+  }
+
+  const handleSectionChange = (section) => {
+    selectSection(section)
+    setSectionMenuAnchor(null)
+    if (currentBranch && section) {
+      navigate(`/admin/branch/${currentBranch.id}/section/${section.id}/dashboard`)
+    }
   }
 
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
       <Box sx={{ p: 2.5, borderBottom: 1, borderColor: 'divider' }}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box sx={{ width: 44, height: 44, borderRadius: '12px', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Restaurant sx={{ fontSize: 24, color: 'white' }} />
-          </Box>
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Avatar sx={{ bgcolor: 'primary.main', width: 44, height: 44 }}>
+            <Restaurant />
+          </Avatar>
           <Box>
-            <Typography variant="h6" fontWeight={700}>AR Menu</Typography>
+            <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2 }}>AR Menu</Typography>
             <Typography variant="caption" color="text.secondary">Yönetim Paneli</Typography>
           </Box>
         </Stack>
@@ -277,17 +357,26 @@ function Sidebar({ open, onClose, isMobile }) {
       {/* Branch Selector */}
       {branches.length > 0 && (
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>Aktif Şube</Typography>
-          <Button fullWidth variant="outlined" onClick={(e) => setBranchMenuAnchor(e.currentTarget)} endIcon={<ExpandMore />}
-            sx={{ justifyContent: 'space-between', py: 1.5, borderColor: 'divider' }}>
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              <Avatar sx={{ width: 28, height: 28, bgcolor: 'primary.main' }}><Store sx={{ fontSize: 16 }} /></Avatar>
-              <Typography noWrap sx={{ maxWidth: 140 }}>{currentBranch?.name || 'Şube Seç'}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+            ŞUBE
+          </Typography>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={(e) => setBranchMenuAnchor(e.currentTarget)}
+            endIcon={<ExpandMore />}
+            sx={{ justifyContent: 'space-between', textAlign: 'left', py: 1.5, borderColor: 'divider' }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ overflow: 'hidden' }}>
+              <Avatar src={currentBranch?.logo ? getImageUrl(currentBranch.logo) : undefined} sx={{ width: 28, height: 28 }}>
+                <Store fontSize="small" />
+              </Avatar>
+              <Typography noWrap fontWeight={600}>{currentBranch?.name || 'Şube Seç'}</Typography>
             </Stack>
           </Button>
-          <Menu anchorEl={branchMenuAnchor} open={Boolean(branchMenuAnchor)} onClose={() => setBranchMenuAnchor(null)} PaperProps={{ sx: { width: 250, maxHeight: 400 } }}>
+          <Menu anchorEl={branchMenuAnchor} open={Boolean(branchMenuAnchor)} onClose={() => setBranchMenuAnchor(null)} PaperProps={{ sx: { width: 260, maxHeight: 400 } }}>
             {branches.map(branch => (
-              <MenuItem key={branch.id} onClick={() => handleBranchChange(branch)} selected={currentBranch?.id === branch.id} sx={{ py: 1.5 }}>
+              <MenuItem key={branch.id} onClick={() => handleBranchChange(branch)} selected={currentBranch?.id === branch.id}>
                 <ListItemIcon>
                   <Avatar sx={{ width: 32, height: 32 }} src={branch.logo ? getImageUrl(branch.logo) : undefined}><Store fontSize="small" /></Avatar>
                 </ListItemIcon>
@@ -304,16 +393,102 @@ function Sidebar({ open, onClose, isMobile }) {
         </Box>
       )}
 
-      {/* Menu Items */}
+      {/* Section Selector - Sadece şube seçiliyse ve bölümler varsa göster */}
+      {currentBranch && sections.length > 0 && (
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+            BÖLÜM
+          </Typography>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={(e) => setSectionMenuAnchor(e.currentTarget)}
+            endIcon={<ExpandMore />}
+            sx={{ 
+              justifyContent: 'space-between', 
+              textAlign: 'left', 
+              py: 1.5, 
+              borderColor: currentSection?.color || 'divider',
+              bgcolor: currentSection?.color ? alpha(currentSection.color, 0.1) : 'transparent'
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ overflow: 'hidden' }}>
+              <Typography fontSize={20}>{currentSection?.icon || '📍'}</Typography>
+              <Typography noWrap fontWeight={600}>{currentSection?.name || 'Bölüm Seç'}</Typography>
+            </Stack>
+          </Button>
+          <Menu anchorEl={sectionMenuAnchor} open={Boolean(sectionMenuAnchor)} onClose={() => setSectionMenuAnchor(null)} PaperProps={{ sx: { width: 260, maxHeight: 400 } }}>
+            {sections.filter(s => s.isActive).map(section => (
+              <MenuItem 
+                key={section.id} 
+                onClick={() => handleSectionChange(section)} 
+                selected={currentSection?.id === section.id}
+                sx={{ 
+                  bgcolor: currentSection?.id === section.id ? alpha(section.color || '#e53935', 0.1) : 'transparent'
+                }}
+              >
+                <ListItemIcon>
+                  <Typography fontSize={24}>{section.icon}</Typography>
+                </ListItemIcon>
+                <ListItemText 
+                  primary={section.name} 
+                  secondary={`${section.productCount || 0} ürün`} 
+                />
+                {currentSection?.id === section.id && <Check fontSize="small" color="primary" />}
+              </MenuItem>
+            ))}
+            <Divider sx={{ my: 1 }} />
+            <MenuItem component={Link} to={`/admin/branch/${currentBranch.id}/sections`} onClick={() => setSectionMenuAnchor(null)}>
+              <ListItemIcon><Settings fontSize="small" /></ListItemIcon>
+              <ListItemText primary="Bölümleri Yönet" />
+            </MenuItem>
+          </Menu>
+        </Box>
+      )}
+
+      {/* No Sections Message */}
+      {currentBranch && sections.length === 0 && (
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Alert severity="info" sx={{ mb: 1 }}>
+            Henüz bölüm oluşturulmamış
+          </Alert>
+          <Button 
+            fullWidth 
+            variant="outlined" 
+            startIcon={<Add />}
+            component={Link}
+            to={`/admin/branch/${currentBranch.id}/sections`}
+            onClick={() => isMobile && onClose()}
+          >
+            Bölüm Ekle
+          </Button>
+        </Box>
+      )}
+
+      {/* Menu Items - Sadece bölüm seçiliyse göster */}
       <Box sx={{ flex: 1, overflow: 'auto', py: 2 }}>
         <List sx={{ px: 2 }}>
-          {currentBranch && menuItems.map(item => {
-            const fullPath = `/admin/branch/${currentBranch.id}/${item.path}`
+          {currentBranch && currentSection && menuItems.map(item => {
+            const fullPath = `/admin/branch/${currentBranch.id}/section/${currentSection.id}/${item.path}`
             const isActive = location.pathname === fullPath
             return (
               <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton component={Link} to={fullPath} selected={isActive} onClick={() => isMobile && onClose()}
-                  sx={{ borderRadius: 2, py: 1.5, '&.Mui-selected': { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, '& .MuiListItemIcon-root': { color: 'white' } } }}>
+                <ListItemButton 
+                  component={Link} 
+                  to={fullPath} 
+                  selected={isActive} 
+                  onClick={() => isMobile && onClose()}
+                  sx={{ 
+                    borderRadius: 2, 
+                    py: 1.5, 
+                    '&.Mui-selected': { 
+                      bgcolor: 'primary.main', 
+                      color: 'white', 
+                      '&:hover': { bgcolor: 'primary.dark' }, 
+                      '& .MuiListItemIcon-root': { color: 'white' } 
+                    } 
+                  }}
+                >
                   <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 400 }} />
                 </ListItemButton>
@@ -321,16 +496,70 @@ function Sidebar({ open, onClose, isMobile }) {
             )
           })}
 
+          {/* Şube Ayarları - Bölüm seçili olmasa bile göster */}
+          {currentBranch && (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="caption" color="text.secondary" sx={{ px: 2, mb: 1, display: 'block', fontWeight: 600 }}>
+                ŞUBE AYARLARI
+              </Typography>
+              {branchSettingsItems.map(item => {
+                const fullPath = `/admin/branch/${currentBranch.id}/${item.path}`
+                const isActive = location.pathname === fullPath
+                return (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton 
+                      component={Link} 
+                      to={fullPath} 
+                      selected={isActive} 
+                      onClick={() => isMobile && onClose()}
+                      sx={{ 
+                        borderRadius: 2, 
+                        py: 1.5, 
+                        '&.Mui-selected': { 
+                          bgcolor: 'primary.main', 
+                          color: 'white', 
+                          '&:hover': { bgcolor: 'primary.dark' }, 
+                          '& .MuiListItemIcon-root': { color: 'white' } 
+                        } 
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                      <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 400 }} />
+                    </ListItemButton>
+                  </ListItem>
+                )
+              })}
+            </>
+          )}
+
+          {/* Super Admin Items */}
           {user?.role === 'superadmin' && (
             <>
               <Divider sx={{ my: 2 }} />
-              <Typography variant="caption" color="text.secondary" sx={{ px: 2, mb: 1, display: 'block', fontWeight: 600 }}>SİSTEM YÖNETİMİ</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ px: 2, mb: 1, display: 'block', fontWeight: 600 }}>
+                SİSTEM YÖNETİMİ
+              </Typography>
               {superAdminItems.map(item => {
                 const isActive = location.pathname === item.path
                 return (
                   <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                    <ListItemButton component={Link} to={item.path} selected={isActive} onClick={() => isMobile && onClose()}
-                      sx={{ borderRadius: 2, py: 1.5, '&.Mui-selected': { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, '& .MuiListItemIcon-root': { color: 'white' } } }}>
+                    <ListItemButton 
+                      component={Link} 
+                      to={item.path} 
+                      selected={isActive} 
+                      onClick={() => isMobile && onClose()}
+                      sx={{ 
+                        borderRadius: 2, 
+                        py: 1.5, 
+                        '&.Mui-selected': { 
+                          bgcolor: 'primary.main', 
+                          color: 'white', 
+                          '&:hover': { bgcolor: 'primary.dark' }, 
+                          '& .MuiListItemIcon-root': { color: 'white' } 
+                        } 
+                      }}
+                    >
                       <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
                       <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 400 }} />
                     </ListItemButton>
@@ -343,9 +572,17 @@ function Sidebar({ open, onClose, isMobile }) {
       </Box>
 
       {/* Preview Button */}
-      {currentBranch && (
+      {currentBranch && currentSection && (
         <Box sx={{ px: 2, pb: 2 }}>
-          <Button fullWidth variant="outlined" component={Link} to={`/menu/${currentBranch.slug}`} target="_blank" startIcon={<Preview />} sx={{ borderColor: 'divider' }}>
+          <Button 
+            fullWidth 
+            variant="outlined" 
+            component={Link} 
+            to={`/menu/${currentBranch.slug}?section=${currentSection.slug}`} 
+            target="_blank" 
+            startIcon={<Preview />} 
+            sx={{ borderColor: 'divider' }}
+          >
             Menüyü Önizle
           </Button>
         </Box>
@@ -392,155 +629,61 @@ function ProtectedRoute({ children }) {
 
 // ==================== LIVE PREVIEW PHONE ====================
 function LivePreviewPhone() {
-  const { currentBranch } = useBranch()
+  const { currentBranch, currentSection } = useBranch()
   const iframeRef = useRef(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const handleRefresh = () => {
-    if (iframeRef.current) {
-      setIsLoading(true)
-      iframeRef.current.src = iframeRef.current.src
-    }
-  }
+  const previewUrl = currentBranch?.slug 
+    ? currentSection?.slug 
+      ? `/menu/${currentBranch.slug}?section=${currentSection.slug}&preview=1`
+      : `/menu/${currentBranch.slug}?preview=1`
+    : null
 
-  if (!currentBranch?.slug) {
+  if (!previewUrl) {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        p: 2 
-      }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', p: 2 }}>
         <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'background.default' }}>
           <Phone sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-          <Typography color="text.secondary">Şube seçin</Typography>
+          <Typography color="text.secondary">Şube ve bölüm seçin</Typography>
         </Paper>
       </Box>
     )
   }
 
   return (
-    <Box sx={{ 
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      height: '100%',
-      py: 2
-    }}>
-      {/* Header */}
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', py: 2 }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%', maxWidth: 280, mb: 1, px: 1 }}>
         <Phone sx={{ color: 'primary.main', fontSize: 20 }} />
         <Typography variant="subtitle2" fontWeight={600} sx={{ flex: 1 }}>Canlı Önizleme</Typography>
-        <Tooltip title="Yenile">
-          <IconButton size="small" onClick={handleRefresh}>
-            <Refresh fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Yeni Sekmede Aç">
-          <IconButton size="small" component="a" href={`/menu/${currentBranch.slug}`} target="_blank">
-            <Store fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <IconButton size="small" onClick={() => { setIsLoading(true); iframeRef.current.src = iframeRef.current.src }}>
+          <Refresh fontSize="small" />
+        </IconButton>
       </Stack>
 
-      {/* Phone Frame */}
-      <Box sx={{
-        position: 'relative',
-        width: 280,
-        height: 'calc(100vh - 180px)',
-        maxHeight: 600,
-        minHeight: 400,
-        borderRadius: '36px',
-        bgcolor: '#1a1a1a',
-        p: '10px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-        border: '1px solid rgba(255,255,255,0.1)'
-      }}>
-        {/* Notch */}
-        <Box sx={{
-          position: 'absolute',
-          top: 10,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 80,
-          height: 24,
-          bgcolor: '#1a1a1a',
-          borderRadius: '0 0 16px 16px',
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 1
-        }}>
-          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#333' }} />
-          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#333' }} />
-        </Box>
+      <Box sx={{ position: 'relative', width: 280, height: 580, borderRadius: 5, border: '8px solid', borderColor: 'grey.800', bgcolor: 'black', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+        <Box sx={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 80, height: 24, bgcolor: 'black', borderRadius: 3, zIndex: 10 }} />
+        
+        {isLoading && (
+          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.paper', zIndex: 5 }}>
+            <CircularProgress size={32} />
+          </Box>
+        )}
+        <Box
+          component="iframe"
+          ref={iframeRef}
+          src={previewUrl}
+          sx={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+          onLoad={() => setIsLoading(false)}
+          title="Menu Preview"
+        />
 
-        {/* Screen */}
-        <Box sx={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '26px',
-          overflow: 'hidden',
-          bgcolor: '#000',
-          position: 'relative'
-        }}>
-          {isLoading && (
-            <Box sx={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'background.paper',
-              zIndex: 5
-            }}>
-              <CircularProgress size={32} />
-            </Box>
-          )}
-          <Box
-            component="iframe"
-            ref={iframeRef}
-            src={`/menu/${currentBranch.slug}?preview=1`}
-            sx={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              display: 'block',
-              // Scrollbar gizleme
-              '&::-webkit-scrollbar': { display: 'none' },
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
-            }}
-            onLoad={() => setIsLoading(false)}
-            title="Menu Preview"
-          />
-        </Box>
-
-        {/* Home Indicator */}
-        <Box sx={{
-          position: 'absolute',
-          bottom: 6,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 100,
-          height: 4,
-          bgcolor: 'rgba(255,255,255,0.3)',
-          borderRadius: 2
-        }} />
+        <Box sx={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', width: 100, height: 4, bgcolor: 'rgba(255,255,255,0.3)', borderRadius: 2 }} />
       </Box>
 
-      {/* Branch Info */}
-      <Chip 
-        label={currentBranch.name} 
-        size="small" 
-        color="primary" 
-        variant="outlined"
-        icon={<Store fontSize="small" />}
-        sx={{ mt: 1 }}
-      />
+      <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+        <Chip label={currentBranch?.name} size="small" color="primary" variant="outlined" icon={<Store fontSize="small" />} />
+        {currentSection && <Chip label={currentSection.name} size="small" color="secondary" variant="outlined" icon={<Place fontSize="small" />} />}
+      </Stack>
     </Box>
   )
 }
@@ -548,7 +691,7 @@ function LivePreviewPhone() {
 // ==================== ADMIN LAYOUT ====================
 function AdminLayout({ children }) {
   const { user } = useAuth()
-  const { loadBranches, currentBranch, branches, selectBranch } = useBranch()
+  const { loadBranches, currentBranch, currentSection, branches, selectBranch, selectSection, sections } = useBranch()
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useMediaQuery('(max-width:900px)')
@@ -560,11 +703,12 @@ function AdminLayout({ children }) {
 
   useEffect(() => { if (user) loadBranches() }, [user])
 
+  // Auto-redirect logic
   useEffect(() => {
     if (branches.length > 0 && !currentBranch && location.pathname === '/admin') {
       const firstBranch = branches[0]
       selectBranch(firstBranch)
-      navigate(`/admin/branch/${firstBranch.id}/dashboard`)
+      navigate(`/admin/branch/${firstBranch.id}/select-section`)
     }
   }, [branches, currentBranch, location.pathname])
 
@@ -572,6 +716,7 @@ function AdminLayout({ children }) {
 
   const getPageTitle = () => {
     const path = location.pathname
+    if (path.includes('/select-section')) return 'Bölüm Seç'
     if (path.includes('/dashboard')) return 'Dashboard'
     if (path.includes('/products')) return 'Ürünler'
     if (path.includes('/categories')) return 'Kategoriler'
@@ -579,19 +724,23 @@ function AdminLayout({ children }) {
     if (path.includes('/glb')) return '3D Modeller'
     if (path.includes('/announcements')) return 'Duyurular'
     if (path.includes('/reviews')) return 'Yorumlar'
+    if (path.includes('/sections')) return 'Bölümler'
+    if (path.includes('/tags')) return 'Etiketler'
     if (path.includes('/settings')) return 'Şube Ayarları'
     if (path.includes('/branches')) return 'Şubeler'
     if (path.includes('/users')) return 'Kullanıcılar'
     return 'AR Menu Admin'
   }
 
-  // Branches ve Users sayfalarında preview gösterme
-  const showPreview = isLargeScreen && currentBranch && !location.pathname.includes('/branches') && !location.pathname.includes('/users')
+  const showPreview = isLargeScreen && currentBranch && currentSection && 
+    !location.pathname.includes('/branches') && 
+    !location.pathname.includes('/users') &&
+    !location.pathname.includes('/select-section') &&
+    !location.pathname.includes('/sections')
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {/* Global scrollbar gizleme için iframe içi */}
       <style>{`
         iframe::-webkit-scrollbar { display: none !important; }
         iframe { scrollbar-width: none !important; -ms-overflow-style: none !important; }
@@ -604,7 +753,15 @@ function AdminLayout({ children }) {
               {isMobile && <IconButton edge="start" onClick={() => setSidebarOpen(true)} sx={{ mr: 2 }}><MenuIcon /></IconButton>}
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6" fontWeight={700}>{getPageTitle()}</Typography>
-                {currentBranch && <Typography variant="caption" color="text.secondary">{currentBranch.name}</Typography>}
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {currentBranch && <Typography variant="caption" color="text.secondary">{currentBranch.name}</Typography>}
+                  {currentSection && (
+                    <>
+                      <Typography variant="caption" color="text.secondary">›</Typography>
+                      <Typography variant="caption" color="primary">{currentSection.icon} {currentSection.name}</Typography>
+                    </>
+                  )}
+                </Stack>
               </Box>
               <Tooltip title={darkMode ? 'Açık Mod' : 'Koyu Mod'}>
                 <IconButton onClick={toggleDarkMode}>{darkMode ? <LightMode /> : <DarkMode />}</IconButton>
@@ -612,32 +769,13 @@ function AdminLayout({ children }) {
             </Toolbar>
           </AppBar>
           
-          {/* Main Content with Preview */}
           <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-            {/* Content Area */}
-            <Box 
-              component="main" 
-              sx={{ 
-                flex: 1, 
-                p: 3, 
-                bgcolor: 'background.default', 
-                overflow: 'auto',
-                minWidth: 0
-              }}
-            >
+            <Box component="main" sx={{ flex: 1, p: 3, bgcolor: 'background.default', overflow: 'auto', minWidth: 0 }}>
               {children}
             </Box>
             
-            {/* Phone Preview - Sabit kalır, sayfa değişse bile yeniden yüklenmez */}
             {showPreview && (
-              <Box sx={{ 
-                width: 320, 
-                borderLeft: 1, 
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                flexShrink: 0,
-                overflow: 'hidden'
-              }}>
+              <Box sx={{ width: 320, borderLeft: 1, borderColor: 'divider', bgcolor: 'background.paper', flexShrink: 0, overflow: 'hidden' }}>
                 <LivePreviewPhone />
               </Box>
             )}
@@ -648,11 +786,143 @@ function AdminLayout({ children }) {
   )
 }
 
+// ==================== SECTION SELECTION PAGE ====================
+function SectionSelectionPage() {
+  const { branchId } = useParams()
+  const navigate = useNavigate()
+  const { currentBranch, sections, selectSection, selectBranch, branches, loadSections } = useBranch()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const init = async () => {
+      // Eğer currentBranch yoksa veya farklıysa, doğru branch'i seç
+      if (!currentBranch || currentBranch.id !== branchId) {
+        const branch = branches.find(b => b.id === branchId)
+        if (branch) {
+          selectBranch(branch)
+        }
+      } else {
+        // Branch zaten doğru, sections yüklenmiş mi kontrol et
+        if (sections.length === 0) {
+          await loadSections(branchId)
+        }
+      }
+      setLoading(false)
+    }
+    init()
+  }, [branchId, currentBranch, branches])
+
+  const handleSectionSelect = (section) => {
+    selectSection(section)
+    navigate(`/admin/branch/${branchId}/section/${section.id}/dashboard`)
+  }
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (sections.length === 0) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 8 }}>
+        <Place sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h5" gutterBottom fontWeight={700}>Henüz Bölüm Yok</Typography>
+        <Typography color="text.secondary" sx={{ mb: 3 }}>
+          Bu şube için henüz bölüm oluşturulmamış. İlk bölümünüzü oluşturun.
+        </Typography>
+        <Button 
+          variant="contained" 
+          size="large" 
+          startIcon={<Add />}
+          onClick={() => navigate(`/admin/branch/${branchId}/sections`)}
+        >
+          İlk Bölümü Oluştur
+        </Button>
+      </Box>
+    )
+  }
+
+  return (
+    <Box>
+      <Typography variant="h5" fontWeight={700} gutterBottom>Bölüm Seçin</Typography>
+      <Typography color="text.secondary" sx={{ mb: 4 }}>
+        Yönetmek istediğiniz restoran bölümünü seçin
+      </Typography>
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 3 }}>
+        {sections.filter(s => s.isActive).map(section => (
+          <Paper
+            key={section.id}
+            onClick={() => handleSectionSelect(section)}
+            sx={{
+              p: 3,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: '2px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                borderColor: section.color || 'primary.main',
+                transform: 'translateY(-4px)',
+                boxShadow: 4
+              }
+            }}
+          >
+            <Stack spacing={2} alignItems="center" textAlign="center">
+              {section.image ? (
+                <Avatar 
+                  src={getImageUrl(section.image)} 
+                  sx={{ width: 80, height: 80, bgcolor: section.color || 'primary.main' }}
+                />
+              ) : (
+                <Avatar 
+                  sx={{ 
+                    width: 80, 
+                    height: 80, 
+                    bgcolor: alpha(section.color || '#e53935', 0.1),
+                    fontSize: 40
+                  }}
+                >
+                  {section.icon}
+                </Avatar>
+              )}
+              <Box>
+                <Typography variant="h6" fontWeight={700}>{section.name}</Typography>
+                {section.description && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {section.description}
+                  </Typography>
+                )}
+              </Box>
+              <Stack direction="row" spacing={1}>
+                <Chip label={`${section.productCount || 0} ürün`} size="small" />
+                <Chip label={`${section.categoryCount || 0} kategori`} size="small" variant="outlined" />
+              </Stack>
+            </Stack>
+          </Paper>
+        ))}
+      </Box>
+
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Button 
+          variant="outlined" 
+          startIcon={<Settings />}
+          onClick={() => navigate(`/admin/branch/${branchId}/sections`)}
+        >
+          Bölümleri Yönet
+        </Button>
+      </Box>
+    </Box>
+  )
+}
+
 // ==================== PAGES IMPORT ====================
 import {
   DashboardPage, ProductsPage, CategoriesPage, CategoryLayoutPage,
   GlbFilesPage, AnnouncementsPage, ReviewsPage, BranchSettingsPage,
-  BranchesPage, UsersPage
+  BranchesPage, UsersPage, SectionsPage, TagsPage
 } from './AdminPages'
 import { LoginPage, BranchSelectionPage, MenuPage } from './PublicPages'
 
@@ -664,12 +934,12 @@ function App() {
         <AuthProvider>
           <BranchProvider>
             <Routes>
-              {/* ===== PUBLIC ROUTES - Auth gerektirmez ===== */}
+              {/* ===== PUBLIC ROUTES ===== */}
               <Route path="/" element={<BranchSelectionPage />} />
               <Route path="/menu/:slug" element={<MenuPage />} />
               <Route path="/login" element={<LoginPage />} />
 
-              {/* ===== ADMIN ROUTES - Auth gerektirir ===== */}
+              {/* ===== ADMIN ROUTES ===== */}
               <Route path="/admin" element={
                 <ProtectedRoute>
                   <AdminLayout><Navigate to="/admin/branches" replace /></AdminLayout>
@@ -688,52 +958,72 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Branch Routes */}
-              <Route path="/admin/branch/:branchId/dashboard" element={
+              {/* Branch Section Selection */}
+              <Route path="/admin/branch/:branchId/select-section" element={
                 <ProtectedRoute>
-                  <AdminLayout><DashboardPage /></AdminLayout>
+                  <AdminLayout><SectionSelectionPage /></AdminLayout>
                 </ProtectedRoute>
               } />
-              
-              <Route path="/admin/branch/:branchId/products" element={
+
+              {/* Branch Level Routes (No Section Required) */}
+              <Route path="/admin/branch/:branchId/sections" element={
                 <ProtectedRoute>
-                  <AdminLayout><ProductsPage /></AdminLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/admin/branch/:branchId/categories" element={
-                <ProtectedRoute>
-                  <AdminLayout><CategoriesPage /></AdminLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/admin/branch/:branchId/category-layout" element={
-                <ProtectedRoute>
-                  <AdminLayout><CategoryLayoutPage /></AdminLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/admin/branch/:branchId/glb" element={
-                <ProtectedRoute>
-                  <AdminLayout><GlbFilesPage /></AdminLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/admin/branch/:branchId/announcements" element={
-                <ProtectedRoute>
-                  <AdminLayout><AnnouncementsPage /></AdminLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/admin/branch/:branchId/reviews" element={
-                <ProtectedRoute>
-                  <AdminLayout><ReviewsPage /></AdminLayout>
+                  <AdminLayout><SectionsPage /></AdminLayout>
                 </ProtectedRoute>
               } />
               
               <Route path="/admin/branch/:branchId/settings" element={
                 <ProtectedRoute>
                   <AdminLayout><BranchSettingsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/tags" element={
+                <ProtectedRoute>
+                  <AdminLayout><TagsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+
+              {/* Section Level Routes */}
+              <Route path="/admin/branch/:branchId/section/:sectionId/dashboard" element={
+                <ProtectedRoute>
+                  <AdminLayout><DashboardPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/section/:sectionId/products" element={
+                <ProtectedRoute>
+                  <AdminLayout><ProductsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/section/:sectionId/categories" element={
+                <ProtectedRoute>
+                  <AdminLayout><CategoriesPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/section/:sectionId/category-layout" element={
+                <ProtectedRoute>
+                  <AdminLayout><CategoryLayoutPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/section/:sectionId/glb" element={
+                <ProtectedRoute>
+                  <AdminLayout><GlbFilesPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/section/:sectionId/announcements" element={
+                <ProtectedRoute>
+                  <AdminLayout><AnnouncementsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/branch/:branchId/section/:sectionId/reviews" element={
+                <ProtectedRoute>
+                  <AdminLayout><ReviewsPage /></AdminLayout>
                 </ProtectedRoute>
               } />
 

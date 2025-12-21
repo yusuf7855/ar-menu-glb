@@ -53,24 +53,36 @@ const branchSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-// Section (Bölüm) - YENİ: Restoran içi alanlar (Bahçe, Teras, VIP vb.)
+// Section (Bölüm) - Restoran içi alanlar (Bahçe, Teras, VIP vb.)
 const sectionSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   name: { type: String, required: true },
   slug: { type: String, required: true },
   description: { type: String, default: '' },
   icon: { type: String, default: '📍' },
-  image: { type: String, default: null },           // Bölüm seçim kartı görseli
-  homepageImage: { type: String, default: null },   // Bölüm menü üst görseli
+  image: { type: String, default: null },
+  homepageImage: { type: String, default: null },
   isActive: { type: Boolean, default: true },
   order: { type: Number, default: 0 },
   color: { type: String, default: '#e53935' }
 }, { timestamps: true })
 
-// Category - Section desteği eklendi
+// Tag (Etiket) - YENİ
+const tagSchema = new mongoose.Schema({
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+  name: { type: String, required: true },
+  slug: { type: String },
+  icon: { type: String, default: '🏷️' },
+  color: { type: String, default: '#e53935' },
+  description: { type: String, default: '' },
+  isActive: { type: Boolean, default: true },
+  order: { type: Number, default: 0 }
+}, { timestamps: true })
+
+// Category
 const categorySchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
-  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ: null = tüm bölümlerde
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   name: { type: String, required: true },
   icon: { type: String, default: '📁' },
   image: { type: String, default: null },
@@ -80,10 +92,10 @@ const categorySchema = new mongoose.Schema({
   layoutSize: { type: String, enum: ['full', 'half', 'third'], default: 'half' }
 }, { timestamps: true })
 
-// CategoryLayout - Section desteği eklendi
+// CategoryLayout
 const categoryLayoutSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
-  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   rowOrder: { type: Number, default: 0 },
   categories: [{
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
@@ -91,10 +103,10 @@ const categoryLayoutSchema = new mongoose.Schema({
   }]
 }, { timestamps: true })
 
-// Product - Section desteği eklendi
+// Product - tags artık ObjectId array
 const productSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
-  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ: null = tüm bölümlerde
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   name: { type: String, required: true },
   price: { type: Number, required: true },
   description: { type: String, default: '' },
@@ -109,9 +121,8 @@ const productSchema = new mongoose.Schema({
   calories: { type: Number, default: null },
   preparationTime: { type: Number, default: null },
   allergens: [{ type: String }],
-  tags: [{ type: String }],
+  tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }], // DEĞİŞTİ: String -> ObjectId
   viewCount: { type: Number, default: 0 },
-  // YENİ: Bölüm bazlı farklı fiyatlar
   sectionPrices: [{
     section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section' },
     price: { type: Number, required: true },
@@ -120,10 +131,10 @@ const productSchema = new mongoose.Schema({
   }]
 }, { timestamps: true })
 
-// Announcement - Section desteği eklendi
+// Announcement
 const announcementSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
-  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null }, // YENİ
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   title: { type: String, required: true },
   message: { type: String, required: true },
   icon: { type: String, default: '📢' },
@@ -171,6 +182,7 @@ const userSchema = new mongoose.Schema({
 // Models
 const Branch = mongoose.model('Branch', branchSchema)
 const Section = mongoose.model('Section', sectionSchema)
+const Tag = mongoose.model('Tag', tagSchema)
 const Category = mongoose.model('Category', categorySchema)
 const CategoryLayout = mongoose.model('CategoryLayout', categoryLayoutSchema)
 const Product = mongoose.model('Product', productSchema)
@@ -225,7 +237,6 @@ const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-// YENİ: Türkçe karakterleri slug'a çevir
 const createSlug = (text) => {
   return text.toLowerCase()
     .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
@@ -252,7 +263,6 @@ app.get('/api/public/branches/:slug', async (req, res) => {
     const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
     
-    // YENİ: Bölümleri de getir
     const sections = await Section.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
     
     res.json({
@@ -280,7 +290,7 @@ app.get('/api/public/branches/:slug', async (req, res) => {
   }
 })
 
-// YENİ: Get sections for a branch
+// Get sections for a branch
 app.get('/api/public/branches/:slug/sections', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
@@ -292,6 +302,101 @@ app.get('/api/public/branches/:slug/sections', async (req, res) => {
       icon: s.icon, image: s.image, homepageImage: s.homepageImage, color: s.color
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// PUBLIC: Get all tags for a branch
+app.get('/api/public/branches/:slug/tags', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    
+    const tags = await Tag.find({ branch: branch._id, isActive: true }).sort({ order: 1, name: 1 })
+    
+    // Her etiket için aktif ürün sayısını hesapla
+    const tagsWithCount = await Promise.all(tags.map(async (tag) => {
+      const productCount = await Product.countDocuments({ 
+        branch: branch._id,
+        tags: tag._id,
+        isActive: true
+      })
+      return {
+        id: tag._id,
+        name: tag.name,
+        slug: tag.slug,
+        icon: tag.icon,
+        color: tag.color,
+        description: tag.description,
+        productCount
+      }
+    }))
+    
+    // Ürünü olan etiketleri döndür
+    res.json(tagsWithCount.filter(t => t.productCount > 0))
+  } catch (err) { 
+    console.error('Get public tags error:', err)
+    res.status(500).json({ error: err.message }) 
+  }
+})
+
+// PUBLIC: Get products by tag
+app.get('/api/public/branches/:slug/products/by-tag/:tagSlug', async (req, res) => {
+  try {
+    const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    
+    const tag = await Tag.findOne({ 
+      branch: branch._id,
+      slug: req.params.tagSlug,
+      isActive: true
+    })
+    
+    if (!tag) return res.status(404).json({ error: 'Tag not found' })
+    
+    const products = await Product.find({
+      branch: branch._id,
+      tags: tag._id,
+      isActive: true
+    })
+    .populate('category', 'name icon')
+    .populate('tags', 'name slug icon color')
+    .sort({ isFeatured: -1, name: 1 })
+    
+    res.json({
+      tag: {
+        id: tag._id,
+        name: tag.name,
+        slug: tag.slug,
+        icon: tag.icon,
+        color: tag.color,
+        description: tag.description
+      },
+      products: products.map(p => ({
+        id: p._id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        campaignPrice: p.campaignPrice,
+        isCampaign: p.isCampaign,
+        isFeatured: p.isFeatured,
+        thumbnail: p.thumbnail,
+        hasGlb: !!p.glbFile,
+        glbFile: p.glbFile,
+        categoryId: p.category?._id,
+        categoryName: p.category?.name,
+        categoryIcon: p.category?.icon,
+        tags: p.tags?.map(t => ({
+          id: t._id,
+          name: t.name,
+          slug: t.slug,
+          icon: t.icon,
+          color: t.color
+        }))
+      }))
+    })
+  } catch (err) { 
+    console.error('Get products by tag error:', err)
+    res.status(500).json({ error: err.message }) 
+  }
 })
 
 // Get categories with layout info
@@ -349,7 +454,12 @@ app.get('/api/public/branches/:slug/products', async (req, res) => {
     if (req.query.category) filter.category = req.query.category
     if (req.query.isCampaign === 'true') filter.isCampaign = true
     if (req.query.isFeatured === 'true') filter.isFeatured = true
-    const products = await Product.find(filter).populate('category', 'name icon').sort({ isFeatured: -1, name: 1 })
+    
+    const products = await Product.find(filter)
+      .populate('category', 'name icon')
+      .populate('tags', 'name slug icon color')
+      .sort({ isFeatured: -1, name: 1 })
+    
     res.json(products.map(p => ({
       id: p._id, 
       name: p.name, 
@@ -364,7 +474,13 @@ app.get('/api/public/branches/:slug/products', async (req, res) => {
       calories: p.calories, 
       preparationTime: p.preparationTime,
       allergens: p.allergens || [],
-      tags: p.tags || [],
+      tags: p.tags?.map(t => ({
+        id: t._id,
+        name: t.name,
+        slug: t.slug,
+        icon: t.icon,
+        color: t.color
+      })) || [],
       categoryId: p.category?._id || null,
       categoryName: p.category?.name || null,
       categoryIcon: p.category?.icon || null,
@@ -374,44 +490,40 @@ app.get('/api/public/branches/:slug/products', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// YENİ: Get menu with section filter - Bölüm bazlı menü
+// Get menu with section filter
 app.get('/api/public/branches/:slug/menu', async (req, res) => {
   try {
     const { section: sectionSlug } = req.query
     const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
 
-    // Section bilgisi
     let selectedSection = null
     if (sectionSlug) {
       selectedSection = await Section.findOne({ branch: branch._id, slug: sectionSlug, isActive: true })
     }
 
-    // Categories - bölüme göre filtrele (null = genel, section = bölüme özel)
     const categoryFilter = { branch: branch._id, isActive: true }
     if (selectedSection) {
       categoryFilter.$or = [{ section: null }, { section: selectedSection._id }]
     }
     const categories = await Category.find(categoryFilter).sort({ order: 1 })
 
-    // Products - bölüme göre filtrele
     const productFilter = { branch: branch._id, isActive: true }
     if (selectedSection) {
       productFilter.$or = [{ section: null }, { section: selectedSection._id }]
     }
     const products = await Product.find(productFilter)
       .populate('category', 'name icon')
+      .populate('tags', 'name slug icon color')
       .populate('sectionPrices.section', 'name slug')
       .sort({ isFeatured: -1, createdAt: -1 })
 
-    // Announcements - bölüme göre filtrele
     const announcementFilter = { branch: branch._id, isActive: true }
     if (selectedSection) {
       announcementFilter.$or = [{ section: null }, { section: selectedSection._id }]
     }
     const announcements = await Announcement.find(announcementFilter).sort({ order: 1 })
 
-    // Layouts - bölüme göre filtrele
     const layoutFilter = { branch: branch._id }
     if (selectedSection) {
       layoutFilter.$or = [{ section: null }, { section: selectedSection._id }]
@@ -420,7 +532,9 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
       .populate('categories.category', 'name icon image')
       .sort({ rowOrder: 1 })
 
-    // Ürünleri işle - section bazlı fiyat uygula
+    // Etiketleri de getir
+    const tags = await Tag.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
+
     const processedProducts = products.map(p => {
       const product = p.toObject()
       product.id = p._id
@@ -428,8 +542,14 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
       product.categoryName = p.category?.name
       product.categoryIcon = p.category?.icon
       product.hasGlb = !!p.glbFile
+      product.tags = p.tags?.map(t => ({
+        id: t._id,
+        name: t.name,
+        slug: t.slug,
+        icon: t.icon,
+        color: t.color
+      })) || []
       
-      // Section bazlı fiyat kontrolü
       if (selectedSection && product.sectionPrices?.length > 0) {
         const sectionPrice = product.sectionPrices.find(
           sp => sp.section?._id?.toString() === selectedSection._id.toString() && sp.isActive
@@ -446,7 +566,6 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
       return product
     })
 
-    // Homepage image - section varsa section'ınkini kullan
     let homepageImage = branch.homepageImage
     if (selectedSection?.homepageImage) {
       homepageImage = selectedSection.homepageImage
@@ -476,6 +595,9 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
           } : null,
           size: c.size
         })).filter(c => c.category)
+      })),
+      tags: tags.map(t => ({
+        id: t._id, name: t.name, slug: t.slug, icon: t.icon, color: t.color
       })),
       selectedSection: selectedSection ? {
         id: selectedSection._id, name: selectedSection.name,
@@ -578,7 +700,6 @@ app.get('/api/branches', authMiddleware, async (req, res) => {
     const countMap = {}
     counts.forEach(c => { if (c._id) countMap[c._id.toString()] = c.count })
     
-    // YENİ: Section sayılarını da ekle
     const sectionCounts = await Section.aggregate([{ $group: { _id: '$branch', count: { $sum: 1 } } }])
     const sectionCountMap = {}
     sectionCounts.forEach(c => { if (c._id) sectionCountMap[c._id.toString()] = c.count })
@@ -649,7 +770,8 @@ app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
     const branch = await Branch.findById(req.params.id)
     if (!branch) return res.status(404).json({ error: 'Not found' })
     await Promise.all([
-      Section.deleteMany({ branch: branch._id }), // YENİ
+      Section.deleteMany({ branch: branch._id }),
+      Tag.deleteMany({ branch: branch._id }),
       Category.deleteMany({ branch: branch._id }),
       CategoryLayout.deleteMany({ branch: branch._id }),
       Product.deleteMany({ branch: branch._id }),
@@ -689,20 +811,19 @@ app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), asyn
   }
 })
 
-// ==================== SECTIONS (YENİ) ====================
+// ==================== SECTIONS ====================
 app.get('/api/branches/:branchId/sections', authMiddleware, async (req, res) => {
   try {
     const sections = await Section.find({ branch: req.params.branchId }).sort({ order: 1 })
     
-    // Her section için istatistikler
     const sectionsWithCounts = await Promise.all(sections.map(async s => {
       const productCount = await Product.countDocuments({ 
         branch: req.params.branchId,
-        $or: [{ section: null }, { section: s._id }]
+        section: s._id
       })
       const categoryCount = await Category.countDocuments({ 
         branch: req.params.branchId,
-        $or: [{ section: null }, { section: s._id }]
+        section: s._id
       })
       return { ...s.toObject(), id: s._id, productCount, categoryCount }
     }))
@@ -745,7 +866,6 @@ app.delete('/api/sections/:id', authMiddleware, async (req, res) => {
     if (!section) return res.status(404).json({ error: 'Not found' })
     if (!checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
     
-    // Bu bölüme ait verileri genel bölüme taşı (section: null)
     await Product.updateMany({ section: section._id }, { section: null })
     await Category.updateMany({ section: section._id }, { section: null })
     await Announcement.updateMany({ section: section._id }, { section: null })
@@ -758,7 +878,7 @@ app.delete('/api/sections/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/sections/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const type = req.query.type || 'image' // image veya homepageImage
+    const type = req.query.type || 'image'
     const section = await Section.findByIdAndUpdate(req.params.id, { [type]: req.file.filename }, { new: true })
     res.json({ ...section.toObject(), id: section._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -773,28 +893,201 @@ app.put('/api/branches/:branchId/sections/reorder', authMiddleware, async (req, 
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
+// ==================== TAGS (YENİ) ====================
+app.get('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
+  try {
+    const tags = await Tag.find({ branch: req.params.branchId }).sort({ order: 1, name: 1 })
+    
+    const tagsWithCount = await Promise.all(tags.map(async (tag) => {
+      const productCount = await Product.countDocuments({ 
+        branch: req.params.branchId,
+        tags: tag._id 
+      })
+      return {
+        id: tag._id,
+        ...tag.toObject(),
+        productCount
+      }
+    }))
+    
+    res.json(tagsWithCount)
+  } catch (err) {
+    console.error('Get tags error:', err)
+    res.status(500).json({ error: 'Etiketler yüklenemedi' })
+  }
+})
+
+app.post('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    
+    const { name, icon, color, description, isActive } = req.body
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Etiket adı gerekli' })
+    }
+    
+    // Aynı isimde etiket var mı kontrol et
+    const existing = await Tag.findOne({ 
+      branch: req.params.branchId, 
+      name: { $regex: new RegExp(`^${name}$`, 'i') }
+    })
+    
+    if (existing) {
+      return res.status(400).json({ error: 'Bu isimde bir etiket zaten var' })
+    }
+    
+    // Slug oluştur
+    const slug = createSlug(name)
+    
+    // Sıra numarası
+    const maxOrder = await Tag.findOne({ branch: req.params.branchId })
+      .sort({ order: -1 })
+      .select('order')
+    
+    const tag = new Tag({
+      branch: req.params.branchId,
+      name,
+      slug,
+      icon: icon || '🏷️',
+      color: color || '#e53935',
+      description: description || '',
+      isActive: isActive !== false,
+      order: (maxOrder?.order || 0) + 1
+    })
+    
+    await tag.save()
+    
+    res.status(201).json({
+      id: tag._id,
+      ...tag.toObject()
+    })
+  } catch (err) {
+    console.error('Create tag error:', err)
+    res.status(500).json({ error: 'Etiket oluşturulamadı' })
+  }
+})
+
+app.put('/api/tags/:id', authMiddleware, async (req, res) => {
+  try {
+    const { name, icon, color, description, isActive, order } = req.body
+    
+    const tag = await Tag.findById(req.params.id)
+    if (!tag) {
+      return res.status(404).json({ error: 'Etiket bulunamadı' })
+    }
+    
+    if (!checkBranchAccess(req.user, tag.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    // İsim değiştiyse, aynı isimde başka etiket var mı kontrol et
+    if (name && name !== tag.name) {
+      const existing = await Tag.findOne({ 
+        branch: tag.branch, 
+        name: { $regex: new RegExp(`^${name}$`, 'i') },
+        _id: { $ne: tag._id }
+      })
+      
+      if (existing) {
+        return res.status(400).json({ error: 'Bu isimde bir etiket zaten var' })
+      }
+      
+      tag.name = name
+      tag.slug = createSlug(name)
+    }
+    
+    if (icon !== undefined) tag.icon = icon
+    if (color !== undefined) tag.color = color
+    if (description !== undefined) tag.description = description
+    if (isActive !== undefined) tag.isActive = isActive
+    if (order !== undefined) tag.order = order
+    
+    await tag.save()
+    
+    res.json({
+      id: tag._id,
+      ...tag.toObject()
+    })
+  } catch (err) {
+    console.error('Update tag error:', err)
+    res.status(500).json({ error: 'Etiket güncellenemedi' })
+  }
+})
+
+app.delete('/api/tags/:id', authMiddleware, async (req, res) => {
+  try {
+    const tag = await Tag.findById(req.params.id)
+    if (!tag) {
+      return res.status(404).json({ error: 'Etiket bulunamadı' })
+    }
+    
+    if (!checkBranchAccess(req.user, tag.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    // Bu etiketi kullanan ürünlerden kaldır
+    await Product.updateMany(
+      { tags: tag._id },
+      { $pull: { tags: tag._id } }
+    )
+    
+    await Tag.findByIdAndDelete(req.params.id)
+    
+    res.json({ success: true, message: 'Etiket silindi' })
+  } catch (err) {
+    console.error('Delete tag error:', err)
+    res.status(500).json({ error: 'Etiket silinemedi' })
+  }
+})
+
+app.put('/api/branches/:branchId/tags/reorder', authMiddleware, async (req, res) => {
+  try {
+    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    
+    const { tagIds } = req.body
+    
+    if (!Array.isArray(tagIds)) {
+      return res.status(400).json({ error: 'Geçersiz veri' })
+    }
+    
+    await Promise.all(tagIds.map((id, index) => 
+      Tag.findByIdAndUpdate(id, { order: index })
+    ))
+    
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Reorder tags error:', err)
+    res.status(500).json({ error: 'Sıralama kaydedilemedi' })
+  }
+})
+
 // ==================== DASHBOARD ====================
 app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) => {
   try {
     const { branchId } = req.params
+    const { section } = req.query
+    
     if (!checkBranchAccess(req.user, branchId)) return res.status(403).json({ error: 'Access denied' })
     
-    const [productCount, categoryCount, sectionCount, reviewCount, glbCount, pendingReviewCount, campaignCount] = await Promise.all([
-      Product.countDocuments({ branch: branchId }),
-      Category.countDocuments({ branch: branchId }),
-      Section.countDocuments({ branch: branchId }), // YENİ
+    const sectionFilter = section ? { section: section } : {}
+    const branchFilter = { branch: branchId, ...sectionFilter }
+    
+    const [productCount, categoryCount, sectionCount, tagCount, reviewCount, glbCount, pendingReviewCount, campaignCount] = await Promise.all([
+      Product.countDocuments(branchFilter),
+      Category.countDocuments(branchFilter),
+      Section.countDocuments({ branch: branchId }),
+      Tag.countDocuments({ branch: branchId }),
       Review.countDocuments({ branch: branchId }),
       GlbFile.countDocuments({ branch: branchId }),
       Review.countDocuments({ branch: branchId, isApproved: false }),
-      Product.countDocuments({ branch: branchId, isCampaign: true })
+      Product.countDocuments({ ...branchFilter, isCampaign: true })
     ])
 
     const recentReviews = await Review.find({ branch: branchId }).sort({ createdAt: -1 }).limit(5).populate('product', 'name')
-    const topProducts = await Product.find({ branch: branchId }).sort({ viewCount: -1 }).limit(5).select('name viewCount thumbnail')
-    const campaignProducts = await Product.find({ branch: branchId, isCampaign: true }).select('name price campaignPrice thumbnail')
+    
+    const topProducts = await Product.find(branchFilter).sort({ viewCount: -1 }).limit(5).select('name viewCount thumbnail')
+    
+    const campaignProducts = await Product.find({ ...branchFilter, isCampaign: true }).select('name price campaignPrice thumbnail')
     
     const categoryStats = await Product.aggregate([
-      { $match: { branch: new mongoose.Types.ObjectId(branchId) } },
+      { $match: { branch: new mongoose.Types.ObjectId(branchId), ...(section ? { section: new mongoose.Types.ObjectId(section) } : {}) } },
       { $group: { _id: '$category', count: { $sum: 1 } } },
       { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'cat' } },
       { $project: { name: { $ifNull: [{ $arrayElemAt: ['$cat.name', 0] }, 'Kategorisiz'] }, count: 1 } }
@@ -813,9 +1106,9 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
 
     res.json({
       counts: { 
-        products: productCount, categories: categoryCount, sections: sectionCount, // YENİ
-        reviews: reviewCount, glbFiles: glbCount, pendingReviews: pendingReviewCount, 
-        campaigns: campaignCount
+        products: productCount, categories: categoryCount, sections: sectionCount,
+        tags: tagCount, reviews: reviewCount, glbFiles: glbCount, 
+        pendingReviews: pendingReviewCount, campaigns: campaignCount
       },
       recentReviews, topProducts, categoryStats, campaignProducts,
       averageRating: avgRating[0]?.avg || 0, ratingStats
@@ -826,9 +1119,9 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
 app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
-    const [branchCount, productCount, categoryCount, sectionCount, reviewCount, userCount] = await Promise.all([
+    const [branchCount, productCount, categoryCount, sectionCount, tagCount, reviewCount, userCount] = await Promise.all([
       Branch.countDocuments(), Product.countDocuments(), Category.countDocuments(), 
-      Section.countDocuments(), Review.countDocuments(), User.countDocuments()
+      Section.countDocuments(), Tag.countDocuments(), Review.countDocuments(), User.countDocuments()
     ])
     const branchStats = await Product.aggregate([
       { $group: { _id: '$branch', count: { $sum: 1 } } },
@@ -837,7 +1130,7 @@ app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
       { $project: { name: '$branch.name', count: 1 } }
     ])
     res.json({ 
-      counts: { branches: branchCount, products: productCount, categories: categoryCount, sections: sectionCount, reviews: reviewCount, users: userCount }, 
+      counts: { branches: branchCount, products: productCount, categories: categoryCount, sections: sectionCount, tags: tagCount, reviews: reviewCount, users: userCount }, 
       branchStats 
     })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -848,7 +1141,10 @@ app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) =
   try {
     const { section } = req.query
     const filter = { branch: req.params.branchId }
-    if (section) filter.section = section === 'null' ? null : section
+    
+    if (section) {
+      filter.section = section
+    }
     
     const categories = await Category.find(filter).populate('section', 'name').sort({ order: 1 })
     const counts = await Product.aggregate([
@@ -860,7 +1156,7 @@ app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) =
     res.json(categories.map(c => ({ 
       ...c.toObject(), id: c._id, 
       productCount: countMap[c._id.toString()] || 0,
-      sectionName: c.section?.name || 'Tüm Bölümler'
+      sectionName: c.section?.name
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -908,8 +1204,10 @@ app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, 
   try {
     const { section } = req.query
     const filter = { branch: req.params.branchId }
-    if (section) filter.section = section === 'null' ? null : section
-    else filter.section = null
+    
+    if (section) {
+      filter.section = section
+    }
     
     const layouts = await CategoryLayout.find(filter)
       .populate('categories.category', 'name icon image')
@@ -948,12 +1246,10 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
     
     const { layouts, section } = req.body
     
-    // Mevcut layout'ları sil
     const filter = { branch: req.params.branchId }
     filter.section = section || null
     await CategoryLayout.deleteMany(filter)
     
-    // Yeni layout'ları ekle
     if (layouts && layouts.length > 0) {
       const layoutsToInsert = layouts.map((l, index) => ({
         branch: req.params.branchId,
@@ -968,7 +1264,6 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
       await CategoryLayout.insertMany(layoutsToInsert)
     }
     
-    // Güncel layout'ları döndür
     const newLayouts = await CategoryLayout.find(filter)
       .populate('categories.category', 'name icon image')
       .sort({ rowOrder: 1 })
@@ -988,8 +1283,9 @@ app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => 
   try {
     const { category, section, search, isActive, isFeatured, isCampaign, hasGlb, page = 1, limit = 50 } = req.query
     const filter = { branch: req.params.branchId }
+    
     if (category) filter.category = category
-    if (section) filter.section = section === 'null' ? null : section
+    if (section) filter.section = section
     if (isActive !== undefined) filter.isActive = isActive === 'true'
     if (isFeatured !== undefined) filter.isFeatured = isFeatured === 'true'
     if (isCampaign !== undefined) filter.isCampaign = isCampaign === 'true'
@@ -1002,6 +1298,7 @@ app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => 
       Product.find(filter)
         .populate('category', 'name icon')
         .populate('section', 'name icon')
+        .populate('tags', 'name slug icon color')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
@@ -1012,10 +1309,19 @@ app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => 
       products: products.map(p => ({
         ...p.toObject(), id: p._id, 
         categoryId: p.category?._id, categoryName: p.category?.name, categoryIcon: p.category?.icon,
-        sectionId: p.section?._id, sectionName: p.section?.name || 'Tüm Bölümler',
-        hasGlb: !!p.glbFile
+        sectionId: p.section?._id, sectionName: p.section?.name,
+        hasGlb: !!p.glbFile,
+        tags: p.tags?.map(t => ({
+          id: t._id,
+          name: t.name,
+          slug: t.slug,
+          icon: t.icon,
+          color: t.color
+        })) || []
       })),
-      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) }
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit))
     })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -1026,6 +1332,7 @@ app.post('/api/branches/:branchId/products', authMiddleware, async (req, res) =>
     const data = { ...req.body, branch: req.params.branchId }
     if (data.categoryId) { data.category = data.categoryId; delete data.categoryId }
     if (data.sectionId) { data.section = data.sectionId; delete data.sectionId }
+    // tags zaten ObjectId array olarak geliyor
     const product = await Product.create(data)
     res.status(201).json({ ...product.toObject(), id: product._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -1039,6 +1346,7 @@ app.put('/api/products/:id', authMiddleware, async (req, res) => {
     const data = { ...req.body }
     if (data.categoryId !== undefined) { data.category = data.categoryId || null; delete data.categoryId }
     if (data.sectionId !== undefined) { data.section = data.sectionId || null; delete data.sectionId }
+    // tags zaten ObjectId array olarak geliyor
     Object.assign(product, data)
     await product.save()
     res.json({ ...product.toObject(), id: product._id })
@@ -1080,7 +1388,6 @@ app.put('/api/products/:id/assign-glb', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// YENİ: Section bazlı fiyatları güncelle
 app.put('/api/products/:id/section-prices', authMiddleware, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
@@ -1218,12 +1525,18 @@ app.get('/api/branches/:branchId/announcements', authMiddleware, async (req, res
   try {
     const { section } = req.query
     const filter = { branch: req.params.branchId }
-    if (section) filter.section = section === 'null' ? null : section
     
-    const announcements = await Announcement.find(filter).populate('section', 'name').sort({ order: 1, createdAt: -1 })
+    if (section) {
+      filter.section = section
+    }
+    
+    const announcements = await Announcement.find(filter)
+      .populate('section', 'name icon')
+      .sort({ order: 1 })
     res.json(announcements.map(a => ({ 
-      ...a.toObject(), id: a._id,
-      sectionName: a.section?.name || 'Tüm Bölümler'
+      ...a.toObject(), 
+      id: a._id,
+      sectionName: a.section?.name
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })

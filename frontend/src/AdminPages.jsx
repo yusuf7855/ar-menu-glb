@@ -15,7 +15,8 @@ import {
   PhotoCamera, CloudUpload, LocalOffer, ThreeDRotation,
   Phone, LocationOn, AccessTime, Instagram, WhatsApp,
   GridView, ViewModule, Fullscreen, ArrowUpward, ArrowDownward,
-  DragIndicator, Reply, Lock, Star, TouchApp, ThreeSixty, Place
+  DragIndicator, Reply, Lock, Star, TouchApp, ThreeSixty, Place,
+  Visibility, VisibilityOff, ContentCopy, OpenInNew
 } from '@mui/icons-material'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useDropzone } from 'react-dropzone'
@@ -35,7 +36,7 @@ function PageWrapper({ children }) {
 }
 
 // ==================== IMAGE UPLOADER ====================
-function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'medium' }) {
+function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'medium', disabled = false }) {
   const showSnackbar = useSnackbar()
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(null)
@@ -60,6 +61,7 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
   }, [value])
 
   const handleDrop = useCallback(async (acceptedFiles) => {
+    if (disabled) return
     let file = acceptedFiles[0]
     if (!file) return
     setUploading(true)
@@ -74,12 +76,13 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
     } finally {
       setUploading(false)
     }
-  }, [onChange, showSnackbar])
+  }, [onChange, showSnackbar, disabled])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: handleDrop,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic'] },
-    maxFiles: 1
+    maxFiles: 1,
+    disabled
   })
 
   const sizes = { small: { height: 120 }, medium: { height: 180 }, large: { height: 240 } }
@@ -91,10 +94,11 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
         sx={{
           position: 'relative', aspectRatio, minHeight: sizes[size].height,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', overflow: 'hidden', borderStyle: 'dashed', borderWidth: 2,
+          cursor: disabled ? 'not-allowed' : 'pointer', overflow: 'hidden', borderStyle: 'dashed', borderWidth: 2,
           borderColor: isDragActive ? 'primary.main' : 'divider',
           bgcolor: isDragActive ? alpha('#e53935', 0.1) : 'transparent',
-          transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main' }
+          opacity: disabled ? 0.5 : 1,
+          transition: 'all 0.2s', '&:hover': { borderColor: disabled ? 'divider' : 'primary.main' }
         }}>
         <input {...getInputProps()} />
         {uploading ? (
@@ -102,17 +106,19 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
         ) : preview ? (
           <>
             <Box component="img" src={preview} alt={label} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none' }} />
-            <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.5)', opacity: 0, transition: 'opacity 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', '&:hover': { opacity: 1 } }}>
-              <Stack alignItems="center" spacing={1}>
-                <PhotoCamera sx={{ fontSize: 40, color: 'white' }} />
-                <Typography color="white" variant="body2">Değiştir</Typography>
-              </Stack>
-            </Box>
+            {!disabled && (
+              <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.5)', opacity: 0, transition: 'opacity 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', '&:hover': { opacity: 1 } }}>
+                <Stack alignItems="center" spacing={1}>
+                  <PhotoCamera sx={{ fontSize: 40, color: 'white' }} />
+                  <Typography color="white" variant="body2">Değiştir</Typography>
+                </Stack>
+              </Box>
+            )}
           </>
         ) : (
           <Stack alignItems="center" spacing={1} sx={{ color: 'text.secondary', p: 2 }}>
             <CloudUpload sx={{ fontSize: 48 }} />
-            <Typography variant="body2" textAlign="center">{isDragActive ? 'Bırakın...' : 'Görsel yükleyin'}</Typography>
+            <Typography variant="body2" textAlign="center">{isDragActive ? 'Bırakın...' : disabled ? 'Görsel yüklenemez' : 'Görsel yükleyin'}</Typography>
           </Stack>
         )}
       </Paper>
@@ -233,17 +239,18 @@ function StatCard({ title, value, icon, color = 'primary', subtitle, onClick }) 
 
 // ==================== DASHBOARD PAGE ====================
 export function DashboardPage() {
-  const { branchId } = useParams()
+  const { branchId, sectionId } = useParams()
+  const { currentSection } = useBranch()
   const showSnackbar = useSnackbar()
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (branchId) loadStats() }, [branchId])
+  useEffect(() => { if (branchId && sectionId) loadStats() }, [branchId, sectionId])
 
   const loadStats = async () => {
     try {
-      const res = await api.get(`/branches/${branchId}/dashboard`)
+      const res = await api.get(`/branches/${branchId}/dashboard?section=${sectionId}`)
       setStats(res.data)
     } catch { showSnackbar('İstatistikler yüklenemedi', 'error') }
     finally { setLoading(false) }
@@ -258,22 +265,22 @@ export function DashboardPage() {
       <Stack spacing={3}>
         <Grid container spacing={2}>
           <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="Toplam Ürün" value={stats?.counts?.products || 0} icon={<Restaurant />} color="primary" onClick={() => navigate(`/admin/branch/${branchId}/products`)} />
+            <StatCard title="Toplam Ürün" value={stats?.counts?.products || 0} icon={<Restaurant />} color="primary" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products`)} />
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="Kategoriler" value={stats?.counts?.categories || 0} icon={<Category />} color="secondary" onClick={() => navigate(`/admin/branch/${branchId}/categories`)} />
+            <StatCard title="Kategoriler" value={stats?.counts?.categories || 0} icon={<Category />} color="secondary" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/categories`)} />
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="3D Modeller" value={stats?.counts?.glbFiles || 0} icon={<ViewInAr />} color="success" onClick={() => navigate(`/admin/branch/${branchId}/glb`)} />
+            <StatCard title="Etiketler" value={stats?.counts?.tags || 0} icon={<LocalOffer />} color="info" onClick={() => navigate(`/admin/branch/${branchId}/tags`)} />
           </Grid>
           <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="Kampanyalar" value={stats?.counts?.campaigns || 0} icon={<LocalOffer />} color="warning" onClick={() => navigate(`/admin/branch/${branchId}/products?filter=campaign`)} />
+            <StatCard title="3D Modeller" value={stats?.counts?.glbFiles || 0} icon={<ViewInAr />} color="success" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/glb`)} />
           </Grid>
         </Grid>
 
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={4}>
-            <StatCard title="Yorumlar" value={stats?.counts?.reviews || 0} icon={<RateReview />} color="info" subtitle={`${stats?.counts?.pendingReviews || 0} bekleyen`} onClick={() => navigate(`/admin/branch/${branchId}/reviews`)} />
+            <StatCard title="Yorumlar" value={stats?.counts?.reviews || 0} icon={<RateReview />} color="warning" subtitle={`${stats?.counts?.pendingReviews || 0} bekleyen`} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/reviews`)} />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
             <Card sx={{ height: '100%' }}>
@@ -291,8 +298,8 @@ export function DashboardPage() {
               <CardContent>
                 <Typography color="text.secondary" variant="body2" gutterBottom>Hızlı İşlemler</Typography>
                 <Stack spacing={1} sx={{ mt: 2 }}>
-                  <Button variant="outlined" fullWidth startIcon={<Add />} onClick={() => navigate(`/admin/branch/${branchId}/products?action=new`)}>Yeni Ürün</Button>
-                  <Button variant="outlined" fullWidth startIcon={<Category />} onClick={() => navigate(`/admin/branch/${branchId}/categories?action=new`)}>Yeni Kategori</Button>
+                  <Button variant="outlined" fullWidth startIcon={<Add />} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products?action=new`)}>Yeni Ürün</Button>
+                  <Button variant="outlined" fullWidth startIcon={<Place />} onClick={() => navigate(`/admin/branch/${branchId}/sections`)}>Bölümler</Button>
                 </Stack>
               </CardContent>
             </Card>
@@ -354,7 +361,7 @@ export function DashboardPage() {
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <Card>
-              <CardHeader title="Kampanyalı Ürünler" action={<Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/products?filter=campaign`)}>Tümü</Button>} />
+              <CardHeader title="Kampanyalı Ürünler" action={<Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products?filter=campaign`)}>Tümü</Button>} />
               <CardContent>
                 {stats?.campaignProducts?.length > 0 ? (
                   <Stack spacing={2}>
@@ -379,7 +386,7 @@ export function DashboardPage() {
 
           <Grid item xs={12} md={6}>
             <Card>
-              <CardHeader title="Son Yorumlar" action={<Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/reviews`)}>Tümü</Button>} />
+              <CardHeader title="Son Yorumlar" action={<Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/reviews`)}>Tümü</Button>} />
               <CardContent>
                 {stats?.recentReviews?.length > 0 ? (
                   <Stack spacing={2}>
@@ -412,11 +419,14 @@ export function DashboardPage() {
 export function SectionsPage() {
   const { branchId } = useParams()
   const showSnackbar = useSnackbar()
+  const navigate = useNavigate()
+  const { currentBranch } = useBranch()
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingSection, setEditingSection] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState(null)
+  const [reordering, setReordering] = useState(false)
 
   useEffect(() => { if (branchId) loadSections() }, [branchId])
 
@@ -424,7 +434,10 @@ export function SectionsPage() {
     try {
       const res = await api.get(`/branches/${branchId}/sections`)
       setSections(res.data)
-    } catch { showSnackbar('Bölümler yüklenemedi', 'error') }
+    } catch (err) { 
+      console.error(err)
+      showSnackbar('Bölümler yüklenemedi', 'error') 
+    }
     finally { setLoading(false) }
   }
 
@@ -434,7 +447,50 @@ export function SectionsPage() {
       showSnackbar('Bölüm silindi', 'success')
       setDeleteDialog(null)
       loadSections()
-    } catch { showSnackbar('Silinemedi', 'error') }
+    } catch (err) { 
+      console.error(err)
+      showSnackbar('Silinemedi', 'error') 
+    }
+  }
+
+  const handleReorder = async (index, direction) => {
+    const newSections = [...sections]
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= newSections.length) return
+
+    [newSections[index], newSections[targetIndex]] = [newSections[targetIndex], newSections[index]]
+    setSections(newSections)
+
+    setReordering(true)
+    try {
+      await api.put(`/branches/${branchId}/sections/reorder`, {
+        sectionIds: newSections.map(s => s.id)
+      })
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Sıralama kaydedilemedi', 'error')
+      loadSections()
+    } finally {
+      setReordering(false)
+    }
+  }
+
+  const handleToggleActive = async (section) => {
+    try {
+      await api.put(`/sections/${section.id}`, { isActive: !section.isActive })
+      showSnackbar(section.isActive ? 'Bölüm gizlendi' : 'Bölüm aktifleştirildi', 'success')
+      loadSections()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('İşlem başarısız', 'error')
+    }
+  }
+
+  const copyMenuLink = (section) => {
+    const baseUrl = window.location.origin
+    const link = `${baseUrl}/${currentBranch?.slug || 'menu'}?section=${section.slug}`
+    navigator.clipboard.writeText(link)
+    showSnackbar('Menü linki kopyalandı', 'success')
   }
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
@@ -442,195 +498,701 @@ export function SectionsPage() {
   return (
     <PageWrapper>
       <Stack spacing={3}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
-            <Typography variant="h5" fontWeight={700}>Bölümler</Typography>
-            <Typography color="text.secondary">Restoran içi farklı alanları yönetin (Bahçe, Teras, VIP vb.)</Typography>
+            <Typography variant="h5" fontWeight={700}>Restoran Bölümleri</Typography>
+            <Typography color="text.secondary">
+              Restoranınızın farklı alanlarını yönetin (Bahçe, Teras, Roof, VIP vb.)
+            </Typography>
           </Box>
-          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingSection(null); setModalOpen(true) }}>Yeni Bölüm</Button>
+          <Stack direction="row" spacing={1}>
+            <Button startIcon={<Refresh />} onClick={loadSections} disabled={reordering}>Yenile</Button>
+            <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingSection(null); setModalOpen(true) }}>
+              Yeni Bölüm
+            </Button>
+          </Stack>
         </Stack>
+
+        <Alert severity="info" icon={<Place />}>
+          <Typography variant="subtitle2" gutterBottom>Bölümler Nasıl Çalışır?</Typography>
+          <Typography variant="body2">
+            • Müşteriler menüye girdiğinde önce bölüm seçer (Bahçe, Teras, VIP vb.)<br/>
+            • Her bölüm için farklı kategoriler ve ürünler tanımlayabilirsiniz<br/>
+            • Bölüme özel fiyatlar belirleyebilirsiniz (örn: Roof'ta %10 fazla)<br/>
+            • "Genel" olarak eklenen ürün ve kategoriler tüm bölümlerde görünür
+          </Typography>
+        </Alert>
 
         {sections.length > 0 ? (
           <Grid container spacing={3}>
             {sections.map((section, index) => (
               <Grid item xs={12} sm={6} md={4} key={section.id}>
-                <Card sx={{ height: '100%', position: 'relative', overflow: 'visible' }}>
+                <Card sx={{ 
+                  height: '100%', 
+                  position: 'relative', 
+                  overflow: 'visible',
+                  opacity: section.isActive ? 1 : 0.7,
+                  transition: 'all 0.2s',
+                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                }}>
+                  {/* Görsel Alanı */}
                   {section.image ? (
-                    <CardMedia component="img" height="160" image={getImageUrl(section.image)} alt={section.name} sx={{ objectFit: 'cover' }} />
+                    <CardMedia 
+                      component="img" 
+                      height="180" 
+                      image={getImageUrl(section.image)} 
+                      alt={section.name} 
+                      sx={{ objectFit: 'cover' }} 
+                    />
                   ) : (
-                    <Box sx={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: section.color || 'primary.main', color: 'white' }}>
-                      <Typography variant="h1">{section.icon}</Typography>
+                    <Box sx={{ 
+                      height: 180, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      bgcolor: section.color || 'primary.main', 
+                      color: 'white',
+                      position: 'relative'
+                    }}>
+                      <Typography variant="h1" sx={{ fontSize: 80 }}>{section.icon}</Typography>
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        inset: 0, 
+                        background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5) 100%)' 
+                      }} />
                     </Box>
                   )}
                   
-                  <Chip label={section.isActive ? 'Aktif' : 'Pasif'} size="small" color={section.isActive ? 'success' : 'default'} 
-                    sx={{ position: 'absolute', top: 12, right: 12 }} />
+                  {/* Status Badge */}
+                  <Chip 
+                    label={section.isActive ? 'Aktif' : 'Gizli'} 
+                    size="small" 
+                    color={section.isActive ? 'success' : 'default'}
+                    icon={section.isActive ? <Visibility sx={{ fontSize: 16 }} /> : <VisibilityOff sx={{ fontSize: 16 }} />}
+                    sx={{ position: 'absolute', top: 12, right: 12 }} 
+                  />
+
+                  {/* Sıralama Butonları */}
+                  <Stack 
+                    direction="column" 
+                    spacing={0.5} 
+                    sx={{ position: 'absolute', top: 12, left: 12 }}
+                  >
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handleReorder(index, -1)}
+                      disabled={index === 0 || reordering}
+                      sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}
+                    >
+                      <ArrowUpward fontSize="small" />
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handleReorder(index, 1)}
+                      disabled={index === sections.length - 1 || reordering}
+                      sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}
+                    >
+                      <ArrowDownward fontSize="small" />
+                    </IconButton>
+                  </Stack>
                   
                   <CardContent>
-                    <Stack spacing={1}>
+                    <Stack spacing={1.5}>
+                      {/* Başlık */}
                       <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="h6" fontWeight={600}>{section.icon} {section.name}</Typography>
+                        <Typography variant="h6" fontWeight={700}>
+                          {section.icon} {section.name}
+                        </Typography>
                       </Stack>
                       
+                      {/* Açıklama */}
                       {section.description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ 
-                          overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' 
-                        }}>{section.description}</Typography>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            display: '-webkit-box', 
+                            WebkitLineClamp: 2, 
+                            WebkitBoxOrient: 'vertical' 
+                          }}
+                        >
+                          {section.description}
+                        </Typography>
                       )}
                       
-                      <Stack direction="row" spacing={2}>
-                        <Chip icon={<Restaurant fontSize="small" />} label={`${section.productCount || 0} ürün`} size="small" variant="outlined" />
-                        <Chip icon={<Category fontSize="small" />} label={`${section.categoryCount || 0} kategori`} size="small" variant="outlined" />
+                      {/* İstatistikler */}
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Chip 
+                          icon={<Restaurant fontSize="small" />} 
+                          label={`${section.productCount || 0} ürün`} 
+                          size="small" 
+                          variant="outlined" 
+                        />
+                        <Chip 
+                          icon={<Category fontSize="small" />} 
+                          label={`${section.categoryCount || 0} kategori`} 
+                          size="small" 
+                          variant="outlined" 
+                        />
                       </Stack>
                       
-                      <Typography variant="caption" color="text.secondary">Slug: /{section.slug}</Typography>
+                      {/* Slug */}
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="caption" color="text.secondary">
+                          Slug: <strong>/{section.slug}</strong>
+                        </Typography>
+                        <Tooltip title="Menü linkini kopyala">
+                          <IconButton size="small" onClick={() => copyMenuLink(section)}>
+                            <ContentCopy sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </Stack>
                   </CardContent>
                   
-                  <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-                    <Tooltip title="Düzenle"><IconButton size="small" onClick={() => { setEditingSection(section); setModalOpen(true) }}><Edit fontSize="small" /></IconButton></Tooltip>
-                    <Tooltip title="Sil"><IconButton size="small" color="error" onClick={() => setDeleteDialog(section)}><Delete fontSize="small" /></IconButton></Tooltip>
+                  <Divider />
+                  
+                  <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                    <Stack direction="row" spacing={0.5}>
+                      <Tooltip title="Düzenle">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => { setEditingSection(section); setModalOpen(true) }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={section.isActive ? 'Gizle' : 'Aktifleştir'}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleToggleActive(section)}
+                        >
+                          {section.isActive ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Sil">
+                        <IconButton 
+                          size="small" 
+                          color="error" 
+                          onClick={() => setDeleteDialog(section)}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                    <Button 
+                      size="small" 
+                      endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
+                      onClick={() => {
+                        const baseUrl = window.location.origin
+                        window.open(`${baseUrl}/${currentBranch?.slug || 'menu'}?section=${section.slug}`, '_blank')
+                      }}
+                    >
+                      Önizle
+                    </Button>
                   </CardActions>
                 </Card>
               </Grid>
             ))}
           </Grid>
         ) : (
-          <EmptyState icon={<Store sx={{ fontSize: 64 }} />} title="Henüz bölüm yok" description="Restoran içi farklı alanlar için bölümler oluşturun" 
-            action={<Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>İlk Bölümü Ekle</Button>} />
+          <EmptyState 
+            icon={<Place sx={{ fontSize: 64 }} />} 
+            title="Henüz bölüm yok" 
+            description="Restoran içi farklı alanlar için bölümler oluşturun. Müşteriler menüye girdiğinde önce bölüm seçecek." 
+            action={
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => setModalOpen(true)}
+              >
+                İlk Bölümü Ekle
+              </Button>
+            } 
+          />
         )}
       </Stack>
 
-      <SectionModal open={modalOpen} onClose={() => setModalOpen(false)} section={editingSection} branchId={branchId} onSuccess={loadSections} />
+      {/* Section Modal */}
+      <SectionModal 
+        open={modalOpen} 
+        onClose={() => { setModalOpen(false); setEditingSection(null) }} 
+        section={editingSection} 
+        branchId={branchId} 
+        onSuccess={() => { setModalOpen(false); setEditingSection(null); loadSections() }} 
+      />
       
-      <ConfirmDialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)} onConfirm={handleDelete}
-        title="Bölümü Sil" message={`"${deleteDialog?.name}" bölümünü silmek istediğinize emin misiniz? Bu bölüme ait ürün ve kategoriler genel bölüme taşınacak.`} />
+      {/* Delete Dialog */}
+      <ConfirmDialog 
+        open={!!deleteDialog} 
+        onCancel={() => setDeleteDialog(null)} 
+        onConfirm={handleDelete}
+        title="Bölümü Sil" 
+        message={
+          <>
+            <Typography gutterBottom>
+              <strong>"{deleteDialog?.name}"</strong> bölümünü silmek istediğinize emin misiniz?
+            </Typography>
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Bu bölüme ait ürün ve kategoriler <strong>Genel</strong> bölüme taşınacak ve tüm bölümlerde görünür olacak.
+            </Alert>
+          </>
+        } 
+      />
     </PageWrapper>
   )
 }
 
-// Section Modal
+// ==================== SECTION MODAL ====================
 function SectionModal({ open, onClose, section, branchId, onSuccess }) {
   const showSnackbar = useSnackbar()
-  const isEditing = !!section
+  const isEditing = !!section?.id
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [form, setForm] = useState({
-    name: '', slug: '', description: '', icon: '📍', color: '#e53935', isActive: true, image: null, homepageImage: null
+    name: '', 
+    slug: '', 
+    description: '', 
+    icon: '📍', 
+    color: '#e53935', 
+    isActive: true, 
+    image: null, 
+    homepageImage: null
   })
 
+  const icons = ['📍', '🏠', '🌳', '☀️', '🌙', '🎉', '👑', '🍽️', '🪴', '🏖️', '🎪', '🎭', '🎨', '🌺', '🍀', '⭐', '💎', '🔥', '🌊', '🏔️', '🌆', '🌃', '🎵', '🎸', '🍷', '🍸', '☕', '🍵']
+  const colors = ['#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab', '#1e88e5', '#039be5', '#00acc1', '#00897b', '#43a047', '#7cb342', '#c0ca33', '#fdd835', '#ffb300', '#fb8c00', '#f4511e', '#6d4c41', '#546e7a']
+
   useEffect(() => {
-    if (section) {
-      setForm({
-        name: section.name || '', slug: section.slug || '', description: section.description || '',
-        icon: section.icon || '📍', color: section.color || '#e53935', isActive: section.isActive !== false,
-        image: section.image || null, homepageImage: section.homepageImage || null
-      })
-    } else {
-      setForm({ name: '', slug: '', description: '', icon: '📍', color: '#e53935', isActive: true, image: null, homepageImage: null })
+    if (open) {
+      if (section) {
+        setForm({
+          name: section.name || '', 
+          slug: section.slug || '', 
+          description: section.description || '',
+          icon: section.icon || '📍', 
+          color: section.color || '#e53935', 
+          isActive: section.isActive !== false,
+          image: section.image || null, 
+          homepageImage: section.homepageImage || null
+        })
+      } else {
+        setForm({ 
+          name: '', 
+          slug: '', 
+          description: '', 
+          icon: '📍', 
+          color: '#e53935', 
+          isActive: true, 
+          image: null, 
+          homepageImage: null 
+        })
+      }
     }
   }, [section, open])
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) return showSnackbar('Bölüm adı gerekli', 'error')
+    if (!form.name.trim()) {
+      showSnackbar('Bölüm adı gerekli', 'error')
+      return
+    }
+    
     setSaving(true)
     try {
+      const data = {
+        name: form.name,
+        slug: form.slug || undefined,
+        description: form.description,
+        icon: form.icon,
+        color: form.color,
+        isActive: form.isActive
+      }
+
       if (isEditing) {
-        await api.put(`/sections/${section.id}`, form)
+        await api.put(`/sections/${section.id}`, data)
         showSnackbar('Bölüm güncellendi', 'success')
       } else {
-        await api.post(`/branches/${branchId}/sections`, form)
+        await api.post(`/branches/${branchId}/sections`, data)
         showSnackbar('Bölüm eklendi', 'success')
       }
       onSuccess()
-      onClose()
-    } catch { showSnackbar('Kaydedilemedi', 'error') }
+    } catch (err) { 
+      console.error(err)
+      showSnackbar(err.response?.data?.error || 'Kaydedilemedi', 'error') 
+    }
     finally { setSaving(false) }
   }
 
   const handleImageUpload = async (file, type = 'image') => {
-    if (!isEditing) return showSnackbar('Önce bölümü kaydedin', 'warning')
+    if (!isEditing) {
+      showSnackbar('Görsel yüklemek için önce bölümü kaydedin', 'warning')
+      return
+    }
+    
     setUploadingImage(true)
     try {
+      let processedFile = file
+      if (isHeicFile(file)) {
+        processedFile = await convertHeicToJpg(file)
+      }
+      
       const formData = new FormData()
-      formData.append('image', file)
+      formData.append('image', processedFile)
+      
       const res = await api.post(`/sections/${section.id}/image?type=${type}`, formData)
       setForm(prev => ({ ...prev, [type]: res.data[type] }))
       showSnackbar('Görsel yüklendi', 'success')
       onSuccess()
-    } catch { showSnackbar('Yüklenemedi', 'error') }
+    } catch (err) { 
+      console.error(err)
+      showSnackbar('Yüklenemedi', 'error') 
+    }
     finally { setUploadingImage(false) }
   }
 
-  const icons = ['📍', '🏠', '🌳', '☀️', '🌙', '🎉', '👑', '🍽️', '🪴', '🏖️', '🎪', '🎭', '🎨', '🌺', '🍀', '⭐', '💎', '🔥']
-  const colors = ['#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab', '#1e88e5', '#00acc1', '#00897b', '#43a047', '#7cb342', '#c0ca33', '#fdd835', '#ffb300', '#fb8c00', '#f4511e', '#6d4c41']
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{isEditing ? 'Bölümü Düzenle' : 'Yeni Bölüm'}</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={3} sx={{ mt: 0 }}>
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={700}>
+            {isEditing ? 'Bölümü Düzenle' : 'Yeni Bölüm Ekle'}
+          </Typography>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Stack>
+      </DialogTitle>
+      
+      <DialogContent dividers>
+        <Grid container spacing={3}>
+          {/* Sol Kolon - Form Alanları */}
           <Grid item xs={12} md={6}>
-            <Stack spacing={2}>
-              <TextField fullWidth label="Bölüm Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Bahçe, Teras, VIP Salon..." />
-              <TextField fullWidth label="Slug (URL)" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} helperText="Boş bırakılırsa otomatik oluşturulur" placeholder="bahce, teras, vip-salon..." />
-              <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} placeholder="Bölüm hakkında kısa açıklama..." />
+            <Stack spacing={2.5}>
+              <TextField 
+                fullWidth 
+                label="Bölüm Adı" 
+                value={form.name} 
+                onChange={e => setForm({ ...form, name: e.target.value })} 
+                required 
+                placeholder="Bahçe, Teras, VIP Salon, Roof..."
+                helperText="Müşteriler bu ismi görecek"
+              />
               
+              <TextField 
+                fullWidth 
+                label="Slug (URL)" 
+                value={form.slug} 
+                onChange={e => setForm({ ...form, slug: e.target.value })} 
+                helperText="Boş bırakılırsa otomatik oluşturulur (örn: bahce, teras, vip-salon)" 
+                placeholder="bahce"
+              />
+              
+              <TextField 
+                fullWidth 
+                label="Açıklama" 
+                value={form.description} 
+                onChange={e => setForm({ ...form, description: e.target.value })} 
+                multiline 
+                rows={2} 
+                placeholder="Bölüm hakkında kısa açıklama..."
+              />
+              
+              {/* İkon Seçimi */}
               <Box>
-                <Typography variant="subtitle2" gutterBottom>İkon</Typography>
-                <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                  {icons.map(icon => (
-                    <Button key={icon} variant={form.icon === icon ? 'contained' : 'outlined'} onClick={() => setForm({ ...form, icon })} 
-                      sx={{ minWidth: 44, height: 44, fontSize: 20 }}>{icon}</Button>
-                  ))}
-                </Stack>
+                <Typography variant="subtitle2" gutterBottom>İkon Seçin</Typography>
+                <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 140, overflow: 'auto' }}>
+                  <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                    {icons.map(icon => (
+                      <Button 
+                        key={icon} 
+                        variant={form.icon === icon ? 'contained' : 'outlined'} 
+                        onClick={() => setForm({ ...form, icon })} 
+                        sx={{ 
+                          minWidth: 44, 
+                          height: 44, 
+                          fontSize: 20,
+                          p: 0
+                        }}
+                      >
+                        {icon}
+                      </Button>
+                    ))}
+                  </Stack>
+                </Paper>
               </Box>
               
+              {/* Renk Seçimi */}
               <Box>
-                <Typography variant="subtitle2" gutterBottom>Renk</Typography>
+                <Typography variant="subtitle2" gutterBottom>Arka Plan Rengi</Typography>
                 <Stack direction="row" flexWrap="wrap" gap={0.5}>
                   {colors.map(color => (
-                    <Button key={color} onClick={() => setForm({ ...form, color })} 
-                      sx={{ minWidth: 32, height: 32, bgcolor: color, border: form.color === color ? '3px solid' : 'none', borderColor: 'primary.main',
-                        '&:hover': { bgcolor: color, opacity: 0.8 } }} />
+                    <Button 
+                      key={color} 
+                      onClick={() => setForm({ ...form, color })} 
+                      sx={{ 
+                        minWidth: 32, 
+                        height: 32, 
+                        bgcolor: color, 
+                        border: form.color === color ? '3px solid' : '2px solid transparent', 
+                        borderColor: form.color === color ? 'white' : 'transparent',
+                        boxShadow: form.color === color ? `0 0 0 2px ${color}` : 'none',
+                        '&:hover': { bgcolor: color, opacity: 0.8 } 
+                      }} 
+                    />
                   ))}
                 </Stack>
               </Box>
               
-              <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
+              <FormControlLabel 
+                control={
+                  <Switch 
+                    checked={form.isActive} 
+                    onChange={e => setForm({ ...form, isActive: e.target.checked })} 
+                  />
+                } 
+                label={
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>Aktif</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Pasif bölümler müşterilere görünmez
+                    </Typography>
+                  </Box>
+                }
+              />
             </Stack>
           </Grid>
           
+          {/* Sağ Kolon - Görseller ve Önizleme */}
           <Grid item xs={12} md={6}>
-            <Stack spacing={2}>
+            <Stack spacing={2.5}>
+              {/* Önizleme */}
               <Box>
-                <Typography variant="subtitle2" gutterBottom>Bölüm Görseli</Typography>
-                <ImageUploader value={form.image} onChange={(file) => handleImageUpload(file, 'image')} label="Bölüm görseli" disabled={!isEditing || uploadingImage} />
-                {!isEditing && <Typography variant="caption" color="text.secondary">Görsel yüklemek için önce bölümü kaydedin</Typography>}
+                <Typography variant="subtitle2" gutterBottom>Önizleme</Typography>
+                <Paper 
+                  sx={{ 
+                    p: 3, 
+                    bgcolor: form.color, 
+                    color: 'white', 
+                    borderRadius: 2,
+                    textAlign: 'center'
+                  }}
+                >
+                  <Typography variant="h1" sx={{ fontSize: 64, mb: 1 }}>{form.icon}</Typography>
+                  <Typography variant="h5" fontWeight={700}>
+                    {form.name || 'Bölüm Adı'}
+                  </Typography>
+                  {form.description && (
+                    <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+                      {form.description}
+                    </Typography>
+                  )}
+                </Paper>
               </Box>
               
+              {/* Bölüm Görseli */}
               <Box>
-                <Typography variant="subtitle2" gutterBottom>Anasayfa Görseli</Typography>
-                <ImageUploader value={form.homepageImage} onChange={(file) => handleImageUpload(file, 'homepageImage')} label="Anasayfa görseli" disabled={!isEditing || uploadingImage} />
-                <Typography variant="caption" color="text.secondary">Bu bölüm seçildiğinde menüde gösterilecek görsel</Typography>
-              </Box>
-              
-              <Paper sx={{ p: 2, bgcolor: form.color, color: 'white', borderRadius: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Typography variant="h2">{form.icon}</Typography>
-                  <Box>
-                    <Typography variant="h6" fontWeight={600}>{form.name || 'Bölüm Adı'}</Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.8 }}>{form.description || 'Açıklama...'}</Typography>
+                <Typography variant="subtitle2" gutterBottom>
+                  Bölüm Görseli {!isEditing && <Chip label="Kaydet" size="small" sx={{ ml: 1 }} />}
+                </Typography>
+                {isEditing ? (
+                  <Box 
+                    component="label" 
+                    sx={{ 
+                      display: 'block', 
+                      position: 'relative', 
+                      width: '100%', 
+                      paddingTop: '56.25%', 
+                      borderRadius: 2, 
+                      overflow: 'hidden', 
+                      cursor: uploadingImage ? 'wait' : 'pointer', 
+                      border: '2px dashed', 
+                      borderColor: form.image ? 'transparent' : 'divider', 
+                      bgcolor: 'background.default', 
+                      '&:hover .overlay': { opacity: 1 } 
+                    }}
+                  >
+                    {uploadingImage && (
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        top: 0, left: 0, right: 0, bottom: 0, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        zIndex: 10
+                      }}>
+                        <CircularProgress sx={{ color: 'white' }} />
+                      </Box>
+                    )}
+                    {form.image ? (
+                      <>
+                        <Box 
+                          component="img" 
+                          src={getImageUrl(form.image)} 
+                          alt="Bölüm" 
+                          sx={{ 
+                            position: 'absolute', 
+                            top: 0, left: 0, 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover' 
+                          }} 
+                        />
+                        <Box 
+                          className="overlay" 
+                          sx={{ 
+                            position: 'absolute', 
+                            top: 0, left: 0, right: 0, bottom: 0, 
+                            bgcolor: 'rgba(0,0,0,0.6)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            opacity: 0, 
+                            transition: 'opacity 0.2s' 
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={0.5}>
+                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
+                            <Typography variant="caption" color="white">Değiştir</Typography>
+                          </Stack>
+                        </Box>
+                      </>
+                    ) : (
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        top: 0, left: 0, right: 0, bottom: 0, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
+                      }}>
+                        <Stack alignItems="center" spacing={0.5}>
+                          <CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary">Görsel Yükle</Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                    <input 
+                      type="file" 
+                      hidden 
+                      accept="image/*,.heic" 
+                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'image')} 
+                      disabled={uploadingImage}
+                    />
                   </Box>
-                </Stack>
-              </Paper>
+                ) : (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    Görsel yüklemek için önce bölümü kaydedin
+                  </Alert>
+                )}
+              </Box>
+              
+              {/* Anasayfa Görseli */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Anasayfa Görseli (Opsiyonel)
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                  Bu bölüm seçildiğinde menü üstünde gösterilecek büyük görsel
+                </Typography>
+                {isEditing ? (
+                  <Box 
+                    component="label" 
+                    sx={{ 
+                      display: 'block', 
+                      position: 'relative', 
+                      width: '100%', 
+                      paddingTop: '40%', 
+                      borderRadius: 2, 
+                      overflow: 'hidden', 
+                      cursor: uploadingImage ? 'wait' : 'pointer', 
+                      border: '2px dashed', 
+                      borderColor: form.homepageImage ? 'success.main' : 'divider', 
+                      bgcolor: form.homepageImage ? 'background.default' : alpha('#e53935', 0.05),
+                      '&:hover .overlay': { opacity: 1 } 
+                    }}
+                  >
+                    {form.homepageImage ? (
+                      <>
+                        <Box 
+                          component="img" 
+                          src={getImageUrl(form.homepageImage)} 
+                          alt="Anasayfa" 
+                          sx={{ 
+                            position: 'absolute', 
+                            top: 0, left: 0, 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover' 
+                          }} 
+                        />
+                        <Chip 
+                          label="Aktif" 
+                          color="success" 
+                          size="small" 
+                          sx={{ position: 'absolute', top: 8, right: 8 }} 
+                        />
+                        <Box 
+                          className="overlay" 
+                          sx={{ 
+                            position: 'absolute', 
+                            top: 0, left: 0, right: 0, bottom: 0, 
+                            bgcolor: 'rgba(0,0,0,0.6)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            opacity: 0, 
+                            transition: 'opacity 0.2s' 
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={0.5}>
+                            <PhotoCamera sx={{ color: 'white', fontSize: 28 }} />
+                            <Typography variant="caption" color="white">Değiştir</Typography>
+                          </Stack>
+                        </Box>
+                      </>
+                    ) : (
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        top: 0, left: 0, right: 0, bottom: 0, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
+                      }}>
+                        <Stack alignItems="center" spacing={0.5}>
+                          <CloudUpload sx={{ fontSize: 28, color: 'primary.main' }} />
+                          <Typography variant="caption" color="primary.main">Yükle</Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                    <input 
+                      type="file" 
+                      hidden 
+                      accept="image/*,.heic" 
+                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'homepageImage')} 
+                      disabled={uploadingImage}
+                    />
+                  </Box>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">
+                    Kayıt sonrası yüklenebilir
+                  </Typography>
+                )}
+              </Box>
             </Stack>
           </Grid>
         </Grid>
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}>
-        <Button onClick={onClose}>İptal</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={saving}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button>
+      
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={saving}>İptal</Button>
+        <Button 
+          onClick={handleSubmit} 
+          variant="contained" 
+          disabled={saving || uploadingImage}
+          startIcon={saving ? <CircularProgress size={20} /> : <Check />}
+        >
+          {saving ? 'Kaydediliyor...' : isEditing ? 'Güncelle' : 'Kaydet'}
+        </Button>
       </DialogActions>
     </Dialog>
   )
@@ -638,24 +1200,24 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
 
 // ==================== PRODUCTS PAGE ====================
 export function ProductsPage() {
-  const { branchId } = useParams()
+  const { branchId, sectionId } = useParams()
+  const { currentSection } = useBranch()
   const location = useLocation()
   const showSnackbar = useSnackbar()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
-  const [sections, setSections] = useState([])
+  const [tags, setTags] = useState([])
   const [glbFiles, setGlbFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
-  const [filterSection, setFilterSection] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null })
   const [previewDialog, setPreviewDialog] = useState({ open: false, product: null })
 
-  useEffect(() => { if (branchId) loadData() }, [branchId])
+  useEffect(() => { if (branchId && sectionId) loadData() }, [branchId, sectionId])
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -665,15 +1227,15 @@ export function ProductsPage() {
 
   const loadData = async () => {
     try {
-      const [productsRes, categoriesRes, sectionsRes, glbRes] = await Promise.all([
-        api.get(`/branches/${branchId}/products`),
-        api.get(`/branches/${branchId}/categories`),
-        api.get(`/branches/${branchId}/sections`),
+      const [productsRes, categoriesRes, tagsRes, glbRes] = await Promise.all([
+        api.get(`/branches/${branchId}/products?section=${sectionId}`),
+        api.get(`/branches/${branchId}/categories?section=${sectionId}`),
+        api.get(`/branches/${branchId}/tags`),
         api.get(`/branches/${branchId}/glb`)
       ])
       setProducts(productsRes.data.products || productsRes.data)
       setCategories(categoriesRes.data)
-      setSections(sectionsRes.data)
+      setTags(tagsRes.data || [])
       setGlbFiles(glbRes.data || [])
     } catch (err) { 
       console.error(err)
@@ -694,8 +1256,6 @@ export function ProductsPage() {
   const filteredProducts = products.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
     if (filterCategory && p.categoryId !== filterCategory) return false
-    if (filterSection === 'null' && p.sectionId) return false
-    if (filterSection && filterSection !== 'null' && p.sectionId !== filterSection) return false
     if (filterStatus === 'active' && !p.isActive) return false
     if (filterStatus === 'inactive' && p.isActive) return false
     if (filterStatus === 'featured' && !p.isFeatured) return false
@@ -722,15 +1282,13 @@ export function ProductsPage() {
                     {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.icon} {cat.name}</MenuItem>)}
                   </Select>
                 </FormControl>
-                {sections.length > 0 && (
-                  <FormControl size="small" sx={{ minWidth: 150 }}>
-                    <InputLabel>Bölüm</InputLabel>
-                    <Select value={filterSection} label="Bölüm" onChange={e => setFilterSection(e.target.value)}>
-                      <MenuItem value="">Tümü</MenuItem>
-                      <MenuItem value="null">Genel (Bölümsüz)</MenuItem>
-                      {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
-                    </Select>
-                  </FormControl>
+                {currentSection && (
+                  <Chip 
+                    icon={<Place />} 
+                    label={`${currentSection.icon} ${currentSection.name}`} 
+                    color="primary" 
+                    variant="outlined"
+                  />
                 )}
                 <FormControl size="small" sx={{ minWidth: 150 }}>
                   <InputLabel>Durum</InputLabel>
@@ -754,6 +1312,7 @@ export function ProductsPage() {
 
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
           <Chip label={`Toplam: ${products.length}`} />
+          <Chip label={`Gösterilen: ${filteredProducts.length}`} variant="outlined" />
           <Chip label={`3D: ${products.filter(p => p.hasGlb).length}`} color="info" variant="outlined" />
           <Chip label={`Kampanya: ${products.filter(p => p.isCampaign).length}`} color="error" variant="outlined" />
         </Stack>
@@ -817,7 +1376,7 @@ export function ProductsPage() {
           )}
         </Grid>
 
-        <ProductModal open={modalOpen} product={editingProduct} categories={categories} sections={sections} glbFiles={glbFiles} branchId={branchId}
+        <ProductModal open={modalOpen} product={editingProduct} categories={categories} tags={tags} sectionId={sectionId} glbFiles={glbFiles} branchId={branchId}
           onClose={() => { setModalOpen(false); setEditingProduct(null) }}
           onSave={() => { setModalOpen(false); setEditingProduct(null); loadData() }} />
 
@@ -843,16 +1402,16 @@ export function ProductsPage() {
 }
 
 // ==================== PRODUCT MODAL ====================
-function ProductModal({ open, product, categories, sections = [], glbFiles, branchId, onClose, onSave }) {
+function ProductModal({ open, product, categories, tags = [], sectionId, glbFiles, branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
   
   const isEditing = !!product?.id
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState(0)
   const [form, setForm] = useState({
-    name: '', price: '', description: '', categoryId: '', sectionId: '', isActive: true,
+    name: '', price: '', description: '', categoryId: '', isActive: true,
     isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '',
-    calories: '', preparationTime: '', allergens: '', tags: ''
+    calories: '', preparationTime: '', allergens: '', selectedTags: []
   })
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [thumbnailPreview, setThumbnailPreview] = useState(null)
@@ -860,19 +1419,21 @@ function ProductModal({ open, product, categories, sections = [], glbFiles, bran
   useEffect(() => {
     if (open) {
       if (product) {
+        // Ürünün mevcut etiketlerini ID array olarak al
+        const productTagIds = product.tags?.map(t => t.id || t._id || t) || []
+        
         setForm({
           name: product.name || '', price: product.price || '', description: product.description || '',
           categoryId: product.categoryId || product.category?._id || '', 
-          sectionId: product.sectionId || product.section?._id || '',
           isActive: product.isActive !== false,
           isFeatured: product.isFeatured || false, isCampaign: product.isCampaign || false,
           campaignPrice: product.campaignPrice || '', glbFile: product.glbFile || '',
           calories: product.calories || '', preparationTime: product.preparationTime || '',
-          allergens: product.allergens?.join(', ') || '', tags: product.tags?.join(', ') || ''
+          allergens: product.allergens?.join(', ') || '', selectedTags: productTagIds
         })
         setThumbnailPreview(product.thumbnail ? getImageUrl(product.thumbnail) : null)
       } else {
-        setForm({ name: '', price: '', description: '', categoryId: '', sectionId: '', isActive: true, isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '', calories: '', preparationTime: '', allergens: '', tags: '' })
+        setForm({ name: '', price: '', description: '', categoryId: '', isActive: true, isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '', calories: '', preparationTime: '', allergens: '', selectedTags: [] })
         setThumbnailPreview(null)
       }
       setThumbnailFile(null)
@@ -892,13 +1453,13 @@ function ProductModal({ open, product, categories, sections = [], glbFiles, bran
     try {
       const data = {
         name: form.name, price: parseFloat(form.price), description: form.description,
-        categoryId: form.categoryId || null, section: form.sectionId || null,
+        categoryId: form.categoryId || null, section: sectionId,
         isActive: form.isActive, isFeatured: form.isFeatured,
         isCampaign: form.isCampaign, campaignPrice: form.campaignPrice ? parseFloat(form.campaignPrice) : null,
         calories: form.calories ? parseInt(form.calories) : null,
         preparationTime: form.preparationTime ? parseInt(form.preparationTime) : null,
         allergens: form.allergens ? form.allergens.split(',').map(s => s.trim()).filter(Boolean) : [],
-        tags: form.tags ? form.tags.split(',').map(s => s.trim()).filter(Boolean) : []
+        tags: form.selectedTags // ObjectId array olarak gönder
       }
 
       let productId = product?.id
@@ -942,7 +1503,7 @@ function ProductModal({ open, product, categories, sections = [], glbFiles, bran
 
       <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ px: 3, borderBottom: 1, borderColor: 'divider' }}>
         <Tab label="Genel Bilgiler" />
-        <Tab label="Detaylar" />
+        <Tab label="Detaylar & Etiketler" />
         <Tab label="3D Model" />
       </Tabs>
 
@@ -966,15 +1527,7 @@ function ProductModal({ open, product, categories, sections = [], glbFiles, bran
                     </Select>
                   </FormControl>
                 </Stack>
-                {sections.length > 0 && (
-                  <FormControl fullWidth>
-                    <InputLabel>Bölüm</InputLabel>
-                    <Select value={form.sectionId} label="Bölüm" onChange={e => setForm({ ...form, sectionId: e.target.value })}>
-                      <MenuItem value="">Genel (Tüm Bölümler)</MenuItem>
-                      {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
-                    </Select>
-                  </FormControl>
-                )}
+                
                 <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3} />
                 <Divider />
                 <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
@@ -994,6 +1547,70 @@ function ProductModal({ open, product, categories, sections = [], glbFiles, bran
 
         {tab === 1 && (
           <Stack spacing={3}>
+            {/* Etiketler - Select Box */}
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>Etiketler</Typography>
+              {tags.length > 0 ? (
+                <FormControl fullWidth>
+                  <InputLabel>Etiketler Seçin</InputLabel>
+                  <Select
+                    multiple
+                    value={form.selectedTags}
+                    label="Etiketler Seçin"
+                    onChange={e => setForm({ ...form, selectedTags: e.target.value })}
+                    renderValue={(selected) => (
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                        {selected.map(id => {
+                          const tag = tags.find(t => t.id === id)
+                          return tag ? (
+                            <Chip 
+                              key={id} 
+                              label={`${tag.icon} ${tag.name}`} 
+                              size="small"
+                              sx={{ bgcolor: tag.color, color: 'white' }}
+                              onDelete={() => setForm({ 
+                                ...form, 
+                                selectedTags: form.selectedTags.filter(t => t !== id) 
+                              })}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          ) : null
+                        })}
+                      </Stack>
+                    )}
+                  >
+                    {tags.filter(t => t.isActive).map(tag => (
+                      <MenuItem key={tag.id} value={tag.id}>
+                        <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                          <Box 
+                            sx={{ 
+                              width: 28, 
+                              height: 28, 
+                              borderRadius: 1, 
+                              bgcolor: tag.color,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <Typography sx={{ fontSize: 14 }}>{tag.icon}</Typography>
+                          </Box>
+                          <Typography sx={{ flex: 1 }}>{tag.name}</Typography>
+                          {form.selectedTags.includes(tag.id) && <Check color="primary" />}
+                        </Stack>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <Alert severity="info">
+                  Henüz etiket eklenmemiş. Etiketler sayfasından etiket ekleyebilirsiniz.
+                </Alert>
+              )}
+            </Box>
+
+            <Divider />
+
             <Typography variant="subtitle2" color="text.secondary">Ürün Detayları (Opsiyonel)</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField fullWidth label="Kalori" type="number" value={form.calories} onChange={e => setForm({ ...form, calories: e.target.value })}
@@ -1001,8 +1618,7 @@ function ProductModal({ open, product, categories, sections = [], glbFiles, bran
               <TextField fullWidth label="Hazırlama Süresi" type="number" value={form.preparationTime} onChange={e => setForm({ ...form, preparationTime: e.target.value })}
                 InputProps={{ endAdornment: <InputAdornment position="end">dk</InputAdornment> }} />
             </Stack>
-            <TextField fullWidth label="Alerjenler" value={form.allergens} onChange={e => setForm({ ...form, allergens: e.target.value })} placeholder="Gluten, Süt, Fındık..." />
-            <TextField fullWidth label="Etiketler" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="Vegan, Glutensiz, Acılı..." />
+            <TextField fullWidth label="Alerjenler" value={form.allergens} onChange={e => setForm({ ...form, allergens: e.target.value })} placeholder="Gluten, Süt, Fındık..." helperText="Virgülle ayırarak yazın" />
           </Stack>
         )}
 
@@ -1057,18 +1673,17 @@ function ProductModal({ open, product, categories, sections = [], glbFiles, bran
 
 // ==================== CATEGORIES PAGE ====================
 export function CategoriesPage() {
-  const { branchId } = useParams()
+  const { branchId, sectionId } = useParams()
+  const { currentSection } = useBranch()
   const location = useLocation()
   const showSnackbar = useSnackbar()
   const [categories, setCategories] = useState([])
-  const [sections, setSections] = useState([])
-  const [filterSection, setFilterSection] = useState('')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, category: null })
 
-  useEffect(() => { if (branchId) loadData() }, [branchId])
+  useEffect(() => { if (branchId && sectionId) loadData() }, [branchId, sectionId])
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -1077,12 +1692,8 @@ export function CategoriesPage() {
 
   const loadData = async () => {
     try {
-      const [catRes, secRes] = await Promise.all([
-        api.get(`/branches/${branchId}/categories`),
-        api.get(`/branches/${branchId}/sections`)
-      ])
+      const catRes = await api.get(`/branches/${branchId}/categories?section=${sectionId}`)
       setCategories(catRes.data)
-      setSections(secRes.data)
     } catch { showSnackbar('Veriler yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
@@ -1116,12 +1727,6 @@ export function CategoriesPage() {
     }
   }
 
-  const filteredCategories = categories.filter(c => {
-    if (filterSection === 'null' && c.section) return false
-    if (filterSection && filterSection !== 'null' && c.section !== filterSection) return false
-    return true
-  })
-
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
   return (
@@ -1129,19 +1734,14 @@ export function CategoriesPage() {
       <Stack spacing={3}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
-            <Typography variant="h6" fontWeight={700}>{filteredCategories.length} Kategori</Typography>
-            <Typography variant="body2" color="text.secondary">Kategorileri düzenleyin ve yerleşimlerini ayarlayın</Typography>
+            <Typography variant="h6" fontWeight={700}>{categories.length} Kategori</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {currentSection?.icon} {currentSection?.name} bölümü kategorileri
+            </Typography>
           </Box>
           <Stack direction="row" spacing={2} alignItems="center">
-            {sections.length > 0 && (
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Bölüm</InputLabel>
-                <Select value={filterSection} label="Bölüm" onChange={e => setFilterSection(e.target.value)}>
-                  <MenuItem value="">Tümü</MenuItem>
-                  <MenuItem value="null">Genel (Bölümsüz)</MenuItem>
-                  {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
-                </Select>
-              </FormControl>
+            {currentSection && (
+              <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />
             )}
             <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>Yeni Kategori</Button>
           </Stack>
@@ -1157,42 +1757,44 @@ export function CategoriesPage() {
         </Alert>
 
         <Grid container spacing={2}>
-          {filteredCategories.map(category => (
-            <Grid item xs={6} sm={4} md={3} key={category.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default' }}>
-                  {category.image ? (
-                    <CardMedia component="img" image={getImageUrl(category.image)} alt={category.name}
-                      sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography variant="h2">{category.icon}</Typography>
-                    </Box>
-                  )}
-                  <Tooltip title="Görsel Yükle">
-                    <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}>
-                      <PhotoCamera sx={{ color: 'white', fontSize: 20 }} />
-                      <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
-                    </IconButton>
-                  </Tooltip>
-                  <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} sx={{ position: 'absolute', top: 8, right: 8 }} />
-                </Box>
+          {categories.map(category => {
+            return (
+              <Grid item xs={6} sm={4} md={3} key={category.id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default' }}>
+                    {category.image ? (
+                      <CardMedia component="img" image={getImageUrl(category.image)} alt={category.name}
+                        sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Typography variant="h2">{category.icon}</Typography>
+                      </Box>
+                    )}
+                    <Tooltip title="Görsel Yükle">
+                      <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}>
+                        <PhotoCamera sx={{ color: 'white', fontSize: 20 }} />
+                        <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
+                      </IconButton>
+                    </Tooltip>
+                    <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} sx={{ position: 'absolute', top: 8, right: 8 }} />
+                  </Box>
 
-                <CardContent sx={{ flex: 1, p: 1.5 }}>
-                  <Typography variant="subtitle2" fontWeight={700} noWrap>{category.icon} {category.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">{category.productCount || 0} ürün</Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" />
-                  </Stack>
-                </CardContent>
+                  <CardContent sx={{ flex: 1, p: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700} noWrap>{category.icon} {category.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">{category.productCount || 0} ürün</Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+                      <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" />
+                    </Stack>
+                  </CardContent>
 
-                <CardActions sx={{ p: 1, pt: 0 }}>
-                  <Button size="small" startIcon={<Edit />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>Düzenle</Button>
-                  <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete fontSize="small" /></IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
+                  <CardActions sx={{ p: 1, pt: 0 }}>
+                    <Button size="small" startIcon={<Edit />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>Düzenle</Button>
+                    <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete fontSize="small" /></IconButton>
+                  </CardActions>
+                </Card>
+              </Grid>
+            )
+          })}
 
           {categories.length === 0 && (
             <Grid item xs={12}>
@@ -1202,7 +1804,7 @@ export function CategoriesPage() {
           )}
         </Grid>
 
-        <CategoryModal open={modalOpen} category={editingCategory} sections={sections} branchId={branchId}
+        <CategoryModal open={modalOpen} category={editingCategory} sectionId={sectionId} branchId={branchId}
           onClose={() => { setModalOpen(false); setEditingCategory(null) }}
           onSave={() => { setModalOpen(false); setEditingCategory(null); loadData() }} />
 
@@ -1215,14 +1817,14 @@ export function CategoriesPage() {
 }
 
 // ==================== CATEGORY MODAL ====================
-function CategoryModal({ open, category, sections = [], branchId, onClose, onSave }) {
+function CategoryModal({ open, category, sectionId, branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
   
   const isEditing = !!category?.id
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half', section: '' })
+  const [form, setForm] = useState({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half' })
 
-  const icons = ['🍕', '🍔', '🌮', '🍜', '🍣', '🥗', '🍰', '☕', '🍺', '🥤', '🍳', '🥪', '🍝', '🥘', '🍱', '🧁', '🍦', '🥩', '🍗', '🥙']
+  const icons = ['🍕', '🍔', '🌮', '🍜', '🍣', '🥗', '🍰', '☕', '🍺', '🥤', '🍳', '🥪', '🍝', '🥘', '🍱', '🧁', '🍦', '🥩', '🍗', '🥙', '🌯', '🥡', '🍛', '🍲', '🥧', '🧇', '🥞', '🧆', '🍤', '🦐']
 
   useEffect(() => {
     if (open) {
@@ -1230,10 +1832,10 @@ function CategoryModal({ open, category, sections = [], branchId, onClose, onSav
         setForm({ 
           name: category.name || '', icon: category.icon || '📁', 
           description: category.description || '', isActive: category.isActive !== false, 
-          layoutSize: category.layoutSize || 'half', section: category.section || ''
+          layoutSize: category.layoutSize || 'half'
         })
       } else {
-        setForm({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half', section: '' })
+        setForm({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half' })
       }
     }
   }, [open, category])
@@ -1242,7 +1844,7 @@ function CategoryModal({ open, category, sections = [], branchId, onClose, onSav
     if (!form.name) { showSnackbar('Kategori adı zorunludur', 'error'); return }
     setSaving(true)
     try {
-      const data = { ...form, section: form.section || null }
+      const data = { ...form, section: sectionId }
       if (isEditing) {
         await api.put(`/categories/${category.id}`, data)
       } else {
@@ -1268,26 +1870,18 @@ function CategoryModal({ open, category, sections = [], branchId, onClose, onSav
           <TextField fullWidth label="Kategori Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
           <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} />
 
-          {sections.length > 0 && (
-            <FormControl fullWidth>
-              <InputLabel>Bölüm</InputLabel>
-              <Select value={form.section} label="Bölüm" onChange={e => setForm({ ...form, section: e.target.value })}>
-                <MenuItem value="">Genel (Tüm Bölümler)</MenuItem>
-                {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
-              </Select>
-            </FormControl>
-          )}
-
           <Box>
             <Typography variant="subtitle2" gutterBottom>İkon Seçin</Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {icons.map(icon => (
-                <IconButton key={icon} onClick={() => setForm({ ...form, icon })}
-                  sx={{ fontSize: 24, width: 44, height: 44, border: 2, borderColor: form.icon === icon ? 'primary.main' : 'transparent', bgcolor: form.icon === icon ? alpha('#e53935', 0.1) : 'transparent' }}>
-                  {icon}
-                </IconButton>
-              ))}
-            </Box>
+            <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 120, overflow: 'auto' }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {icons.map(icon => (
+                  <IconButton key={icon} onClick={() => setForm({ ...form, icon })}
+                    sx={{ fontSize: 24, width: 40, height: 40, border: 2, borderColor: form.icon === icon ? 'primary.main' : 'transparent', bgcolor: form.icon === icon ? alpha('#e53935', 0.1) : 'transparent' }}>
+                    {icon}
+                  </IconButton>
+                ))}
+              </Box>
+            </Paper>
           </Box>
 
           <Box>
@@ -1312,20 +1906,21 @@ function CategoryModal({ open, category, sections = [], branchId, onClose, onSav
 
 // ==================== CATEGORY LAYOUT PAGE ====================
 export function CategoryLayoutPage() {
-  const { branchId } = useParams()
+  const { branchId, sectionId } = useParams()
+  const { currentSection } = useBranch()
   const showSnackbar = useSnackbar()
   const [categories, setCategories] = useState([])
   const [layouts, setLayouts] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { if (branchId) loadData() }, [branchId])
+  useEffect(() => { if (branchId && sectionId) loadData() }, [branchId, sectionId])
 
   const loadData = async () => {
     try {
       const [categoriesRes, layoutsRes] = await Promise.all([
-        api.get(`/branches/${branchId}/categories`),
-        api.get(`/branches/${branchId}/category-layouts`)
+        api.get(`/branches/${branchId}/categories?section=${sectionId}`),
+        api.get(`/branches/${branchId}/category-layouts?section=${sectionId}`)
       ])
       
       const cats = categoriesRes.data || []
@@ -1418,7 +2013,10 @@ export function CategoryLayoutPage() {
           size: c.size
         }))
       }))
-      await api.put(`/branches/${branchId}/category-layouts/bulk`, { layouts: layoutsToSave })
+      await api.put(`/branches/${branchId}/category-layouts/bulk`, { 
+        layouts: layoutsToSave,
+        section: sectionId
+      })
       showSnackbar('Düzen kaydedildi', 'success')
     } catch (err) { 
       console.error(err)
@@ -1428,6 +2026,8 @@ export function CategoryLayoutPage() {
   }
 
   const usedCategoryIds = layouts.flatMap(l => (l.categories || []).map(c => c.category?.id || c.category?._id || c.category)).filter(Boolean)
+  
+  // Kategoriler zaten API'den section'a göre filtrelenmiş geliyor
   const unusedCategories = categories.filter(c => !usedCategoryIds.includes(c.id))
 
   const getGridSize = (size) => size === 'full' ? 12 : size === 'half' ? 6 : 4
@@ -1440,9 +2040,14 @@ export function CategoryLayoutPage() {
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
             <Typography variant="h6" fontWeight={700}>Kategori Düzeni</Typography>
-            <Typography variant="body2" color="text.secondary">Menüde kategorilerin görünümünü ayarlayın</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {currentSection?.icon} {currentSection?.name} bölümü için menü düzeni
+            </Typography>
           </Box>
           <Stack direction="row" spacing={1}>
+            {currentSection && (
+              <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />
+            )}
             <Button onClick={loadData} startIcon={<Refresh />}>Yenile</Button>
             <Button variant="contained" onClick={saveLayouts} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>
               {saving ? 'Kaydediliyor...' : 'Kaydet'}
@@ -1688,22 +2293,389 @@ export function GlbFilesPage() {
   )
 }
 
+// ==================== TAGS PAGE ====================
+export function TagsPage() {
+  const { branchId } = useParams()
+  const showSnackbar = useSnackbar()
+  const [tags, setTags] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null })
+  const [reordering, setReordering] = useState(false)
+
+  useEffect(() => { if (branchId) loadTags() }, [branchId])
+
+  const loadTags = async () => {
+    try {
+      const res = await api.get(`/branches/${branchId}/tags`)
+      setTags(res.data)
+    } catch (err) { 
+      console.error(err)
+      showSnackbar('Etiketler yüklenemedi', 'error') 
+    }
+    finally { setLoading(false) }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/tags/${deleteDialog.item.id}`)
+      showSnackbar('Etiket silindi', 'success')
+      setDeleteDialog({ open: false, item: null })
+      loadTags()
+    } catch (err) { 
+      console.error(err)
+      showSnackbar('Silinemedi', 'error') 
+    }
+  }
+
+  const handleToggleActive = async (tag) => {
+    try {
+      await api.put(`/tags/${tag.id}`, { isActive: !tag.isActive })
+      showSnackbar(tag.isActive ? 'Etiket gizlendi' : 'Etiket aktifleştirildi', 'success')
+      loadTags()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('İşlem başarısız', 'error')
+    }
+  }
+
+  const handleReorder = async (index, direction) => {
+    const newTags = [...tags]
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= newTags.length) return
+
+    [newTags[index], newTags[targetIndex]] = [newTags[targetIndex], newTags[index]]
+    setTags(newTags)
+
+    setReordering(true)
+    try {
+      await api.put(`/branches/${branchId}/tags/reorder`, {
+        tagIds: newTags.map(t => t.id)
+      })
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Sıralama kaydedilemedi', 'error')
+      loadTags()
+    } finally {
+      setReordering(false)
+    }
+  }
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+
+  return (
+    <PageWrapper>
+      <Stack spacing={3}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>Etiketler</Typography>
+            <Typography color="text.secondary">
+              Ürünlerinizi gruplamak için etiketler oluşturun (Vegan, Glutensiz, Acılı vb.)
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button startIcon={<Refresh />} onClick={loadTags} disabled={reordering}>Yenile</Button>
+            <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>
+              Yeni Etiket
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Alert severity="info" icon={<LocalOffer />}>
+          <Typography variant="subtitle2" gutterBottom>Etiketler Nasıl Çalışır?</Typography>
+          <Typography variant="body2">
+            • Etiketler ürünleri gruplamak için kullanılır (örn: Vegan, Glutensiz, Acılı, Şefin Önerisi)<br/>
+            • Bir ürüne birden fazla etiket atayabilirsiniz<br/>
+            • Müşteriler menüde etiketlere tıklayarak o etiketteki ürünleri görebilir
+          </Typography>
+        </Alert>
+
+        {tags.length > 0 ? (
+          <Grid container spacing={2}>
+            {tags.map((tag, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={tag.id}>
+                <Card sx={{ 
+                  height: '100%',
+                  opacity: tag.isActive ? 1 : 0.6,
+                  transition: 'all 0.2s',
+                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                }}>
+                  <CardContent>
+                    <Stack spacing={2}>
+                      {/* Header - Sıralama */}
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                        <Box>
+                          <Typography variant="h6" fontWeight={700}>
+                            {tag.name}
+                          </Typography>
+                          {tag.description && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                              {tag.description}
+                            </Typography>
+                          )}
+                        </Box>
+                        <Stack direction="row" spacing={0.5}>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleReorder(index, -1)}
+                            disabled={index === 0 || reordering}
+                          >
+                            <ArrowUpward fontSize="small" />
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleReorder(index, 1)}
+                            disabled={index === tags.length - 1 || reordering}
+                          >
+                            <ArrowDownward fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </Stack>
+
+                      {/* İstatistikler */}
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Chip 
+                          icon={<Restaurant fontSize="small" />} 
+                          label={`${tag.productCount || 0} ürün`} 
+                          size="small" 
+                          variant="outlined" 
+                        />
+                        <Chip 
+                          label={tag.isActive ? 'Aktif' : 'Gizli'} 
+                          size="small" 
+                          color={tag.isActive ? 'success' : 'default'}
+                        />
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                  
+                  <Divider />
+                  
+                  <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                    <Stack direction="row" spacing={0.5}>
+                      <Tooltip title="Düzenle">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => { setEditing(tag); setModalOpen(true) }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={tag.isActive ? 'Gizle' : 'Aktifleştir'}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleToggleActive(tag)}
+                        >
+                          {tag.isActive ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Sil">
+                        <IconButton 
+                          size="small" 
+                          color="error" 
+                          onClick={() => setDeleteDialog({ open: true, item: tag })}
+                          disabled={tag.productCount > 0}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <EmptyState 
+            icon={<LocalOffer sx={{ fontSize: 64 }} />} 
+            title="Henüz etiket yok" 
+            description="Ürünlerinizi gruplamak için etiketler oluşturun" 
+            action={
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => setModalOpen(true)}
+              >
+                İlk Etiketi Ekle
+              </Button>
+            } 
+          />
+        )}
+      </Stack>
+
+      {/* Tag Modal */}
+      <TagModal 
+        open={modalOpen} 
+        onClose={() => { setModalOpen(false); setEditing(null) }} 
+        tag={editing} 
+        branchId={branchId} 
+        onSuccess={() => { setModalOpen(false); setEditing(null); loadTags() }} 
+      />
+      
+      {/* Delete Dialog */}
+      <ConfirmDialog 
+        open={deleteDialog.open} 
+        onCancel={() => setDeleteDialog({ open: false, item: null })} 
+        onConfirm={handleDelete}
+        title="Etiket Sil" 
+        message={
+          <>
+            <Typography gutterBottom>
+              <strong>"{deleteDialog.item?.name}"</strong> etiketini silmek istediğinize emin misiniz?
+            </Typography>
+            {deleteDialog.item?.productCount > 0 && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Bu etiket <strong>{deleteDialog.item.productCount} ürüne</strong> atanmış. Önce ürünlerden bu etiketi kaldırın.
+              </Alert>
+            )}
+          </>
+        } 
+      />
+    </PageWrapper>
+  )
+}
+
+// ==================== TAG MODAL ====================
+function TagModal({ open, onClose, tag, branchId, onSuccess }) {
+  const showSnackbar = useSnackbar()
+  const isEditing = !!tag?.id
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    name: '', 
+    description: '', 
+    isActive: true
+  })
+
+  useEffect(() => {
+    if (open) {
+      if (tag) {
+        setForm({
+          name: tag.name || '', 
+          description: tag.description || '',
+          isActive: tag.isActive !== false
+        })
+      } else {
+        setForm({ 
+          name: '', 
+          description: '', 
+          isActive: true
+        })
+      }
+    }
+  }, [tag, open])
+
+  const handleSubmit = async () => {
+    if (!form.name.trim()) {
+      showSnackbar('Etiket adı gerekli', 'error')
+      return
+    }
+    
+    setSaving(true)
+    try {
+      if (isEditing) {
+        await api.put(`/tags/${tag.id}`, form)
+        showSnackbar('Etiket güncellendi', 'success')
+      } else {
+        await api.post(`/branches/${branchId}/tags`, form)
+        showSnackbar('Etiket eklendi', 'success')
+      }
+      onSuccess()
+    } catch (err) { 
+      console.error(err)
+      showSnackbar(err.response?.data?.error || 'Kaydedilemedi', 'error') 
+    }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={700}>
+            {isEditing ? 'Etiketi Düzenle' : 'Yeni Etiket Ekle'}
+          </Typography>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Stack>
+      </DialogTitle>
+      
+      <DialogContent dividers>
+        <Stack spacing={3}>
+          <TextField 
+            fullWidth 
+            label="Etiket Adı" 
+            value={form.name} 
+            onChange={e => setForm({ ...form, name: e.target.value })} 
+            required 
+            placeholder="Vegan, Glutensiz, Şefin Önerisi..."
+            autoFocus
+          />
+          
+          <TextField 
+            fullWidth 
+            label="Açıklama (Opsiyonel)" 
+            value={form.description} 
+            onChange={e => setForm({ ...form, description: e.target.value })} 
+            multiline 
+            rows={2} 
+            placeholder="Etiket hakkında kısa açıklama..."
+          />
+          
+          <FormControlLabel 
+            control={
+              <Switch 
+                checked={form.isActive} 
+                onChange={e => setForm({ ...form, isActive: e.target.checked })} 
+              />
+            } 
+            label={
+              <Box>
+                <Typography variant="body2" fontWeight={600}>Aktif</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Pasif etiketler menüde görünmez
+                </Typography>
+              </Box>
+            }
+          />
+        </Stack>
+      </DialogContent>
+      
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={saving}>İptal</Button>
+        <Button 
+          onClick={handleSubmit} 
+          variant="contained" 
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={20} /> : <Check />}
+        >
+          {saving ? 'Kaydediliyor...' : isEditing ? 'Güncelle' : 'Kaydet'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
 // ==================== ANNOUNCEMENTS PAGE ====================
 export function AnnouncementsPage() {
   const { branchId } = useParams()
   const showSnackbar = useSnackbar()
   const [announcements, setAnnouncements] = useState([])
+  const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null })
 
-  useEffect(() => { if (branchId) loadAnnouncements() }, [branchId])
+  useEffect(() => { if (branchId) loadData() }, [branchId])
 
-  const loadAnnouncements = async () => {
+  const loadData = async () => {
     try {
-      const res = await api.get(`/branches/${branchId}/announcements`)
-      setAnnouncements(res.data)
+      const [announcementsRes, sectionsRes] = await Promise.all([
+        api.get(`/branches/${branchId}/announcements`),
+        api.get(`/branches/${branchId}/sections`)
+      ])
+      setAnnouncements(announcementsRes.data)
+      setSections(sectionsRes.data)
     } catch { showSnackbar('Duyurular yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
@@ -1712,7 +2684,7 @@ export function AnnouncementsPage() {
     try {
       await api.put(`/announcements/${item.id}`, { isActive: !item.isActive })
       showSnackbar(item.isActive ? 'Duyuru gizlendi' : 'Duyuru yayınlandı', 'success')
-      loadAnnouncements()
+      loadData()
     } catch { showSnackbar('İşlem başarısız', 'error') }
   }
 
@@ -1721,7 +2693,7 @@ export function AnnouncementsPage() {
       await api.delete(`/announcements/${deleteDialog.item.id}`)
       showSnackbar('Duyuru silindi', 'success')
       setDeleteDialog({ open: false, item: null })
-      loadAnnouncements()
+      loadData()
     } catch { showSnackbar('Silme başarısız', 'error') }
   }
 
@@ -1771,9 +2743,9 @@ export function AnnouncementsPage() {
             action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>İlk Duyuruyu Ekle</Button>} />
         )}
 
-        <AnnouncementModal open={modalOpen} announcement={editing} branchId={branchId}
+        <AnnouncementModal open={modalOpen} announcement={editing} branchId={branchId} sections={sections}
           onClose={() => { setModalOpen(false); setEditing(null) }}
-          onSave={() => { setModalOpen(false); setEditing(null); loadAnnouncements() }} />
+          onSave={() => { setModalOpen(false); setEditing(null); loadData() }} />
 
         <ConfirmDialog open={deleteDialog.open} title="Duyuru Sil" message={`"${deleteDialog.item?.title}" duyurusunu silmek istediğinize emin misiniz?`}
           onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, item: null })} />
@@ -1783,20 +2755,27 @@ export function AnnouncementsPage() {
 }
 
 // ==================== ANNOUNCEMENT MODAL ====================
-function AnnouncementModal({ open, announcement, branchId, onClose, onSave }) {
+function AnnouncementModal({ open, announcement, branchId, sections = [], onClose, onSave }) {
   const showSnackbar = useSnackbar()
   
   const isEditing = !!announcement?.id
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ title: '', message: '', icon: '📢', type: 'info', isActive: true })
+  const [form, setForm] = useState({ title: '', message: '', icon: '📢', type: 'info', isActive: true, section: '' })
 
   const icons = ['📢', '🎉', '🔥', '⚠️', '✅', '❌', '💰', '🎁', '🆕', '⭐', '❤️', '🍽️', '☕', '🍕', '🍔', '🎊']
   const types = [{ value: 'info', label: 'Bilgi', color: 'info' }, { value: 'warning', label: 'Uyarı', color: 'warning' }, { value: 'success', label: 'Başarı', color: 'success' }, { value: 'promo', label: 'Promosyon', color: 'error' }]
 
   useEffect(() => {
     if (open) {
-      if (announcement) setForm({ title: announcement.title || '', message: announcement.message || '', icon: announcement.icon || '📢', type: announcement.type || 'info', isActive: announcement.isActive !== false })
-      else setForm({ title: '', message: '', icon: '📢', type: 'info', isActive: true })
+      if (announcement) setForm({ 
+        title: announcement.title || '', 
+        message: announcement.message || '', 
+        icon: announcement.icon || '📢', 
+        type: announcement.type || 'info', 
+        isActive: announcement.isActive !== false,
+        section: announcement.section || ''
+      })
+      else setForm({ title: '', message: '', icon: '📢', type: 'info', isActive: true, section: '' })
     }
   }, [open, announcement])
 
@@ -1804,8 +2783,9 @@ function AnnouncementModal({ open, announcement, branchId, onClose, onSave }) {
     if (!form.title || !form.message) { showSnackbar('Başlık ve mesaj zorunludur', 'error'); return }
     setSaving(true)
     try {
-      if (isEditing) await api.put(`/announcements/${announcement.id}`, form)
-      else await api.post(`/branches/${branchId}/announcements`, form)
+      const data = { ...form, section: form.section || null }
+      if (isEditing) await api.put(`/announcements/${announcement.id}`, data)
+      else await api.post(`/branches/${branchId}/announcements`, data)
       showSnackbar(isEditing ? 'Duyuru güncellendi' : 'Duyuru oluşturuldu', 'success')
       
       onSave()
@@ -1820,6 +2800,18 @@ function AnnouncementModal({ open, announcement, branchId, onClose, onSave }) {
         <Stack spacing={3} sx={{ mt: 1 }}>
           <TextField fullWidth label="Başlık" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
           <TextField fullWidth label="Mesaj" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} multiline rows={3} required />
+          
+          {sections.length > 0 && (
+            <FormControl fullWidth>
+              <InputLabel>Bölüm</InputLabel>
+              <Select value={form.section} label="Bölüm" onChange={e => setForm({ ...form, section: e.target.value })}>
+                <MenuItem value="">🌐 Genel (Tüm Bölümler)</MenuItem>
+                <Divider />
+                {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          )}
+          
           <Box>
             <Typography variant="subtitle2" gutterBottom>İkon</Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -1976,7 +2968,6 @@ export function BranchSettingsPage() {
       await api.put(`/branches/${branchId}`, form)
       showSnackbar('Ayarlar kaydedildi', 'success')
       refreshBranch()
-      
       loadBranch() 
     }
     catch { showSnackbar('Kaydetme başarısız', 'error') }
@@ -1990,7 +2981,6 @@ export function BranchSettingsPage() {
       formData.append('image', file)
       await api.post(`/branches/${branchId}/image?type=${type}`, formData)
       showSnackbar('Görsel yüklendi', 'success')
-      
       loadBranch()
     } catch { showSnackbar('Yükleme başarısız', 'error') }
   }
@@ -2354,7 +3344,6 @@ export function UsersPage() {
     </PageWrapper>
   )
 }
-
 
 // ==================== USER MODAL ====================
 function UserModal({ open, user, branches, onClose, onSave }) {

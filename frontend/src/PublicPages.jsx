@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import {
   Box, Grid, Card, CardContent, CardMedia, CardActions,
@@ -14,7 +14,7 @@ import {
   KeyboardArrowRight, ViewInAr, Close, ShoppingBag, Star, Search,
   Person, Lock, Visibility, VisibilityOff, Email, Login as LoginIcon,
   Send, ArrowBack, ExpandMore, LocalOffer, Info, RateReview, ChevronLeft, ChevronRight,
-  Language
+  Language, Place
 } from '@mui/icons-material'
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
 import { useAuth, API_URL, api, formatPrice, getImageUrl, getGlbUrl } from './App'
@@ -245,19 +245,30 @@ export function BranchSelectionPage() {
 // ==================== MENU PAGE ====================
 export function MenuPage() {
   const { slug } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width:600px)')
   const campaignScrollRef = useRef(null)
 
+  // URL'den section parametresini al
+  const sectionSlug = searchParams.get('section')
+
   const [branch, setBranch] = useState(null)
+  const [sections, setSections] = useState([])
+  const [selectedSection, setSelectedSection] = useState(null)
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
   const [layouts, setLayouts] = useState([])
   const [announcements, setAnnouncements] = useState([])
+  const [tags, setTags] = useState([])
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [selectedCategory, setSelectedCategory] = useState(null)
+  const [selectedTag, setSelectedTag] = useState(null)
+  const [tagProducts, setTagProducts] = useState([])
+  const [loadingTagProducts, setLoadingTagProducts] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewForm, setReviewForm] = useState({ customerName: '', rating: 5, comment: '', contact: '' })
@@ -271,7 +282,21 @@ export function MenuPage() {
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => { if (slug) loadData() }, [slug])
+  // İlk yüklemede branch ve sections bilgisini al
+  useEffect(() => { 
+    if (slug) loadInitialData() 
+  }, [slug])
+
+  // Section URL'den değiştiğinde (kullanıcı bölüm seçtiğinde)
+  useEffect(() => { 
+    if (branch && sectionSlug && sections.length > 0 && !selectedSection) {
+      const section = sections.find(s => s.slug === sectionSlug)
+      if (section) {
+        setSelectedSection(section)
+        loadMenuData(sectionSlug)
+      }
+    }
+  }, [sectionSlug]) // Sadece sectionSlug değiştiğinde çalış
   
   // Duyuru otomatik geçiş
   useEffect(() => {
@@ -283,37 +308,141 @@ export function MenuPage() {
     }
   }, [announcements.length])
 
-  const loadData = async () => {
+  const loadInitialData = async () => {
     try {
-      const [branchRes, categoriesRes, productsRes, layoutsRes, announcementsRes, reviewsRes] = await Promise.all([
-        axios.get(`${API_URL}/public/branches/${slug}`),
-        axios.get(`${API_URL}/public/branches/${slug}/categories`),
-        axios.get(`${API_URL}/public/branches/${slug}/products`),
-        axios.get(`${API_URL}/public/branches/${slug}/category-layouts`).catch(() => ({ data: [] })),
-        axios.get(`${API_URL}/public/branches/${slug}/announcements`).catch(() => ({ data: [] })),
-        axios.get(`${API_URL}/public/branches/${slug}/reviews`).catch(() => ({ data: [] }))
-      ])
-      
+      // Branch bilgisini al
+      const branchRes = await axios.get(`${API_URL}/public/branches/${slug}`)
       setBranch(branchRes.data)
-      setCategories(categoriesRes.data)
       
-      // Products - array veya object olabilir
-      const prods = productsRes.data.products || productsRes.data || []
-      setProducts(prods)
-      
-      // Layouts - Backend'den gelen veriyi işle
-      const lays = layoutsRes.data || []
-      console.log('Layouts from API:', lays)
-      setLayouts(lays)
-      
-      setAnnouncements(announcementsRes.data || [])
-      setReviews(reviewsRes.data.reviews || reviewsRes.data || [])
+      // Sections bilgisini al
+      let secs = []
+      try {
+        const sectionsRes = await axios.get(`${API_URL}/public/branches/${slug}/sections`)
+        secs = sectionsRes.data || []
+      } catch (secErr) {
+        // Sections endpoint yoksa devam et
+      }
+      setSections(secs)
+
+      // Section yoksa veya tek section varsa direkt menüyü yükle
+      if (secs.length === 0) {
+        // Section yok, direkt menüyü yükle
+        await loadMenuData(null)
+      } else if (secs.length === 1) {
+        // Tek section var, otomatik seç
+        const section = secs[0]
+        setSelectedSection(section)
+        setSearchParams({ section: section.slug })
+        await loadMenuData(section.slug)
+      } else if (sectionSlug) {
+        // URL'de section var
+        const section = secs.find(s => s.slug === sectionSlug)
+        if (section) {
+          setSelectedSection(section)
+          await loadMenuData(sectionSlug)
+        } else {
+          // Geçersiz section, bölüm seçim ekranı göster
+          setLoading(false)
+        }
+      } else {
+        // Birden fazla section var ve seçim yapılmamış
+        setLoading(false)
+      }
     } catch (err) {
       console.error('Load error:', err)
       setError(err.response?.status === 404 ? 'Şube bulunamadı' : 'Bir hata oluştu')
+      setLoading(false)
+    }
+  }
+
+  const loadMenuData = async (sectionSlugParam) => {
+    try {
+      setLoading(true)
+      
+      let menuData = null
+      
+      // Önce yeni menu API'sini dene
+      try {
+        const menuUrl = sectionSlugParam 
+          ? `${API_URL}/public/branches/${slug}/menu?section=${sectionSlugParam}`
+          : `${API_URL}/public/branches/${slug}/menu`
+        
+        const menuRes = await axios.get(menuUrl)
+        menuData = menuRes.data
+      } catch (menuErr) {
+        // Menu API not available, using fallback APIs
+        
+        // Fallback: Eski API'leri kullan
+        const [categoriesRes, productsRes, layoutsRes, announcementsRes] = await Promise.all([
+          axios.get(`${API_URL}/public/branches/${slug}/categories`).catch(() => ({ data: [] })),
+          axios.get(`${API_URL}/public/branches/${slug}/products`).catch(() => ({ data: [] })),
+          axios.get(`${API_URL}/public/branches/${slug}/category-layouts`).catch(() => ({ data: [] })),
+          axios.get(`${API_URL}/public/branches/${slug}/announcements`).catch(() => ({ data: [] }))
+        ])
+        
+        menuData = {
+          categories: categoriesRes.data || [],
+          products: productsRes.data.products || productsRes.data || [],
+          layouts: layoutsRes.data || [],
+          announcements: announcementsRes.data || []
+        }
+      }
+      
+      // Reviews ayrı yükle
+      const reviewsRes = await axios.get(`${API_URL}/public/branches/${slug}/reviews`).catch(() => ({ data: [] }))
+      
+      // Branch bilgisini güncelle (section'a özel homepageImage olabilir)
+      if (menuData.branch) {
+        setBranch(prev => ({ ...prev, ...menuData.branch }))
+      }
+      
+      setCategories(menuData.categories || [])
+      setProducts(menuData.products || [])
+      setLayouts(menuData.layouts || [])
+      setAnnouncements(menuData.announcements || [])
+      setTags(menuData.tags || [])
+      setReviews(reviewsRes.data.reviews || reviewsRes.data || [])
+      
+      // Seçili section bilgisini güncelle
+      if (menuData.selectedSection) {
+        setSelectedSection(menuData.selectedSection)
+      }
+    } catch (err) {
+      console.error('Load menu error:', err)
+      setError('Menü yüklenemedi')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSectionSelect = (section) => {
+    setSelectedSection(section)
+    setSearchParams({ section: section.slug })
+    loadMenuData(section.slug)
+  }
+
+  const handleTagSelect = async (tag) => {
+    setSelectedCategory(null) // Önce kategoriyi temizle
+    setSelectedTag(tag)
+    setLoadingTagProducts(true)
+    try {
+      const res = await axios.get(`${API_URL}/public/branches/${slug}/products/by-tag/${tag.slug}`)
+      setTagProducts(res.data.products || [])
+    } catch (err) {
+      console.error('Load tag products error:', err)
+      setTagProducts([])
+    } finally {
+      setLoadingTagProducts(false)
+    }
+  }
+
+  const handleBackToSections = () => {
+    setSelectedSection(null)
+    setSearchParams({})
+    setCategories([])
+    setProducts([])
+    setLayouts([])
+    setAnnouncements([])
   }
 
   const handleSubmitReview = async () => {
@@ -325,7 +454,6 @@ export function MenuPage() {
       setReviewForm({ customerName: '', rating: 5, comment: '', contact: '' })
       setReviewSubmitted(true)
       setTimeout(() => setReviewSubmitted(false), 5000)
-      loadData()
     } catch (err) { console.error(err) }
     finally { setSubmittingReview(false) }
   }
@@ -405,12 +533,467 @@ export function MenuPage() {
     )
   }
 
+  // ========== BÖLÜM SEÇİM EKRANI ==========
+  // Birden fazla section var ve henüz seçim yapılmamış
+  if (sections.length > 1 && !selectedSection) {
+    return (
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
+          
+          {/* Bölüm Seçimi */}
+          <Box sx={{ px: 2, py: 4, maxWidth: 600, mx: 'auto' }}>
+            <Typography variant="h6" fontWeight={700} textAlign="center" sx={{ mb: 0.5 }}>
+              Bölüm Seçin
+            </Typography>
+            <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
+              Menüyü görüntülemek istediğiniz bölümü seçin
+            </Typography>
+
+            <Stack spacing={2}>
+              {sections.map((section, index) => (
+                <Fade in timeout={300 + index * 100} key={section.id}>
+                  <Box
+                    onClick={() => handleSectionSelect(section)}
+                    sx={{
+                      cursor: 'pointer',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      position: 'relative',
+                      aspectRatio: '16 / 9',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'scale(1.02)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
+                      },
+                      '&:active': { transform: 'scale(0.98)' }
+                    }}
+                  >
+                    {/* Görsel */}
+                    {section.image || section.homepageImage ? (
+                      <Box
+                        component="img"
+                        src={getImageUrl(section.homepageImage || section.image)}
+                        alt={section.name}
+                        sx={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          objectFit: 'cover' 
+                        }}
+                      />
+                    ) : (
+                      <Box sx={{
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)'
+                      }} />
+                    )}
+
+                    {/* Gradient Overlay */}
+                    <Box sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%)'
+                    }} />
+
+                    {/* İsim */}
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      top: 0,
+                      bottom: 0,
+                      left: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      px: 3
+                    }}>
+                      <Typography
+                        variant="h5"
+                        fontWeight={700}
+                        color="white"
+                        sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
+                      >
+                        {section.name}
+                      </Typography>
+                    </Box>
+
+                    {/* Ok ikonu */}
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      top: 0,
+                      bottom: 0,
+                      right: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      px: 2
+                    }}>
+                      <KeyboardArrowRight sx={{ color: 'white', fontSize: 32 }} />
+                    </Box>
+                  </Box>
+                </Fade>
+              ))}
+            </Stack>
+          </Box>
+
+          {/* Footer */}
+          <Box sx={{ mt: 4, pt: 4, pb: 6, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+            <Box sx={{ px: 2, textAlign: 'center' }}>
+              {branch?.logo && (
+                <Avatar
+                  src={getImageUrl(branch.logo)}
+                  sx={{ width: 60, height: 60, mx: 'auto', mb: 2, '& img': { objectFit: 'contain' } }}
+                  variant="rounded"
+                />
+              )}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                component="a"
+                href="https://www.linkedin.com/in/yusuf-kerim-sar%C4%B1ta%C5%9F-94b172219/"
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  textDecoration: 'none',
+                  '&:hover': { color: 'primary.main' },
+                  transition: 'color 0.2s'
+                }}
+              >
+                Yusuf Kerim Sarıtaş © {new Date().getFullYear()}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </ThemeProvider>
+    )
+  }
+
+  // ========== KATEGORİ SAYFA GÖRÜNÜMÜ ==========
+  if (selectedCategory && selectedCategoryInfo) {
+    return (
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
+          {/* Header */}
+          <Box sx={{ 
+            position: 'sticky', 
+            top: 0, 
+            zIndex: 10,
+            bgcolor: 'background.paper',
+            borderBottom: 1,
+            borderColor: 'divider'
+          }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ p: 2, maxWidth: 800, mx: 'auto' }}>
+              <IconButton onClick={() => setSelectedCategory(null)}>
+                <ArrowBack />
+              </IconButton>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" fontWeight={700}>
+                  {selectedCategoryInfo.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {categoryProducts.length} ürün
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+
+          {/* Ürün Listesi */}
+          <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+            {categoryProducts.length > 0 ? (
+              <Stack divider={<Divider />}>
+                {categoryProducts.map(product => (
+                  <Box 
+                    key={product.id}
+                    onClick={() => setSelectedProduct(product)}
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      p: 2,
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                      '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
+                    }}
+                  >
+                    {/* Sol - Küçük Kare Resim */}
+                    <Box 
+                      sx={{ 
+                        width: 64, 
+                        height: 64, 
+                        borderRadius: 1.5,
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        bgcolor: 'background.paper'
+                      }}
+                    >
+                      {product.thumbnail ? (
+                        <Box 
+                          component="img" 
+                          src={getImageUrl(product.thumbnail)} 
+                          alt={product.name}
+                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}>
+                          <Restaurant sx={{ fontSize: 24, color: 'text.secondary' }} />
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Orta - İsim ve Açıklama */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={600} noWrap>
+                        {product.name}
+                      </Typography>
+                      {product.description && (
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary" 
+                          sx={{ 
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.4
+                          }}
+                        >
+                          {product.description}
+                        </Typography>
+                      )}
+                      {/* Etiketler */}
+                      {product.tags?.length > 0 && (
+                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
+                          {product.tags.slice(0, 3).map((tag, i) => (
+                            <Chip 
+                              key={tag.id || tag.slug || i} 
+                              label={typeof tag === 'string' ? tag : tag.name} 
+                              size="small" 
+                              sx={{ 
+                                height: 20, 
+                                fontSize: '0.65rem',
+                                bgcolor: 'rgba(255,255,255,0.1)'
+                              }} 
+                            />
+                          ))}
+                        </Stack>
+                      )}
+                    </Box>
+
+                    {/* Noktalı Çizgi */}
+                    <Box sx={{ 
+                      flex: '0 0 auto',
+                      borderBottom: '1px dotted',
+                      borderColor: 'divider',
+                      width: 40,
+                      alignSelf: 'center',
+                      mx: 1
+                    }} />
+
+                    {/* Sağ - Fiyat */}
+                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                      {product.isCampaign && product.campaignPrice ? (
+                        <>
+                          <Typography fontWeight={700} color="error.main">
+                            {formatPrice(product.campaignPrice)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                            {formatPrice(product.price)}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography fontWeight={700} color="primary.main">
+                          {formatPrice(product.price)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 8 }}>
+                <Restaurant sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography color="text.secondary">Bu kategoride ürün bulunmuyor</Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Ürün Detay Modal */}
+          <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onTagClick={handleTagSelect} />
+        </Box>
+      </ThemeProvider>
+    )
+  }
+
+  // ========== ETİKET SAYFA GÖRÜNÜMÜ ==========
+  if (selectedTag) {
+    return (
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
+          {/* Header */}
+          <Box sx={{ 
+            position: 'sticky', 
+            top: 0, 
+            zIndex: 10,
+            bgcolor: 'background.paper',
+            borderBottom: 1,
+            borderColor: 'divider'
+          }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ p: 2, maxWidth: 800, mx: 'auto' }}>
+              <IconButton onClick={() => { setSelectedTag(null); setTagProducts([]); }}>
+                <ArrowBack />
+              </IconButton>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" fontWeight={700}>
+                  {selectedTag.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {tagProducts.length} ürün
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+
+          {/* Ürün Listesi */}
+          <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+            {loadingTagProducts ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : tagProducts.length > 0 ? (
+              <Stack divider={<Divider />}>
+                {tagProducts.map(product => (
+                  <Box 
+                    key={product.id}
+                    onClick={() => setSelectedProduct(product)}
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      p: 2,
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                      '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
+                    }}
+                  >
+                    {/* Sol - Küçük Kare Resim */}
+                    <Box 
+                      sx={{ 
+                        width: 64, 
+                        height: 64, 
+                        borderRadius: 1.5,
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        bgcolor: 'background.paper'
+                      }}
+                    >
+                      {product.thumbnail ? (
+                        <Box 
+                          component="img" 
+                          src={getImageUrl(product.thumbnail)} 
+                          alt={product.name}
+                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}>
+                          <Restaurant sx={{ fontSize: 24, color: 'text.secondary' }} />
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Orta - İsim ve Açıklama */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={600} noWrap>
+                        {product.name}
+                      </Typography>
+                      {product.description && (
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary" 
+                          sx={{ 
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.4
+                          }}
+                        >
+                          {product.description}
+                        </Typography>
+                      )}
+                      {/* Kategori bilgisi */}
+                      {product.categoryName && (
+                        <Typography variant="caption" color="grey.500" sx={{ mt: 0.5, display: 'block' }}>
+                          {product.categoryName}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {/* Noktalı Çizgi */}
+                    <Box sx={{ 
+                      flex: '0 0 auto',
+                      borderBottom: '1px dotted',
+                      borderColor: 'divider',
+                      width: 40,
+                      alignSelf: 'center',
+                      mx: 1
+                    }} />
+
+                    {/* Sağ - Fiyat */}
+                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                      {product.isCampaign && product.campaignPrice ? (
+                        <>
+                          <Typography fontWeight={700} color="error.main">
+                            {formatPrice(product.campaignPrice)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                            {formatPrice(product.price)}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography fontWeight={700} color="primary.main">
+                          {formatPrice(product.price)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 8 }}>
+                <LocalOffer sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography color="text.secondary">Bu etikette ürün bulunmuyor</Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Ürün Detay Modal */}
+          <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onTagClick={handleTagSelect} />
+        </Box>
+      </ThemeProvider>
+    )
+  }
+
+  // ========== MENÜ EKRANI ==========
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
 
-        {/* ========== HEADER BAR - Dil & Arama ========== */}
+        {/* ========== HEADER BAR - Geri, Dil & Arama ========== */}
         <Box sx={{ 
           position: 'absolute', 
           top: 0, 
@@ -422,21 +1005,35 @@ export function MenuPage() {
           alignItems: 'center',
           p: 1.5
         }}>
-          {/* Sol - Dil Seçeneği */}
-          <IconButton 
-            sx={{ 
-              bgcolor: 'rgba(0,0,0,0.5)', 
-              backdropFilter: 'blur(10px)',
-              color: 'white',
-              width: 40,
-              height: 40,
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
-            }}
-          >
-            TR
-          </IconButton>
+          {/* Sol - Bölümlere Geri veya Dil */}
+          {sections.length > 1 ? (
+            <IconButton 
+              onClick={handleBackToSections}
+              sx={{ 
+                bgcolor: 'rgba(0,0,0,0.5)', 
+                backdropFilter: 'blur(10px)',
+                color: 'white',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+          ) : (
+            <IconButton 
+              sx={{ 
+                bgcolor: 'rgba(0,0,0,0.5)', 
+                backdropFilter: 'blur(10px)',
+                color: 'white',
+                width: 40,
+                height: 40,
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+              }}
+            >
+              TR
+            </IconButton>
+          )}
           
           {/* Sağ - Arama */}
           <IconButton 
@@ -454,7 +1051,11 @@ export function MenuPage() {
 
         {/* ========== 1. HOMEPAGE IMAGE ========== */}
         <Box sx={{ position: 'relative', width: '100%', height: isMobile ? 220 : 320, overflow: 'hidden' }}>
-          {branch?.homepageImage ? (
+          {/* Section'a özel homepageImage varsa onu göster */}
+          {selectedSection?.homepageImage ? (
+            <Box component="img" src={getImageUrl(selectedSection.homepageImage)} alt={selectedSection.name}
+              sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : branch?.homepageImage ? (
             <Box component="img" src={getImageUrl(branch.homepageImage)} alt={branch.name}
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : branch?.banner ? (
@@ -476,17 +1077,25 @@ export function MenuPage() {
               <Typography variant="h5" fontWeight={800} color="white" sx={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                 {branch?.name}
               </Typography>
-              {branch?.description && (
-                <Typography variant="body2" color="grey.300" sx={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-                  {branch.description}
-                </Typography>
+              {/* Section adını göster */}
+              {selectedSection && (
+                <Chip 
+                  icon={<Place sx={{ fontSize: 14 }} />}
+                  label={`${selectedSection.icon || ''} ${selectedSection.name}`}
+                  size="small"
+                  sx={{ 
+                    bgcolor: alpha(selectedSection.color || '#e53935', 0.3),
+                    color: 'white',
+                    mt: 0.5
+                  }}
+                />
               )}
             </Box>
           </Box>
         </Box>
 
         {/* ========== 2. GÖRÜŞ & YORUMLARINIZ - Minimal ========== */}
-        <Box sx={{ px: 2, py: 1.5 }}>
+        <Box sx={{ px: 2, py: 1.5, maxWidth: 800, mx: 'auto' }}>
           <Typography
             onClick={() => setShowReviewForm(true)}
             sx={{
@@ -515,7 +1124,7 @@ export function MenuPage() {
 
         {/* ========== 3. DUYURULAR - Kayan Slider ========== */}
         {announcements.length > 0 && (
-          <Box sx={{ px: 2, pb: 2 }}>
+          <Box sx={{ px: 2, pb: 2, maxWidth: 800, mx: 'auto' }}>
             <Box sx={{ position: 'relative', overflow: 'hidden' }}>
               {/* Slider Container */}
               <Box 
@@ -587,7 +1196,7 @@ export function MenuPage() {
 
         {/* ========== 4. KAMPANYALI ÜRÜNLER ========== */}
         {campaignProducts.length > 0 && (
-          <Box sx={{ py: 2 }}>
+          <Box sx={{ py: 2, maxWidth: 800, mx: 'auto' }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 2 }}>
               <Typography variant="h6" fontWeight={700}>Kampanyalar</Typography>
               {/* Scroll Butonları - Desktop */}
@@ -709,8 +1318,8 @@ export function MenuPage() {
         )}
 
         {/* ========== 5. KATEGORİLER (Bölümler) ========== */}
-        <Box sx={{ px: 2, py: 2 }}>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Bölümler</Typography>
+        <Box sx={{ px: 2, py: 2, maxWidth: 800, mx: 'auto' }}>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Kategoriler</Typography>
           
           {layouts && layouts.length > 0 ? (
             // Layout var - Admin panelinden ayarlanan düzende göster
@@ -787,7 +1396,7 @@ export function MenuPage() {
                               background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)' 
                             }}>
                               <Typography sx={{ fontSize: gridSpan === 4 ? 32 : gridSpan === 6 ? 48 : 56 }}>
-                                {category.icon || '📁'}
+                                {category.icon }
                               </Typography>
                             </Box>
                           )}
@@ -863,7 +1472,7 @@ export function MenuPage() {
                         justifyContent: 'center',
                         background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)'
                       }}>
-                        <Typography sx={{ fontSize: 48 }}>{cat.icon || '📁'}</Typography>
+                        <Typography sx={{ fontSize: 48 }}>{cat.icon}</Typography>
                       </Box>
                     )}
                     <Box sx={{ 
@@ -946,37 +1555,55 @@ export function MenuPage() {
             {/* Sosyal Medya Butonları */}
             <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 3 }}>
               {branch?.whatsapp && (
-                <Button
+                <IconButton
                   component="a"
                   href={`https://wa.me/${branch.whatsapp.replace(/\D/g, '')}`}
                   target="_blank"
-                  variant="contained"
-                  color="success"
-                  startIcon={<WhatsApp />}
-                  sx={{ borderRadius: 3 }}
+                  sx={{ 
+                    bgcolor: '#25D366', 
+                    color: 'white',
+                    width: 48,
+                    height: 48,
+                    '&:hover': { bgcolor: '#128C7E' }
+                  }}
                 >
-                  WhatsApp
-                </Button>
+                  <WhatsApp />
+                </IconButton>
               )}
               {branch?.instagram && (
-                <Button
+                <IconButton
                   component="a"
                   href={`https://instagram.com/${branch.instagram.replace('@', '')}`}
                   target="_blank"
-                  variant="outlined"
-                  color="secondary"
-                  startIcon={<Instagram />}
-                  sx={{ borderRadius: 3 }}
+                  sx={{ 
+                    bgcolor: '#E4405F', 
+                    color: 'white',
+                    width: 48,
+                    height: 48,
+                    '&:hover': { bgcolor: '#C13584' }
+                  }}
                 >
-                  {branch.instagram}
-                </Button>
+                  <Instagram />
+                </IconButton>
               )}
             </Stack>
 
             {/* Copyright */}
             <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
-              <Typography variant="caption" color="text.secondary">
-                AR Menu © {new Date().getFullYear()}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                component="a"
+                href="https://www.linkedin.com/in/yusuf-kerim-sar%C4%B1ta%C5%9F-94b172219/"
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  textDecoration: 'none',
+                  '&:hover': { color: 'primary.main' },
+                  transition: 'color 0.2s'
+                }}
+              >
+                Yusuf Kerim Sarıtaş © {new Date().getFullYear()}
               </Typography>
             </Box>
           </Box>
@@ -1069,101 +1696,10 @@ export function MenuPage() {
         </Dialog>
 
         {/* ========== KATEGORİ ÜRÜN MODAL ========== */}
-        <Dialog 
-          open={!!selectedCategory} 
-          onClose={() => setSelectedCategory(null)} 
-          fullScreen={isMobile}
-          maxWidth="md" 
-          fullWidth
-          PaperProps={{ sx: { bgcolor: 'background.default' } }}
-        >
-          <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <IconButton onClick={() => setSelectedCategory(null)} edge="start">
-                <ArrowBack />
-              </IconButton>
-              <Box>
-                <Typography variant="h6" fontWeight={700}>
-                  {selectedCategoryInfo?.icon} {selectedCategoryInfo?.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {categoryProducts.length} ürün
-                </Typography>
-              </Box>
-            </Stack>
-          </DialogTitle>
-          <DialogContent sx={{ p: 2 }}>
-            <Grid container spacing={2}>
-              {categoryProducts.map(product => (
-                <Grid item xs={6} sm={4} key={product.id}>
-                  <Box 
-                    onClick={() => setSelectedProduct(product)}
-                    sx={{ 
-                      cursor: 'pointer', 
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      position: 'relative',
-                      aspectRatio: '1 / 1',
-                      transition: 'transform 0.2s', 
-                      '&:hover': { transform: 'scale(1.02)' } 
-                    }}
-                  >
-                    {product.thumbnail ? (
-                      <Box 
-                        component="img" 
-                        src={getImageUrl(product.thumbnail)} 
-                        alt={product.name}
-                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                    ) : (
-                      <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.paper' }}>
-                        <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
-                      </Box>
-                    )}
-                    
-                    {/* Gradient Overlay */}
-                    <Box sx={{ 
-                      position: 'absolute', 
-                      inset: 0, 
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' 
-                    }} />
-                    
-                    {/* Badges */}
-                    <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }}>
-                      {product.hasGlb && <Chip icon={<ViewInAr />} label="AR" size="small" color="info" />}
-                    </Stack>
-                    {product.isCampaign && product.campaignPrice && (
-                      <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" sx={{ position: 'absolute', top: 8, left: 8 }} />
-                    )}
-                    
-                    {/* İsim ve Fiyat - Resim üzerinde */}
-                    <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
-                      <Typography variant="subtitle2" fontWeight={600} color="white" noWrap>{product.name}</Typography>
-                      {product.isCampaign && product.campaignPrice ? (
-                        <Stack direction="row" spacing={1} alignItems="baseline">
-                          <Typography variant="body1" color="error.main" fontWeight={700}>{formatPrice(product.campaignPrice)}</Typography>
-                          <Typography variant="caption" color="grey.500" sx={{ textDecoration: 'line-through' }}>{formatPrice(product.price)}</Typography>
-                        </Stack>
-                      ) : (
-                        <Typography variant="body1" color="primary.main" fontWeight={700}>{formatPrice(product.price)}</Typography>
-                      )}
-                    </Box>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-            
-            {categoryProducts.length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 6 }}>
-                <Restaurant sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography color="text.secondary">Bu kategoride ürün bulunmuyor</Typography>
-              </Box>
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* KALDIRILDI - Artık sayfa olarak gösteriliyor */}
 
         {/* ========== ÜRÜN DETAY MODAL ========== */}
-        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onTagClick={handleTagSelect} />
 
         {/* ========== YORUM FORMU MODAL ========== */}
         <Dialog open={showReviewForm} onClose={() => setShowReviewForm(false)} maxWidth="sm" fullWidth>
@@ -1234,11 +1770,18 @@ export function MenuPage() {
 }
 
 // ==================== PRODUCT DETAIL MODAL ====================
-function ProductDetailModal({ product, onClose }) {
+function ProductDetailModal({ product, onClose, onTagClick }) {
   const [showAR, setShowAR] = useState(false)
   const modelViewerRef = useRef(null)
 
   if (!product) return null
+
+  const handleTagClick = (tag) => {
+    if (onTagClick && typeof tag === 'object' && tag.slug) {
+      onClose() // Önce ürün modalını kapat
+      onTagClick(tag) // Sonra etiket sayfasını aç
+    }
+  }
 
   return (
     <Dialog open={!!product} onClose={onClose} maxWidth="sm" fullWidth>
@@ -1271,7 +1814,7 @@ function ProductDetailModal({ product, onClose }) {
           <Typography variant="h5" fontWeight={700}>{product.name}</Typography>
           {product.categoryName && (
             <Typography variant="body2" color="text.secondary">
-              {product.categoryIcon} {product.categoryName}
+              {product.categoryName}
             </Typography>
           )}
 
@@ -1306,9 +1849,33 @@ function ProductDetailModal({ product, onClose }) {
           )}
 
           {product.tags?.length > 0 && (
-            <Stack direction="row" spacing={0.5} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
-              {product.tags.map((tag, i) => <Chip key={i} label={tag} size="small" variant="outlined" />)}
-            </Stack>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Etiketler:</Typography>
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                {product.tags.map((tag, i) => {
+                  const isClickable = typeof tag === 'object' && tag.slug
+                  return (
+                    <Chip 
+                      key={tag.id || tag.slug || i} 
+                      label={typeof tag === 'string' ? tag : tag.name} 
+                      size="small" 
+                      variant="outlined"
+                      clickable={isClickable}
+                      onClick={isClickable ? () => handleTagClick(tag) : undefined}
+                      sx={isClickable ? {
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          borderColor: 'primary.main'
+                        }
+                      } : {}}
+                    />
+                  )
+                })}
+              </Stack>
+            </Box>
           )}
 
           {/* AR Button */}
