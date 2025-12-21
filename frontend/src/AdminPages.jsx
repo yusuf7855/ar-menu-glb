@@ -16,7 +16,7 @@ import {
   Phone, LocationOn, AccessTime, Instagram, WhatsApp,
   GridView, ViewModule, Fullscreen, ArrowUpward, ArrowDownward,
   DragIndicator, Reply, Lock, Star, TouchApp, ThreeSixty, Place,
-  Visibility, VisibilityOff, ContentCopy, OpenInNew
+  Visibility, VisibilityOff, ContentCopy, OpenInNew ,Translate  
 } from '@mui/icons-material'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useDropzone } from 'react-dropzone'
@@ -513,15 +513,7 @@ export function SectionsPage() {
           </Stack>
         </Stack>
 
-        <Alert severity="info" icon={<Place />}>
-          <Typography variant="subtitle2" gutterBottom>Bölümler Nasıl Çalışır?</Typography>
-          <Typography variant="body2">
-            • Müşteriler menüye girdiğinde önce bölüm seçer (Bahçe, Teras, VIP vb.)<br/>
-            • Her bölüm için farklı kategoriler ve ürünler tanımlayabilirsiniz<br/>
-            • Bölüme özel fiyatlar belirleyebilirsiniz (örn: Roof'ta %10 fazla)<br/>
-            • "Genel" olarak eklenen ürün ve kategoriler tüm bölümlerde görünür
-          </Typography>
-        </Alert>
+  
 
         {sections.length > 0 ? (
           <Grid container spacing={3}>
@@ -1199,6 +1191,11 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
 }
 
 // ==================== PRODUCTS PAGE ====================
+// AdminPages.jsx dosyasındaki mevcut ProductsPage ve ProductModal'ı bu kod ile değiştirin
+// 
+// ÖNEMLİ: Import kısmına Translate ikonunu eklemeyi unutmayın:
+// import { ... Translate ... } from '@mui/icons-material'
+
 export function ProductsPage() {
   const { branchId, sectionId } = useParams()
   const { currentSection } = useBranch()
@@ -1317,64 +1314,100 @@ export function ProductsPage() {
           <Chip label={`Kampanya: ${products.filter(p => p.isCampaign).length}`} color="error" variant="outlined" />
         </Stack>
 
-        <Grid container spacing={2}>
+        {/* SABİT BOYUTLU ÜRÜN KARTLARI */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 2,
+          justifyContent: { xs: 'center', sm: 'flex-start' }
+        }}>
           {filteredProducts.map(product => (
-            <Grid item xs={6} sm={4} md={3} key={product.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ position: 'relative', pt: '100%', bgcolor: 'background.default' }}>
-                  {product.thumbnail ? (
-                    <CardMedia component="img" image={getImageUrl(product.thumbnail)} alt={product.name}
-                      sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            <Card 
+              key={product.id}
+              sx={{ 
+                width: 200,   // SABİT GENİŞLİK
+                height: 320,  // SABİT YÜKSEKLİK
+                display: 'flex', 
+                flexDirection: 'column',
+                flexShrink: 0
+              }}
+            >
+              {/* SABİT BOYUTLU GÖRSEL */}
+              <Box sx={{ 
+                position: 'relative', 
+                width: 200,
+                height: 160,
+                bgcolor: 'background.default',
+                overflow: 'hidden',
+                flexShrink: 0
+              }}>
+                {product.thumbnail ? (
+                  <Box
+                    component="img"
+                    src={getImageUrl(product.thumbnail)}
+                    alt={product.name}
+                    sx={{ 
+                      width: 200,
+                      height: 160,
+                      objectFit: 'cover',
+                      objectPosition: 'center'
+                    }}
+                  />
+                ) : (
+                  <Box sx={{ 
+                    width: 200,
+                    height: 160,
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
+                  }}>
+                    <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
+                  </Box>
+                )}
+                <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }} flexWrap="wrap">
+                  {product.hasGlb && (
+                    <Chip label="3D" size="small" color="info" icon={<ViewInAr />} 
+                      onClick={(e) => { e.stopPropagation(); setPreviewDialog({ open: true, product }) }}
+                      sx={{ cursor: 'pointer' }} />
+                  )}
+                  {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
+                  {product.isCampaign && <Chip label="🔥" size="small" color="error" />}
+                </Stack>
+                {!product.isActive && (
+                  <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Chip label="Pasif" />
+                  </Box>
+                )}
+              </Box>
+
+              <CardContent sx={{ flex: 1, p: 1.5, overflow: 'hidden' }}>
+                <Typography variant="subtitle2" fontWeight={600} noWrap>{product.name}</Typography>
+                {product.categoryName && <Typography variant="caption" color="text.secondary" noWrap display="block">{product.categoryIcon} {product.categoryName}</Typography>}
+                <Stack direction="row" alignItems="baseline" spacing={0.5} sx={{ mt: 0.5 }}>
+                  {product.isCampaign && product.campaignPrice ? (
+                    <>
+                      <Typography variant="subtitle1" color="error.main" fontWeight={700}>{formatPrice(product.campaignPrice)}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>{formatPrice(product.price)}</Typography>
+                    </>
                   ) : (
-                    <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
-                    </Box>
+                    <Typography variant="subtitle1" color="primary.main" fontWeight={700}>{formatPrice(product.price)}</Typography>
                   )}
-                  <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }} flexWrap="wrap">
-                    {product.hasGlb && (
-                      <Chip label="3D" size="small" color="info" icon={<ViewInAr />} 
-                        onClick={(e) => { e.stopPropagation(); setPreviewDialog({ open: true, product }) }}
-                        sx={{ cursor: 'pointer' }} />
-                    )}
-                    {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
-                    {product.isCampaign && <Chip label="🔥" size="small" color="error" />}
-                  </Stack>
-                  {!product.isActive && (
-                    <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Chip label="Pasif" />
-                    </Box>
-                  )}
-                </Box>
+                </Stack>
+              </CardContent>
 
-                <CardContent sx={{ flex: 1, p: 1.5 }}>
-                  <Typography variant="subtitle2" fontWeight={600} noWrap>{product.name}</Typography>
-                  {product.categoryName && <Typography variant="caption" color="text.secondary" noWrap>{product.categoryIcon} {product.categoryName}</Typography>}
-                  <Stack direction="row" alignItems="baseline" spacing={0.5} sx={{ mt: 0.5 }}>
-                    {product.isCampaign && product.campaignPrice ? (
-                      <>
-                        <Typography variant="subtitle1" color="error.main" fontWeight={700}>{formatPrice(product.campaignPrice)}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>{formatPrice(product.price)}</Typography>
-                      </>
-                    ) : (
-                      <Typography variant="subtitle1" color="primary.main" fontWeight={700}>{formatPrice(product.price)}</Typography>
-                    )}
-                  </Stack>
-                </CardContent>
-
-                <CardActions sx={{ p: 1, pt: 0 }}>
-                  <Button size="small" startIcon={<Edit />} onClick={() => { setEditingProduct(product); setModalOpen(true) }}>Düzenle</Button>
-                  <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, product })}><Delete fontSize="small" /></IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
+              <CardActions sx={{ p: 1, pt: 0 }}>
+                <Button size="small" startIcon={<Edit />} onClick={() => { setEditingProduct(product); setModalOpen(true) }}>Düzenle</Button>
+                <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, product })}><Delete fontSize="small" /></IconButton>
+              </CardActions>
+            </Card>
           ))}
-          {filteredProducts.length === 0 && (
-            <Grid item xs={12}>
-              <EmptyState icon={<Restaurant sx={{ fontSize: 64 }} />} title="Ürün bulunamadı"
-                action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditingProduct(null); setModalOpen(true) }}>İlk Ürünü Ekle</Button>} />
-            </Grid>
-          )}
-        </Grid>
+        </Box>
+
+        {filteredProducts.length === 0 && (
+          <EmptyState icon={<Restaurant sx={{ fontSize: 64 }} />} title="Ürün bulunamadı"
+            action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditingProduct(null); setModalOpen(true) }}>İlk Ürünü Ekle</Button>} />
+        )}
 
         <ProductModal open={modalOpen} product={editingProduct} categories={categories} tags={tags} sectionId={sectionId} glbFiles={glbFiles} branchId={branchId}
           onClose={() => { setModalOpen(false); setEditingProduct(null) }}
@@ -1408,10 +1441,28 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
   const isEditing = !!product?.id
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState(0)
+  const [translating, setTranslating] = useState({
+    name: false,
+    description: false,
+    allergens: false
+  })
   const [form, setForm] = useState({
-    name: '', price: '', description: '', categoryId: '', isActive: true,
-    isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '',
-    calories: '', preparationTime: '', allergens: '', selectedTags: []
+    name: '', 
+    nameEN: '',           // YENİ
+    price: '', 
+    description: '', 
+    descriptionEN: '',    // YENİ
+    categoryId: '', 
+    isActive: true,
+    isFeatured: false, 
+    isCampaign: false, 
+    campaignPrice: '', 
+    glbFile: '',
+    calories: '', 
+    preparationTime: '', 
+    allergens: '', 
+    allergensEN: '',      // YENİ
+    selectedTags: []
   })
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [thumbnailPreview, setThumbnailPreview] = useState(null)
@@ -1419,27 +1470,112 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
   useEffect(() => {
     if (open) {
       if (product) {
-        // Ürünün mevcut etiketlerini ID array olarak al
         const productTagIds = product.tags?.map(t => t.id || t._id || t) || []
         
         setForm({
-          name: product.name || '', price: product.price || '', description: product.description || '',
+          name: product.name || '', 
+          nameEN: product.nameEN || '',
+          price: product.price || '', 
+          description: product.description || '',
+          descriptionEN: product.descriptionEN || '',
           categoryId: product.categoryId || product.category?._id || '', 
           isActive: product.isActive !== false,
-          isFeatured: product.isFeatured || false, isCampaign: product.isCampaign || false,
-          campaignPrice: product.campaignPrice || '', glbFile: product.glbFile || '',
-          calories: product.calories || '', preparationTime: product.preparationTime || '',
-          allergens: product.allergens?.join(', ') || '', selectedTags: productTagIds
+          isFeatured: product.isFeatured || false, 
+          isCampaign: product.isCampaign || false,
+          campaignPrice: product.campaignPrice || '', 
+          glbFile: product.glbFile || '',
+          calories: product.calories || '', 
+          preparationTime: product.preparationTime || '',
+          allergens: product.allergens?.join(', ') || '', 
+          allergensEN: product.allergensEN?.join(', ') || '',
+          selectedTags: productTagIds
         })
         setThumbnailPreview(product.thumbnail ? getImageUrl(product.thumbnail) : null)
       } else {
-        setForm({ name: '', price: '', description: '', categoryId: '', isActive: true, isFeatured: false, isCampaign: false, campaignPrice: '', glbFile: '', calories: '', preparationTime: '', allergens: '', selectedTags: [] })
+        setForm({ 
+          name: '', nameEN: '', price: '', description: '', descriptionEN: '',
+          categoryId: '', isActive: true, isFeatured: false, isCampaign: false, 
+          campaignPrice: '', glbFile: '', calories: '', preparationTime: '', 
+          allergens: '', allergensEN: '', selectedTags: [] 
+        })
         setThumbnailPreview(null)
       }
       setThumbnailFile(null)
       setTab(0)
     }
   }, [open, product])
+
+  // Otomatik çeviri fonksiyonu
+  const handleAutoTranslate = async (field) => {
+    const sourceField = field.replace('EN', '')
+    const sourceText = form[sourceField]
+    
+    if (!sourceText || !sourceText.trim()) {
+      showSnackbar(`Önce ${sourceField === 'name' ? 'ürün adını' : sourceField === 'description' ? 'açıklamayı' : 'alerjenleri'} girin`, 'warning')
+      return
+    }
+    
+    setTranslating(prev => ({ ...prev, [sourceField]: true }))
+    try {
+      const res = await api.post('/translate', {
+        text: sourceText,
+        targetLang: 'en',
+        sourceLang: 'tr'
+      })
+      
+      if (res.data.success && res.data.translatedText) {
+        setForm(prev => ({ ...prev, [field]: res.data.translatedText }))
+        showSnackbar('Çeviri başarılı', 'success')
+      } else {
+        showSnackbar('Çeviri yapılamadı', 'error')
+      }
+    } catch (err) {
+      console.error('Translation error:', err)
+      showSnackbar('Çeviri hatası', 'error')
+    } finally {
+      setTranslating(prev => ({ ...prev, [sourceField]: false }))
+    }
+  }
+
+  // Tümünü çevir
+  const handleTranslateAll = async () => {
+    const fieldsToTranslate = []
+    if (form.name && !form.nameEN) fieldsToTranslate.push({ source: 'name', target: 'nameEN' })
+    if (form.description && !form.descriptionEN) fieldsToTranslate.push({ source: 'description', target: 'descriptionEN' })
+    if (form.allergens && !form.allergensEN) fieldsToTranslate.push({ source: 'allergens', target: 'allergensEN' })
+    
+    if (fieldsToTranslate.length === 0) {
+      showSnackbar('Çevrilecek alan bulunamadı', 'info')
+      return
+    }
+
+    setTranslating({ name: true, description: true, allergens: true })
+    
+    try {
+      const texts = fieldsToTranslate.map(f => form[f.source])
+      const res = await api.post('/translate/bulk', {
+        texts,
+        targetLang: 'en',
+        sourceLang: 'tr'
+      })
+      
+      if (res.data.success) {
+        const updates = {}
+        res.data.translations.forEach((t, i) => {
+          if (t.translated) {
+            updates[fieldsToTranslate[i].target] = t.translated
+          }
+        })
+        setForm(prev => ({ ...prev, ...updates }))
+        showSnackbar(`${Object.keys(updates).length} alan çevrildi`, 'success')
+      }
+    } catch (err) {
+      console.error('Bulk translation error:', err)
+      showSnackbar('Toplu çeviri hatası', 'error')
+    } finally {
+      setTranslating({ name: false, description: false, allergens: false })
+    }
+  }
 
   const handleThumbnailChange = (file) => {
     if (!file) return
@@ -1452,14 +1588,22 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
     setSaving(true)
     try {
       const data = {
-        name: form.name, price: parseFloat(form.price), description: form.description,
-        categoryId: form.categoryId || null, section: sectionId,
-        isActive: form.isActive, isFeatured: form.isFeatured,
-        isCampaign: form.isCampaign, campaignPrice: form.campaignPrice ? parseFloat(form.campaignPrice) : null,
+        name: form.name, 
+        nameEN: form.nameEN || '',
+        price: parseFloat(form.price), 
+        description: form.description,
+        descriptionEN: form.descriptionEN || '',
+        categoryId: form.categoryId || null, 
+        section: sectionId,
+        isActive: form.isActive, 
+        isFeatured: form.isFeatured,
+        isCampaign: form.isCampaign, 
+        campaignPrice: form.campaignPrice ? parseFloat(form.campaignPrice) : null,
         calories: form.calories ? parseInt(form.calories) : null,
         preparationTime: form.preparationTime ? parseInt(form.preparationTime) : null,
         allergens: form.allergens ? form.allergens.split(',').map(s => s.trim()).filter(Boolean) : [],
-        tags: form.selectedTags // ObjectId array olarak gönder
+        allergensEN: form.allergensEN ? form.allergensEN.split(',').map(s => s.trim()).filter(Boolean) : [],
+        tags: form.selectedTags
       }
 
       let productId = product?.id
@@ -1503,11 +1647,13 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
 
       <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ px: 3, borderBottom: 1, borderColor: 'divider' }}>
         <Tab label="Genel Bilgiler" />
+        <Tab label="Çeviriler 🌐" />
         <Tab label="Detaylar & Etiketler" />
         <Tab label="3D Model" />
       </Tabs>
 
       <DialogContent sx={{ pt: 3 }}>
+        {/* TAB 0: Genel Bilgiler */}
         {tab === 0 && (
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
@@ -1515,7 +1661,7 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
             </Grid>
             <Grid item xs={12} md={8}>
               <Stack spacing={2.5}>
-                <TextField fullWidth label="Ürün Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                <TextField fullWidth label="Ürün Adı (Türkçe)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <TextField fullWidth label="Fiyat" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })}
                     InputProps={{ startAdornment: <InputAdornment position="start">₺</InputAdornment> }} required />
@@ -1528,7 +1674,7 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
                   </FormControl>
                 </Stack>
                 
-                <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3} />
+                <TextField fullWidth label="Açıklama (Türkçe)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3} />
                 <Divider />
                 <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
                   <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
@@ -1545,7 +1691,164 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
           </Grid>
         )}
 
+        {/* TAB 1: Çeviriler */}
         {tab === 1 && (
+          <Stack spacing={3}>
+            <Alert severity="info" icon={<Translate />}>
+              Türkçe içerikleri otomatik olarak İngilizceye çevirebilirsiniz.
+              <Button 
+                size="small" 
+                variant="outlined" 
+                sx={{ ml: 2 }}
+                onClick={handleTranslateAll}
+                disabled={translating.name || translating.description || translating.allergens}
+              >
+                Tümünü Çevir
+              </Button>
+            </Alert>
+
+            {/* Ürün Adı Çevirisi */}
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>Ürün Adı</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={5}>
+                  <TextField 
+                    fullWidth 
+                    label="Türkçe" 
+                    value={form.name} 
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment>
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Tooltip title="Türkçeden İngilizceye Çevir">
+                    <span>
+                      <IconButton 
+                        onClick={() => handleAutoTranslate('nameEN')}
+                        disabled={translating.name || !form.name.trim()}
+                        color="primary"
+                      >
+                        {translating.name ? <CircularProgress size={24} /> : <Translate />}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Grid>
+                <Grid item xs={12} sm={5}>
+                  <TextField 
+                    fullWidth 
+                    label="İngilizce" 
+                    value={form.nameEN} 
+                    onChange={e => setForm({ ...form, nameEN: e.target.value })}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment>
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider />
+
+            {/* Açıklama Çevirisi */}
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>Açıklama</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={5}>
+                  <TextField 
+                    fullWidth 
+                    label="Türkçe" 
+                    value={form.description} 
+                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    multiline
+                    rows={3}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment>
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', pt: 2 }}>
+                  <Tooltip title="Türkçeden İngilizceye Çevir">
+                    <span>
+                      <IconButton 
+                        onClick={() => handleAutoTranslate('descriptionEN')}
+                        disabled={translating.description || !form.description.trim()}
+                        color="primary"
+                      >
+                        {translating.description ? <CircularProgress size={24} /> : <Translate />}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Grid>
+                <Grid item xs={12} sm={5}>
+                  <TextField 
+                    fullWidth 
+                    label="İngilizce" 
+                    value={form.descriptionEN} 
+                    onChange={e => setForm({ ...form, descriptionEN: e.target.value })}
+                    multiline
+                    rows={3}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment>
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider />
+
+            {/* Alerjenler Çevirisi */}
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>Alerjenler</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={5}>
+                  <TextField 
+                    fullWidth 
+                    label="Türkçe" 
+                    value={form.allergens} 
+                    onChange={e => setForm({ ...form, allergens: e.target.value })}
+                    placeholder="Gluten, Süt, Fındık..."
+                    helperText="Virgülle ayırarak yazın"
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment>
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', pt: 2 }}>
+                  <Tooltip title="Türkçeden İngilizceye Çevir">
+                    <span>
+                      <IconButton 
+                        onClick={() => handleAutoTranslate('allergensEN')}
+                        disabled={translating.allergens || !form.allergens.trim()}
+                        color="primary"
+                      >
+                        {translating.allergens ? <CircularProgress size={24} /> : <Translate />}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Grid>
+                <Grid item xs={12} sm={5}>
+                  <TextField 
+                    fullWidth 
+                    label="İngilizce" 
+                    value={form.allergensEN} 
+                    onChange={e => setForm({ ...form, allergensEN: e.target.value })}
+                    placeholder="Gluten, Milk, Hazelnut..."
+                    helperText="Separated by commas"
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment>
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </Stack>
+        )}
+
+        {/* TAB 2: Detaylar & Etiketler */}
+        {tab === 2 && (
           <Stack spacing={3}>
             {/* Etiketler - Select Box */}
             <Box>
@@ -1618,11 +1921,11 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
               <TextField fullWidth label="Hazırlama Süresi" type="number" value={form.preparationTime} onChange={e => setForm({ ...form, preparationTime: e.target.value })}
                 InputProps={{ endAdornment: <InputAdornment position="end">dk</InputAdornment> }} />
             </Stack>
-            <TextField fullWidth label="Alerjenler" value={form.allergens} onChange={e => setForm({ ...form, allergens: e.target.value })} placeholder="Gluten, Süt, Fındık..." helperText="Virgülle ayırarak yazın" />
           </Stack>
         )}
 
-        {tab === 2 && (
+        {/* TAB 3: 3D Model */}
+        {tab === 3 && (
           <Stack spacing={3}>
             <Alert severity="info" icon={<ViewInAr />}>
               GLB dosyaları backend/outputs klasörüne yüklenir. Yüklenen dosyaları buradan ürüne atayın.
@@ -1672,6 +1975,7 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
 }
 
 // ==================== CATEGORIES PAGE ====================
+
 export function CategoriesPage() {
   const { branchId, sectionId } = useParams()
   const { currentSection } = useBranch()
@@ -1682,6 +1986,7 @@ export function CategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, category: null })
+  const [search, setSearch] = useState('')
 
   useEffect(() => { if (branchId && sectionId) loadData() }, [branchId, sectionId])
 
@@ -1727,11 +2032,23 @@ export function CategoriesPage() {
     }
   }
 
+  // Filtrelenmiş kategoriler
+  const filteredCategories = categories.filter(category => {
+    if (!search.trim()) return true
+    const searchLower = search.toLowerCase()
+    return (
+      category.name?.toLowerCase().includes(searchLower) ||
+      category.nameEN?.toLowerCase().includes(searchLower) ||
+      category.icon?.includes(search)
+    )
+  })
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
   return (
     <PageWrapper>
       <Stack spacing={3}>
+        {/* Header */}
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
             <Typography variant="h6" fontWeight={700}>{categories.length} Kategori</Typography>
@@ -1747,82 +2064,223 @@ export function CategoriesPage() {
           </Stack>
         </Stack>
 
-        <Alert severity="info">
-          <Typography variant="subtitle2" gutterBottom>Yerleşim Boyutları:</Typography>
-          <Stack direction="row" spacing={2}>
-            <Chip label="Tam Satır" size="small" icon={<Fullscreen />} />
-            <Chip label="Yarım (1/2)" size="small" icon={<ViewModule />} />
-            <Chip label="Üçte Bir (1/3)" size="small" icon={<GridView />} />
-          </Stack>
-        </Alert>
-
-        <Grid container spacing={2}>
-          {categories.map(category => {
-            return (
-              <Grid item xs={6} sm={4} md={3} key={category.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default' }}>
-                    {category.image ? (
-                      <CardMedia component="img" image={getImageUrl(category.image)} alt={category.name}
-                        sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Typography variant="h2">{category.icon}</Typography>
-                      </Box>
-                    )}
-                    <Tooltip title="Görsel Yükle">
-                      <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}>
-                        <PhotoCamera sx={{ color: 'white', fontSize: 20 }} />
-                        <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
-                      </IconButton>
-                    </Tooltip>
-                    <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} sx={{ position: 'absolute', top: 8, right: 8 }} />
-                  </Box>
-
-                  <CardContent sx={{ flex: 1, p: 1.5 }}>
-                    <Typography variant="subtitle2" fontWeight={700} noWrap>{category.icon} {category.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{category.productCount || 0} ürün</Typography>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-                      <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" />
-                    </Stack>
-                  </CardContent>
-
-                  <CardActions sx={{ p: 1, pt: 0 }}>
-                    <Button size="small" startIcon={<Edit />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>Düzenle</Button>
-                    <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete fontSize="small" /></IconButton>
-                  </CardActions>
-                </Card>
-              </Grid>
+        {/* Arama Çubuğu */}
+        <TextField
+          fullWidth
+          placeholder="Kategori ara... (isim veya ikon)"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: search && (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={() => setSearch('')}>
+                  <Close fontSize="small" />
+                </IconButton>
+              </InputAdornment>
             )
-          })}
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'background.paper',
+              borderRadius: 2
+            }
+          }}
+        />
 
-          {categories.length === 0 && (
-            <Grid item xs={12}>
-              <EmptyState icon={<Category sx={{ fontSize: 64 }} />} title="Henüz kategori yok"
-                action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>İlk Kategoriyi Ekle</Button>} />
-            </Grid>
-          )}
-        </Grid>
+        {/* Arama sonucu bilgisi */}
+        {search && (
+          <Typography variant="body2" color="text.secondary">
+            {filteredCategories.length} sonuç bulundu
+          </Typography>
+        )}
 
-        <CategoryModal open={modalOpen} category={editingCategory} sectionId={sectionId} branchId={branchId}
+        {/* Kategori Kartları - SABİT BOYUT */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 2,
+          justifyContent: { xs: 'center', sm: 'flex-start' }
+        }}>
+          {filteredCategories.map(category => (
+            <Card 
+              key={category.id}
+              sx={{ 
+                width: 220,   // SABİT GENİŞLİK
+                height: 320,  // SABİT YÜKSEKLİK
+                display: 'flex', 
+                flexDirection: 'column',
+                flexShrink: 0
+              }}
+            >
+              {/* SABİT BOYUTLU GÖRSEL ALANI */}
+              <Box sx={{ 
+                position: 'relative', 
+                width: 220,   // SABİT GENİŞLİK
+                height: 160,  // SABİT YÜKSEKLİK
+                bgcolor: 'background.default',
+                overflow: 'hidden',
+                flexShrink: 0
+              }}>
+                {category.image ? (
+                  <Box
+                    component="img"
+                    src={getImageUrl(category.image)}
+                    alt={category.name}
+                    sx={{ 
+                      width: 220,
+                      height: 160,
+                      objectFit: 'cover',
+                      objectPosition: 'center'
+                    }} 
+                  />
+                ) : (
+                  <Box sx={{ 
+                    width: 220,
+                    height: 160,
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
+                  }}>
+                    <Typography variant="h2">{category.icon}</Typography>
+                  </Box>
+                )}
+                
+                {/* Görsel yükleme butonu */}
+                <Tooltip title="Görsel Yükle">
+                  <IconButton 
+                    component="label" 
+                    size="small" 
+                    sx={{ 
+                      position: 'absolute', 
+                      bottom: 8, 
+                      right: 8, 
+                      bgcolor: 'rgba(0,0,0,0.6)', 
+                      '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } 
+                    }}
+                  >
+                    <PhotoCamera sx={{ color: 'white', fontSize: 20 }} />
+                    <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
+                  </IconButton>
+                </Tooltip>
+                
+                {/* Aktif/Pasif chip */}
+                <Chip 
+                  label={category.isActive ? 'Aktif' : 'Pasif'} 
+                  size="small" 
+                  color={category.isActive ? 'success' : 'default'} 
+                  sx={{ position: 'absolute', top: 8, right: 8 }} 
+                />
+              </Box>
+
+              {/* Kategori bilgileri */}
+              <CardContent sx={{ flex: 1, p: 1.5, overflow: 'hidden' }}>
+                <Typography variant="subtitle2" fontWeight={700} noWrap>
+                  {category.icon} {category.name}
+                </Typography>
+                
+                {/* İngilizce isim varsa göster */}
+                {category.nameEN && (
+                  <Typography variant="caption" color="text.secondary" noWrap display="block">
+                    🇬🇧 {category.nameEN}
+                  </Typography>
+                )}
+                
+                <Typography variant="caption" color="text.secondary">
+                  {category.productCount || 0} ürün
+                </Typography>
+                
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+                  <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" />
+                </Stack>
+              </CardContent>
+
+              {/* Aksiyonlar */}
+              <CardActions sx={{ p: 1, pt: 0 }}>
+                <Button size="small" startIcon={<Edit />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>
+                  Düzenle
+                </Button>
+                <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </CardActions>
+            </Card>
+          ))}
+        </Box>
+
+        {/* Boş durum */}
+        {filteredCategories.length === 0 && !search && (
+          <EmptyState 
+            icon={<Category sx={{ fontSize: 64 }} />} 
+            title="Henüz kategori yok"
+            action={
+              <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>
+                İlk Kategoriyi Ekle
+              </Button>
+            } 
+          />
+        )}
+
+        {/* Arama sonucu boş */}
+        {filteredCategories.length === 0 && search && (
+          <EmptyState 
+            icon={<Search sx={{ fontSize: 64 }} />} 
+            title="Sonuç bulunamadı"
+            description={`"${search}" için kategori bulunamadı`}
+            action={
+              <Button variant="outlined" onClick={() => setSearch('')}>
+                Aramayı Temizle
+              </Button>
+            } 
+          />
+        )}
+
+        {/* Modaller */}
+        <CategoryModal 
+          open={modalOpen} 
+          category={editingCategory} 
+          sectionId={sectionId} 
+          branchId={branchId}
           onClose={() => { setModalOpen(false); setEditingCategory(null) }}
-          onSave={() => { setModalOpen(false); setEditingCategory(null); loadData() }} />
+          onSave={() => { setModalOpen(false); setEditingCategory(null); loadData() }} 
+        />
 
-        <ConfirmDialog open={deleteDialog.open} title="Kategori Sil"
-          message={<><Typography>"{deleteDialog.category?.name}" kategorisini silmek istediğinize emin misiniz?</Typography><Alert severity="warning" sx={{ mt: 2 }}>Bu kategorideki ürünler kategorisiz kalacak.</Alert></>}
-          onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, category: null })} />
+        <ConfirmDialog 
+          open={deleteDialog.open} 
+          title="Kategori Sil"
+          message={
+            <>
+              <Typography>"{deleteDialog.category?.name}" kategorisini silmek istediğinize emin misiniz?</Typography>
+              <Alert severity="warning" sx={{ mt: 2 }}>Bu kategorideki ürünler kategorisiz kalacak.</Alert>
+            </>
+          }
+          onConfirm={handleDelete} 
+          onCancel={() => setDeleteDialog({ open: false, category: null })} 
+        />
       </Stack>
     </PageWrapper>
   )
 }
-
 // ==================== CATEGORY MODAL ====================
 function CategoryModal({ open, category, sectionId, branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
   
   const isEditing = !!category?.id
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half' })
+  const [translating, setTranslating] = useState(false)
+  const [form, setForm] = useState({ 
+    name: '', 
+    nameEN: '',
+    icon: '', 
+    description: '', 
+    isActive: true, 
+    layoutSize: 'half' 
+  })
 
   const icons = ['🍕', '🍔', '🌮', '🍜', '🍣', '🥗', '🍰', '☕', '🍺', '🥤', '🍳', '🥪', '🍝', '🥘', '🍱', '🧁', '🍦', '🥩', '🍗', '🥙', '🌯', '🥡', '🍛', '🍲', '🥧', '🧇', '🥞', '🧆', '🍤', '🦐']
 
@@ -1830,15 +2288,47 @@ function CategoryModal({ open, category, sectionId, branchId, onClose, onSave })
     if (open) {
       if (category) {
         setForm({ 
-          name: category.name || '', icon: category.icon || '📁', 
-          description: category.description || '', isActive: category.isActive !== false, 
+          name: category.name || '', 
+          nameEN: category.nameEN || '',
+          icon: category.icon || '', 
+          description: category.description || '', 
+          isActive: category.isActive !== false, 
           layoutSize: category.layoutSize || 'half'
         })
       } else {
-        setForm({ name: '', icon: '📁', description: '', isActive: true, layoutSize: 'half' })
+        setForm({ name: '', nameEN: '', icon: '', description: '', isActive: true, layoutSize: 'half' })
       }
     }
   }, [open, category])
+
+  // Otomatik çeviri fonksiyonu
+  const handleAutoTranslate = async () => {
+    if (!form.name.trim()) {
+      showSnackbar('Önce kategori adını girin', 'warning')
+      return
+    }
+    
+    setTranslating(true)
+    try {
+      const res = await api.post('/translate', {
+        text: form.name,
+        targetLang: 'en',
+        sourceLang: 'tr'
+      })
+      
+      if (res.data.success && res.data.translatedText) {
+        setForm(prev => ({ ...prev, nameEN: res.data.translatedText }))
+        showSnackbar('Çeviri başarılı', 'success')
+      } else {
+        showSnackbar('Çeviri yapılamadı', 'error')
+      }
+    } catch (err) {
+      console.error('Translation error:', err)
+      showSnackbar('Çeviri hatası: ' + (err.response?.data?.error || err.message), 'error')
+    } finally {
+      setTranslating(false)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!form.name) { showSnackbar('Kategori adı zorunludur', 'error'); return }
@@ -1867,23 +2357,48 @@ function CategoryModal({ open, category, sectionId, branchId, onClose, onSave })
       </DialogTitle>
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
-          <TextField fullWidth label="Kategori Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-          <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} />
+          {/* Kategori Adı (Türkçe) */}
+          <TextField 
+            fullWidth 
+            label="Kategori Adı (Türkçe)" 
+            value={form.name} 
+            onChange={e => setForm({ ...form, name: e.target.value })} 
+            required 
+            placeholder="Örn: Ana Yemekler"
+          />
+          
+          {/* İngilizce İsim */}
+          <Stack direction="row" spacing={1} alignItems="flex-start">
+            <TextField 
+              fullWidth 
+              label="Kategori Adı (İngilizce)" 
+              value={form.nameEN} 
+              onChange={e => setForm({ ...form, nameEN: e.target.value })}
+              placeholder="Örn: Main Courses"
+            />
+            <Tooltip title="Türkçeden İngilizceye Otomatik Çevir">
+              <span>
+                <Button 
+                  variant="outlined" 
+                  onClick={handleAutoTranslate}
+                  disabled={translating || !form.name.trim()}
+                  sx={{ 
+                    minWidth: 56, 
+                    height: 56,
+                    px: 2
+                  }}
+                >
+                  {translating ? <CircularProgress size={20} /> : <Translate />}
+                </Button>
+              </span>
+            </Tooltip>
+          </Stack>
+          
+       
 
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>İkon Seçin</Typography>
-            <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 120, overflow: 'auto' }}>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {icons.map(icon => (
-                  <IconButton key={icon} onClick={() => setForm({ ...form, icon })}
-                    sx={{ fontSize: 24, width: 40, height: 40, border: 2, borderColor: form.icon === icon ? 'primary.main' : 'transparent', bgcolor: form.icon === icon ? alpha('#e53935', 0.1) : 'transparent' }}>
-                    {icon}
-                  </IconButton>
-                ))}
-              </Box>
-            </Paper>
-          </Box>
+        
 
+          {/* Yerleşim Boyutu */}
           <Box>
             <Typography variant="subtitle2" gutterBottom>Yerleşim Boyutu</Typography>
             <ToggleButtonGroup value={form.layoutSize} exclusive onChange={(e, v) => { if (v) setForm({ ...form, layoutSize: v }) }} fullWidth>
@@ -1893,12 +2408,15 @@ function CategoryModal({ open, category, sectionId, branchId, onClose, onSave })
             </ToggleButtonGroup>
           </Box>
 
+          {/* Aktif/Pasif */}
           <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
         </Stack>
       </DialogContent>
       <DialogActions sx={{ p: 3 }}>
         <Button onClick={onClose}>İptal</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={saving}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>
+          {saving ? 'Kaydediliyor...' : 'Kaydet'}
+        </Button>
       </DialogActions>
     </Dialog>
   )
@@ -2134,7 +2652,7 @@ export function CategoryLayoutPage() {
                                 <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)' }}>
-                                  <Typography variant="h2">{cat.icon || '📁'}</Typography>
+                                  <Typography variant="h2">{cat.icon || ''}</Typography>
                                 </Box>
                               )}
                               <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)' }} />

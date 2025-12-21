@@ -7,14 +7,14 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   CircularProgress, Rating, Alert, Divider, Fade, Grow, Slide,
   IconButton, InputAdornment, Tabs, Tab, Badge, Tooltip,
-  useMediaQuery, alpha, Skeleton
+  useMediaQuery, alpha, Skeleton, Menu, MenuItem
 } from '@mui/material'
 import {
   Restaurant, Store, Phone, LocationOn, AccessTime, Instagram, WhatsApp,
   KeyboardArrowRight, ViewInAr, Close, ShoppingBag, Star, Search,
   Person, Lock, Visibility, VisibilityOff, Email, Login as LoginIcon,
   Send, ArrowBack, ExpandMore, LocalOffer, Info, RateReview, ChevronLeft, ChevronRight,
-  Language, Place
+  Language, Place, Translate
 } from '@mui/icons-material'
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
 import { useAuth, API_URL, api, formatPrice, getImageUrl, getGlbUrl } from './App'
@@ -34,6 +34,16 @@ const darkTheme = createTheme({
     MuiCard: { styleOverrides: { root: { backgroundImage: 'none' } } }
   }
 })
+
+// ==================== DİL CONTEXT ====================
+// Dil tercihini localStorage'dan al veya varsayılan olarak 'tr' kullan
+const getInitialLanguage = () => {
+  try {
+    return localStorage.getItem('menuLanguage') || 'tr'
+  } catch {
+    return 'tr'
+  }
+}
 
 // ==================== LOGIN PAGE ====================
 export function LoginPage() {
@@ -253,6 +263,9 @@ export function MenuPage() {
   // URL'den section parametresini al
   const sectionSlug = searchParams.get('section')
 
+  // DİL STATE - localStorage'dan başlat
+  const [language, setLanguage] = useState(getInitialLanguage)
+
   const [branch, setBranch] = useState(null)
   const [sections, setSections] = useState([])
   const [selectedSection, setSelectedSection] = useState(null)
@@ -282,6 +295,37 @@ export function MenuPage() {
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Dil değiştirme fonksiyonu
+  const toggleLanguage = () => {
+    const newLang = language === 'tr' ? 'en' : 'tr'
+    setLanguage(newLang)
+    try {
+      localStorage.setItem('menuLanguage', newLang)
+    } catch (e) {
+      console.error('localStorage error:', e)
+    }
+  }
+
+  // Dile göre metin getiren yardımcı fonksiyon
+  const t = (item, field) => {
+    if (!item) return ''
+    const enField = field + 'EN'
+    if (language === 'en' && item[enField]) {
+      return item[enField]
+    }
+    return item[field] || ''
+  }
+
+  // Dile göre array getiren yardımcı fonksiyon (alerjenler için)
+  const tArray = (item, field) => {
+    if (!item) return []
+    const enField = field + 'EN'
+    if (language === 'en' && item[enField] && item[enField].length > 0) {
+      return item[enField]
+    }
+    return item[field] || []
+  }
+
   // İlk yüklemede branch ve sections bilgisini al
   useEffect(() => { 
     if (slug) loadInitialData() 
@@ -296,7 +340,7 @@ export function MenuPage() {
         loadMenuData(sectionSlug)
       }
     }
-  }, [sectionSlug]) // Sadece sectionSlug değiştiğinde çalış
+  }, [sectionSlug])
   
   // Duyuru otomatik geçiş
   useEffect(() => {
@@ -326,26 +370,21 @@ export function MenuPage() {
 
       // Section yoksa veya tek section varsa direkt menüyü yükle
       if (secs.length === 0) {
-        // Section yok, direkt menüyü yükle
         await loadMenuData(null)
       } else if (secs.length === 1) {
-        // Tek section var, otomatik seç
         const section = secs[0]
         setSelectedSection(section)
         setSearchParams({ section: section.slug })
         await loadMenuData(section.slug)
       } else if (sectionSlug) {
-        // URL'de section var
         const section = secs.find(s => s.slug === sectionSlug)
         if (section) {
           setSelectedSection(section)
           await loadMenuData(sectionSlug)
         } else {
-          // Geçersiz section, bölüm seçim ekranı göster
           setLoading(false)
         }
       } else {
-        // Birden fazla section var ve seçim yapılmamış
         setLoading(false)
       }
     } catch (err) {
@@ -361,7 +400,6 @@ export function MenuPage() {
       
       let menuData = null
       
-      // Önce yeni menu API'sini dene
       try {
         const menuUrl = sectionSlugParam 
           ? `${API_URL}/public/branches/${slug}/menu?section=${sectionSlugParam}`
@@ -370,9 +408,6 @@ export function MenuPage() {
         const menuRes = await axios.get(menuUrl)
         menuData = menuRes.data
       } catch (menuErr) {
-        // Menu API not available, using fallback APIs
-        
-        // Fallback: Eski API'leri kullan
         const [categoriesRes, productsRes, layoutsRes, announcementsRes] = await Promise.all([
           axios.get(`${API_URL}/public/branches/${slug}/categories`).catch(() => ({ data: [] })),
           axios.get(`${API_URL}/public/branches/${slug}/products`).catch(() => ({ data: [] })),
@@ -388,10 +423,8 @@ export function MenuPage() {
         }
       }
       
-      // Reviews ayrı yükle
       const reviewsRes = await axios.get(`${API_URL}/public/branches/${slug}/reviews`).catch(() => ({ data: [] }))
       
-      // Branch bilgisini güncelle (section'a özel homepageImage olabilir)
       if (menuData.branch) {
         setBranch(prev => ({ ...prev, ...menuData.branch }))
       }
@@ -403,7 +436,6 @@ export function MenuPage() {
       setTags(menuData.tags || [])
       setReviews(reviewsRes.data.reviews || reviewsRes.data || [])
       
-      // Seçili section bilgisini güncelle
       if (menuData.selectedSection) {
         setSelectedSection(menuData.selectedSection)
       }
@@ -422,7 +454,7 @@ export function MenuPage() {
   }
 
   const handleTagSelect = async (tag) => {
-    setSelectedCategory(null) // Önce kategoriyi temizle
+    setSelectedCategory(null)
     setSelectedTag(tag)
     setLoadingTagProducts(true)
     try {
@@ -501,10 +533,30 @@ export function MenuPage() {
     if (!searchQuery.trim()) return []
     const query = searchQuery.toLowerCase().trim()
     return products.filter(p => 
-      p.name?.toLowerCase().includes(query) || 
-      p.description?.toLowerCase().includes(query)
+      t(p, 'name')?.toLowerCase().includes(query) || 
+      t(p, 'description')?.toLowerCase().includes(query)
     )
-  }, [products, searchQuery])
+  }, [products, searchQuery, language])
+
+  // Dil buton komponenti
+  const LanguageButton = () => (
+  <IconButton 
+    onClick={toggleLanguage}
+    sx={{ 
+      bgcolor: 'rgba(0,0,0,0.5)', 
+      backdropFilter: 'blur(10px)',
+      color: 'white',
+      width: 40,
+      height: 40,
+      fontSize: '0.75rem',
+      fontWeight: 700,
+      border: '1px solid rgba(255,255,255,0.2)',
+      '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+    }}
+  >
+    {language === 'tr' ? 'TR' : 'EN'}
+  </IconButton>
+)
 
   if (loading) {
     return (
@@ -513,7 +565,9 @@ export function MenuPage() {
         <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#0a0a0a' }}>
           <Stack alignItems="center" spacing={2}>
             <CircularProgress size={60} />
-            <Typography color="text.secondary">Menü yükleniyor...</Typography>
+            <Typography color="text.secondary">
+              {language === 'tr' ? 'Menü yükleniyor...' : 'Loading menu...'}
+            </Typography>
           </Stack>
         </Box>
       </ThemeProvider>
@@ -527,27 +581,33 @@ export function MenuPage() {
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#0a0a0a', p: 3 }}>
           <Restaurant sx={{ fontSize: 100, color: 'text.secondary', mb: 3 }} />
           <Typography variant="h4" color="white" gutterBottom>{error}</Typography>
-          <Button variant="contained" component={Link} to="/" sx={{ mt: 2 }}>Ana Sayfaya Dön</Button>
+          <Button variant="contained" component={Link} to="/" sx={{ mt: 2 }}>
+            {language === 'tr' ? 'Ana Sayfaya Dön' : 'Back to Home'}
+          </Button>
         </Box>
       </ThemeProvider>
     )
   }
 
   // ========== BÖLÜM SEÇİM EKRANI ==========
-  // Birden fazla section var ve henüz seçim yapılmamış
   if (sections.length > 1 && !selectedSection) {
     return (
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
         <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
           
+          {/* Dil Butonu - Sağ Üst */}
+          <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+            <LanguageButton />
+          </Box>
+          
           {/* Bölüm Seçimi */}
           <Box sx={{ px: 2, py: 4, maxWidth: 600, mx: 'auto' }}>
             <Typography variant="h6" fontWeight={700} textAlign="center" sx={{ mb: 0.5 }}>
-              Bölüm Seçin
+              {language === 'tr' ? 'Bölüm Seçin' : 'Select Section'}
             </Typography>
             <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
-              Menüyü görüntülemek istediğiniz bölümü seçin
+              {language === 'tr' ? 'Menüyü görüntülemek istediğiniz bölümü seçin' : 'Select the section to view the menu'}
             </Typography>
 
             <Stack spacing={2}>
@@ -569,17 +629,12 @@ export function MenuPage() {
                       '&:active': { transform: 'scale(0.98)' }
                     }}
                   >
-                    {/* Görsel */}
                     {section.image || section.homepageImage ? (
                       <Box
                         component="img"
                         src={getImageUrl(section.homepageImage || section.image)}
-                        alt={section.name}
-                        sx={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          objectFit: 'cover' 
-                        }}
+                        alt={t(section, 'name')}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
                       <Box sx={{
@@ -589,14 +644,12 @@ export function MenuPage() {
                       }} />
                     )}
 
-                    {/* Gradient Overlay */}
                     <Box sx={{
                       position: 'absolute',
                       inset: 0,
                       background: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%)'
                     }} />
 
-                    {/* İsim */}
                     <Box sx={{ 
                       position: 'absolute', 
                       top: 0,
@@ -612,11 +665,10 @@ export function MenuPage() {
                         color="white"
                         sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
                       >
-                        {section.name}
+                        {t(section, 'name')}
                       </Typography>
                     </Box>
 
-                    {/* Ok ikonu */}
                     <Box sx={{ 
                       position: 'absolute', 
                       top: 0,
@@ -687,12 +739,13 @@ export function MenuPage() {
               </IconButton>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6" fontWeight={700}>
-                  {selectedCategoryInfo.name}
+                  {t(selectedCategoryInfo, 'name')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {categoryProducts.length} ürün
+                  {categoryProducts.length} {language === 'tr' ? 'ürün' : 'products'}
                 </Typography>
               </Box>
+              <LanguageButton />
             </Stack>
           </Box>
 
@@ -715,7 +768,6 @@ export function MenuPage() {
                       '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
                     }}
                   >
-                    {/* Sol - Küçük Kare Resim */}
                     <Box 
                       sx={{ 
                         width: 64, 
@@ -730,7 +782,7 @@ export function MenuPage() {
                         <Box 
                           component="img" 
                           src={getImageUrl(product.thumbnail)} 
-                          alt={product.name}
+                          alt={t(product, 'name')}
                           sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
                       ) : (
@@ -746,12 +798,11 @@ export function MenuPage() {
                       )}
                     </Box>
 
-                    {/* Orta - İsim ve Açıklama */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography fontWeight={600} noWrap>
-                        {product.name}
+                        {t(product, 'name')}
                       </Typography>
-                      {product.description && (
+                      {t(product, 'description') && (
                         <Typography 
                           variant="caption" 
                           color="text.secondary" 
@@ -763,16 +814,15 @@ export function MenuPage() {
                             lineHeight: 1.4
                           }}
                         >
-                          {product.description}
+                          {t(product, 'description')}
                         </Typography>
                       )}
-                      {/* Etiketler */}
                       {product.tags?.length > 0 && (
                         <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                           {product.tags.slice(0, 3).map((tag, i) => (
                             <Chip 
                               key={tag.id || tag.slug || i} 
-                              label={typeof tag === 'string' ? tag : tag.name} 
+                              label={typeof tag === 'string' ? tag : t(tag, 'name')} 
                               size="small" 
                               sx={{ 
                                 height: 20, 
@@ -785,7 +835,6 @@ export function MenuPage() {
                       )}
                     </Box>
 
-                    {/* Noktalı Çizgi */}
                     <Box sx={{ 
                       flex: '0 0 auto',
                       borderBottom: '1px dotted',
@@ -795,7 +844,6 @@ export function MenuPage() {
                       mx: 1
                     }} />
 
-                    {/* Sağ - Fiyat */}
                     <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                       {product.isCampaign && product.campaignPrice ? (
                         <>
@@ -818,13 +866,21 @@ export function MenuPage() {
             ) : (
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Restaurant sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography color="text.secondary">Bu kategoride ürün bulunmuyor</Typography>
+                <Typography color="text.secondary">
+                  {language === 'tr' ? 'Bu kategoride ürün bulunmuyor' : 'No products in this category'}
+                </Typography>
               </Box>
             )}
           </Box>
 
-          {/* Ürün Detay Modal */}
-          <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onTagClick={handleTagSelect} />
+          <ProductDetailModal 
+            product={selectedProduct} 
+            onClose={() => setSelectedProduct(null)} 
+            onTagClick={handleTagSelect}
+            language={language}
+            t={t}
+            tArray={tArray}
+          />
         </Box>
       </ThemeProvider>
     )
@@ -851,12 +907,13 @@ export function MenuPage() {
               </IconButton>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6" fontWeight={700}>
-                  {selectedTag.name}
+                  {t(selectedTag, 'name')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {tagProducts.length} ürün
+                  {tagProducts.length} {language === 'tr' ? 'ürün' : 'products'}
                 </Typography>
               </Box>
+              <LanguageButton />
             </Stack>
           </Box>
 
@@ -883,7 +940,6 @@ export function MenuPage() {
                       '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
                     }}
                   >
-                    {/* Sol - Küçük Kare Resim */}
                     <Box 
                       sx={{ 
                         width: 64, 
@@ -898,7 +954,7 @@ export function MenuPage() {
                         <Box 
                           component="img" 
                           src={getImageUrl(product.thumbnail)} 
-                          alt={product.name}
+                          alt={t(product, 'name')}
                           sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
                       ) : (
@@ -914,12 +970,11 @@ export function MenuPage() {
                       )}
                     </Box>
 
-                    {/* Orta - İsim ve Açıklama */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography fontWeight={600} noWrap>
-                        {product.name}
+                        {t(product, 'name')}
                       </Typography>
-                      {product.description && (
+                      {t(product, 'description') && (
                         <Typography 
                           variant="caption" 
                           color="text.secondary" 
@@ -931,18 +986,17 @@ export function MenuPage() {
                             lineHeight: 1.4
                           }}
                         >
-                          {product.description}
+                          {t(product, 'description')}
                         </Typography>
                       )}
-                      {/* Kategori bilgisi */}
-                      {product.categoryName && (
+                      {/* Kategori adını dile göre göster */}
+                      {(product.categoryName || product.categoryNameEN) && (
                         <Typography variant="caption" color="grey.500" sx={{ mt: 0.5, display: 'block' }}>
-                          {product.categoryName}
+                          {language === 'en' && product.categoryNameEN ? product.categoryNameEN : product.categoryName}
                         </Typography>
                       )}
                     </Box>
 
-                    {/* Noktalı Çizgi */}
                     <Box sx={{ 
                       flex: '0 0 auto',
                       borderBottom: '1px dotted',
@@ -952,7 +1006,6 @@ export function MenuPage() {
                       mx: 1
                     }} />
 
-                    {/* Sağ - Fiyat */}
                     <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                       {product.isCampaign && product.campaignPrice ? (
                         <>
@@ -975,13 +1028,21 @@ export function MenuPage() {
             ) : (
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <LocalOffer sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography color="text.secondary">Bu etikette ürün bulunmuyor</Typography>
+                <Typography color="text.secondary">
+                  {language === 'tr' ? 'Bu etikette ürün bulunmuyor' : 'No products with this tag'}
+                </Typography>
               </Box>
             )}
           </Box>
 
-          {/* Ürün Detay Modal */}
-          <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onTagClick={handleTagSelect} />
+          <ProductDetailModal 
+            product={selectedProduct} 
+            onClose={() => setSelectedProduct(null)} 
+            onTagClick={handleTagSelect}
+            language={language}
+            t={t}
+            tArray={tArray}
+          />
         </Box>
       </ThemeProvider>
     )
@@ -1005,7 +1066,7 @@ export function MenuPage() {
           alignItems: 'center',
           p: 1.5
         }}>
-          {/* Sol - Bölümlere Geri veya Dil */}
+          {/* Sol - Bölümlere Geri */}
           {sections.length > 1 ? (
             <IconButton 
               onClick={handleBackToSections}
@@ -1019,41 +1080,30 @@ export function MenuPage() {
               <ArrowBack />
             </IconButton>
           ) : (
+            <Box sx={{ width: 40 }} /> // Placeholder
+          )}
+          
+          {/* Sağ - Dil ve Arama */}
+          <Stack direction="row" spacing={1}>
+            <LanguageButton />
             <IconButton 
+              onClick={() => setShowSearch(true)}
               sx={{ 
                 bgcolor: 'rgba(0,0,0,0.5)', 
                 backdropFilter: 'blur(10px)',
                 color: 'white',
-                width: 40,
-                height: 40,
-                fontSize: '0.75rem',
-                fontWeight: 700,
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
               }}
             >
-              TR
+              <Search />
             </IconButton>
-          )}
-          
-          {/* Sağ - Arama */}
-          <IconButton 
-            onClick={() => setShowSearch(true)}
-            sx={{ 
-              bgcolor: 'rgba(0,0,0,0.5)', 
-              backdropFilter: 'blur(10px)',
-              color: 'white',
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
-            }}
-          >
-            <Search />
-          </IconButton>
+          </Stack>
         </Box>
 
         {/* ========== 1. HOMEPAGE IMAGE ========== */}
         <Box sx={{ position: 'relative', width: '100%', height: isMobile ? 220 : 320, overflow: 'hidden' }}>
-          {/* Section'a özel homepageImage varsa onu göster */}
           {selectedSection?.homepageImage ? (
-            <Box component="img" src={getImageUrl(selectedSection.homepageImage)} alt={selectedSection.name}
+            <Box component="img" src={getImageUrl(selectedSection.homepageImage)} alt={t(selectedSection, 'name')}
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : branch?.homepageImage ? (
             <Box component="img" src={getImageUrl(branch.homepageImage)} alt={branch.name}
@@ -1068,7 +1118,6 @@ export function MenuPage() {
           )}
           <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, #0a0a0a 100%)' }} />
           
-          {/* Logo ve İsim Overlay */}
           <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 2, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
             {branch?.logo && (
               <Avatar src={getImageUrl(branch.logo)} sx={{ width: 64, height: 64, border: '3px solid', borderColor: 'background.paper', boxShadow: 3 }} />
@@ -1077,11 +1126,10 @@ export function MenuPage() {
               <Typography variant="h5" fontWeight={800} color="white" sx={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                 {branch?.name}
               </Typography>
-              {/* Section adını göster */}
               {selectedSection && (
                 <Chip 
                   icon={<Place sx={{ fontSize: 14 }} />}
-                  label={`${selectedSection.icon || ''} ${selectedSection.name}`}
+                  label={`${selectedSection.icon || ''} ${t(selectedSection, 'name')}`}
                   size="small"
                   sx={{ 
                     bgcolor: alpha(selectedSection.color || '#e53935', 0.3),
@@ -1094,7 +1142,7 @@ export function MenuPage() {
           </Box>
         </Box>
 
-        {/* ========== 2. GÖRÜŞ & YORUMLARINIZ - Minimal ========== */}
+        {/* ========== 2. GÖRÜŞ & YORUMLARINIZ ========== */}
         <Box sx={{ px: 2, py: 1.5, maxWidth: 800, mx: 'auto' }}>
           <Typography
             onClick={() => setShowReviewForm(true)}
@@ -1109,24 +1157,22 @@ export function MenuPage() {
               transition: 'color 0.2s'
             }}
           >
-            💬 Görüş & Yorumlarınız
+            💬 {language === 'tr' ? 'Görüş & Yorumlarınız' : 'Feedback & Reviews'}
           </Typography>
           
-          {/* Başarı mesajı */}
           {reviewSubmitted && (
             <Fade in>
               <Alert severity="success" sx={{ mt: 1 }}>
-                Yorumunuz başarıyla gönderildi! Teşekkür ederiz 🎉
+                {language === 'tr' ? 'Yorumunuz başarıyla gönderildi! Teşekkür ederiz 🎉' : 'Your review has been submitted! Thank you 🎉'}
               </Alert>
             </Fade>
           )}
         </Box>
 
-        {/* ========== 3. DUYURULAR - Kayan Slider ========== */}
+        {/* ========== 3. DUYURULAR ========== */}
         {announcements.length > 0 && (
           <Box sx={{ px: 2, pb: 2, maxWidth: 800, mx: 'auto' }}>
             <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-              {/* Slider Container */}
               <Box 
                 sx={{ 
                   display: 'flex',
@@ -1137,10 +1183,7 @@ export function MenuPage() {
                 {announcements.map((ann, index) => (
                   <Box 
                     key={ann.id || index} 
-                    sx={{ 
-                      minWidth: '100%',
-                      px: 0.5
-                    }}
+                    sx={{ minWidth: '100%', px: 0.5 }}
                   >
                     <Box sx={{
                       bgcolor: ann.type === 'promo' ? 'rgba(229,57,53,0.15)' : 
@@ -1156,8 +1199,12 @@ export function MenuPage() {
                       <Stack direction="row" spacing={1.5} alignItems="flex-start">
                         <Typography sx={{ fontSize: '1.2rem' }}>{ann.icon || '📢'}</Typography>
                         <Box>
-                          <Typography fontWeight={600} color="white" sx={{ fontSize: '0.9rem' }}>{ann.title}</Typography>
-                          <Typography variant="body2" color="grey.400" sx={{ mt: 0.25 }}>{ann.message}</Typography>
+                          <Typography fontWeight={600} color="white" sx={{ fontSize: '0.9rem' }}>
+                            {t(ann, 'title')}
+                          </Typography>
+                          <Typography variant="body2" color="grey.400" sx={{ mt: 0.25 }}>
+                            {t(ann, 'message')}
+                          </Typography>
                         </Box>
                       </Stack>
                     </Box>
@@ -1165,14 +1212,8 @@ export function MenuPage() {
                 ))}
               </Box>
               
-              {/* Dots Indicator */}
               {announcements.length > 1 && (
-                <Stack 
-                  direction="row" 
-                  spacing={0.75} 
-                  justifyContent="center" 
-                  sx={{ mt: 1.5 }}
-                >
+                <Stack direction="row" spacing={0.75} justifyContent="center" sx={{ mt: 1.5 }}>
                   {announcements.map((_, index) => (
                     <Box
                       key={index}
@@ -1198,8 +1239,9 @@ export function MenuPage() {
         {campaignProducts.length > 0 && (
           <Box sx={{ py: 2, maxWidth: 800, mx: 'auto' }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 2 }}>
-              <Typography variant="h6" fontWeight={700}>Kampanyalar</Typography>
-              {/* Scroll Butonları - Desktop */}
+              <Typography variant="h6" fontWeight={700}>
+                {language === 'tr' ? 'Kampanyalar' : 'Campaigns'}
+              </Typography>
               {!isMobile && campaignProducts.length > 3 && (
                 <Stack direction="row" spacing={1}>
                   <IconButton size="small" onClick={() => scrollCampaign('left')} sx={{ bgcolor: 'background.paper' }}>
@@ -1244,12 +1286,11 @@ export function MenuPage() {
                     '&:hover': { transform: 'scale(1.03)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' } 
                   }}
                 >
-                  {/* Ürün Görseli */}
                   {product.thumbnail ? (
                     <Box 
                       component="img" 
                       src={getImageUrl(product.thumbnail)} 
-                      alt={product.name}
+                      alt={t(product, 'name')}
                       sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     />
                   ) : (
@@ -1258,29 +1299,15 @@ export function MenuPage() {
                     </Box>
                   )}
                   
-                  {/* Gradient Overlay */}
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    inset: 0, 
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' 
-                  }} />
+                  <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' }} />
                   
-                  {/* İndirim Badge */}
                   <Chip 
                     label={`%${Math.round((1 - product.campaignPrice / product.price) * 100)}`} 
                     size="small" 
                     color="error" 
-                    sx={{ 
-                      position: 'absolute', 
-                      top: 8, 
-                      left: 8, 
-                      fontWeight: 700, 
-                      fontSize: '0.7rem',
-                      height: 22
-                    }} 
+                    sx={{ position: 'absolute', top: 8, left: 8, fontWeight: 700, fontSize: '0.7rem', height: 22 }} 
                   />
                   
-                  {/* 3D Badge */}
                   {product.hasGlb && (
                     <Chip 
                       icon={<ViewInAr sx={{ fontSize: 14 }} />} 
@@ -1291,7 +1318,6 @@ export function MenuPage() {
                     />
                   )}
                   
-                  {/* İsim ve Fiyat - Resim üzerinde */}
                   <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
                     <Typography 
                       variant="subtitle2" 
@@ -1300,7 +1326,7 @@ export function MenuPage() {
                       noWrap
                       sx={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
                     >
-                      {product.name}
+                      {t(product, 'name')}
                     </Typography>
                     <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mt: 0.25 }}>
                       <Typography variant="body1" color="error.main" fontWeight={700}>
@@ -1317,12 +1343,13 @@ export function MenuPage() {
           </Box>
         )}
 
-        {/* ========== 5. KATEGORİLER (Bölümler) ========== */}
+        {/* ========== 5. KATEGORİLER ========== */}
         <Box sx={{ px: 2, py: 2, maxWidth: 800, mx: 'auto' }}>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Kategoriler</Typography>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+            {language === 'tr' ? 'Kategoriler' : 'Categories'}
+          </Typography>
           
           {layouts && layouts.length > 0 ? (
-            // Layout var - Admin panelinden ayarlanan düzende göster
             <Stack spacing={1.5}>
               {layouts.map((row, rowIndex) => {
                 const rowCategories = row.categories || []
@@ -1347,10 +1374,7 @@ export function MenuPage() {
                       const size = item.size || category.layoutSize || 'half'
                       const productCount = getCategoryProductCount(categoryId)
                       
-                      // Grid span değerleri
                       const gridSpan = size === 'full' ? 12 : size === 'half' ? 6 : 4
-                      
-                      // Aspect ratio - full için dikdörtgen, half ve third için kare
                       const aspectRatio = size === 'full' ? '16 / 9' : '1 / 1'
                       
                       return (
@@ -1365,26 +1389,16 @@ export function MenuPage() {
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'transform 0.2s, box-shadow 0.2s',
-                            '&:hover': { 
-                              transform: 'scale(1.02)', 
-                              boxShadow: '0 8px 24px rgba(0,0,0,0.3)' 
-                            },
-                            '&:active': {
-                              transform: 'scale(0.98)'
-                            }
+                            '&:hover': { transform: 'scale(1.02)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' },
+                            '&:active': { transform: 'scale(0.98)' }
                           }}
                         >
-                          {/* Görsel veya Icon */}
                           {category.image ? (
                             <Box 
                               component="img" 
                               src={getImageUrl(category.image)} 
-                              alt={category.name}
-                              sx={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'cover' 
-                              }} 
+                              alt={t(category, 'name')}
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                             />
                           ) : (
                             <Box sx={{ 
@@ -1396,19 +1410,13 @@ export function MenuPage() {
                               background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)' 
                             }}>
                               <Typography sx={{ fontSize: gridSpan === 4 ? 32 : gridSpan === 6 ? 48 : 56 }}>
-                                {category.icon }
+                                {category.icon}
                               </Typography>
                             </Box>
                           )}
                           
-                          {/* Gradient Overlay */}
-                          <Box sx={{ 
-                            position: 'absolute', 
-                            inset: 0, 
-                            background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)' 
-                          }} />
+                          <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)' }} />
                           
-                          {/* İsim ve Ürün Sayısı */}
                           <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
                             <Typography 
                               color="white" 
@@ -1419,10 +1427,10 @@ export function MenuPage() {
                                 textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                               }}
                             >
-                              {category.name}
+                              {t(category, 'name')}
                             </Typography>
                             <Typography variant="caption" color="grey.400">
-                              {productCount} ürün
+                              {productCount} {language === 'tr' ? 'ürün' : 'products'}
                             </Typography>
                           </Box>
                         </Box>
@@ -1433,12 +1441,7 @@ export function MenuPage() {
               })}
             </Stack>
           ) : categories.length > 0 ? (
-            // Layout yok - Varsayılan 2'li grid göster
-            <Box sx={{ 
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 1.5
-            }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
               {categories.map(cat => {
                 const productCount = getCategoryProductCount(cat.id)
                 
@@ -1461,7 +1464,7 @@ export function MenuPage() {
                       <Box 
                         component="img" 
                         src={getImageUrl(cat.image)} 
-                        alt={cat.name}
+                        alt={t(cat, 'name')}
                         sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
@@ -1475,14 +1478,12 @@ export function MenuPage() {
                         <Typography sx={{ fontSize: 48 }}>{cat.icon}</Typography>
                       </Box>
                     )}
-                    <Box sx={{ 
-                      position: 'absolute', 
-                      inset: 0, 
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)' 
-                    }} />
+                    <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)' }} />
                     <Box sx={{ position: 'absolute', bottom: 8, left: 12, right: 12 }}>
-                      <Typography color="white" fontWeight={700} noWrap>{cat.name}</Typography>
-                      <Typography variant="caption" color="grey.400">{productCount} ürün</Typography>
+                      <Typography color="white" fontWeight={700} noWrap>{t(cat, 'name')}</Typography>
+                      <Typography variant="caption" color="grey.400">
+                        {productCount} {language === 'tr' ? 'ürün' : 'products'}
+                      </Typography>
                     </Box>
                   </Box>
                 )
@@ -1490,7 +1491,9 @@ export function MenuPage() {
             </Box>
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography color="text.secondary">Henüz kategori eklenmemiş</Typography>
+              <Typography color="text.secondary">
+                {language === 'tr' ? 'Henüz kategori eklenmemiş' : 'No categories added yet'}
+              </Typography>
             </Box>
           )}
         </Box>
@@ -1498,16 +1501,11 @@ export function MenuPage() {
         {/* ========== 6. FOOTER ========== */}
         <Box sx={{ mt: 4, pt: 4, pb: 6, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
           <Box sx={{ px: 2, maxWidth: 600, mx: 'auto' }}>
-            {/* Logo - Genişletilmiş, Text yok */}
             <Stack alignItems="center" spacing={2} sx={{ mb: 3 }}>
               {branch?.logo ? (
                 <Avatar 
                   src={getImageUrl(branch.logo)} 
-                  sx={{ 
-                    width: 100, 
-                    height: 100,
-                    '& img': { objectFit: 'contain' }
-                  }} 
+                  sx={{ width: 100, height: 100, '& img': { objectFit: 'contain' } }} 
                   variant="rounded"
                 />
               ) : (
@@ -1517,13 +1515,14 @@ export function MenuPage() {
               )}
             </Stack>
 
-            {/* İletişim Bilgileri */}
             <Stack spacing={2}>
               {branch?.address && (
                 <Stack direction="row" spacing={2} alignItems="flex-start">
                   <LocationOn color="primary" />
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Adres</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {language === 'tr' ? 'Adres' : 'Address'}
+                    </Typography>
                     <Typography variant="body2">{branch.address}</Typography>
                   </Box>
                 </Stack>
@@ -1533,7 +1532,9 @@ export function MenuPage() {
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Phone color="primary" />
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Telefon</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {language === 'tr' ? 'Telefon' : 'Phone'}
+                    </Typography>
                     <Typography variant="body2" component="a" href={`tel:${branch.phone}`} sx={{ color: 'white', textDecoration: 'none', display: 'block' }}>
                       {branch.phone}
                     </Typography>
@@ -1545,27 +1546,22 @@ export function MenuPage() {
                 <Stack direction="row" spacing={2} alignItems="center">
                   <AccessTime color="primary" />
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Çalışma Saatleri</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {language === 'tr' ? 'Çalışma Saatleri' : 'Working Hours'}
+                    </Typography>
                     <Typography variant="body2">{branch.workingHours}</Typography>
                   </Box>
                 </Stack>
               )}
             </Stack>
 
-            {/* Sosyal Medya Butonları */}
             <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 3 }}>
               {branch?.whatsapp && (
                 <IconButton
                   component="a"
                   href={`https://wa.me/${branch.whatsapp.replace(/\D/g, '')}`}
                   target="_blank"
-                  sx={{ 
-                    bgcolor: '#25D366', 
-                    color: 'white',
-                    width: 48,
-                    height: 48,
-                    '&:hover': { bgcolor: '#128C7E' }
-                  }}
+                  sx={{ bgcolor: '#25D366', color: 'white', width: 48, height: 48, '&:hover': { bgcolor: '#128C7E' } }}
                 >
                   <WhatsApp />
                 </IconButton>
@@ -1575,20 +1571,13 @@ export function MenuPage() {
                   component="a"
                   href={`https://instagram.com/${branch.instagram.replace('@', '')}`}
                   target="_blank"
-                  sx={{ 
-                    bgcolor: '#E4405F', 
-                    color: 'white',
-                    width: 48,
-                    height: 48,
-                    '&:hover': { bgcolor: '#C13584' }
-                  }}
+                  sx={{ bgcolor: '#E4405F', color: 'white', width: 48, height: 48, '&:hover': { bgcolor: '#C13584' } }}
                 >
                   <Instagram />
                 </IconButton>
               )}
             </Stack>
 
-            {/* Copyright */}
             <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
               <Typography
                 variant="caption"
@@ -1597,11 +1586,7 @@ export function MenuPage() {
                 href="https://www.linkedin.com/in/yusuf-kerim-sar%C4%B1ta%C5%9F-94b172219/"
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{
-                  textDecoration: 'none',
-                  '&:hover': { color: 'primary.main' },
-                  transition: 'color 0.2s'
-                }}
+                sx={{ textDecoration: 'none', '&:hover': { color: 'primary.main' }, transition: 'color 0.2s' }}
               >
                 Yusuf Kerim Sarıtaş © {new Date().getFullYear()}
               </Typography>
@@ -1625,15 +1610,12 @@ export function MenuPage() {
               </IconButton>
               <TextField 
                 fullWidth
-                placeholder="Ürün ara..."
+                placeholder={language === 'tr' ? 'Ürün ara...' : 'Search products...'}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 autoFocus
                 variant="standard"
-                InputProps={{
-                  disableUnderline: true,
-                  sx: { fontSize: '1.1rem' }
-                }}
+                InputProps={{ disableUnderline: true, sx: { fontSize: '1.1rem' } }}
               />
             </Stack>
           </DialogTitle>
@@ -1659,7 +1641,7 @@ export function MenuPage() {
                           <Box 
                             component="img" 
                             src={getImageUrl(product.thumbnail)} 
-                            alt={product.name}
+                            alt={t(product, 'name')}
                             sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                           />
                         ) : (
@@ -1667,13 +1649,9 @@ export function MenuPage() {
                             <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
                           </Box>
                         )}
-                        <Box sx={{ 
-                          position: 'absolute', 
-                          inset: 0, 
-                          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%)' 
-                        }} />
+                        <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%)' }} />
                         <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5 }}>
-                          <Typography variant="subtitle2" fontWeight={600} color="white" noWrap>{product.name}</Typography>
+                          <Typography variant="subtitle2" fontWeight={600} color="white" noWrap>{t(product, 'name')}</Typography>
                           <Typography variant="body2" color="primary.main" fontWeight={700}>{formatPrice(product.price)}</Typography>
                         </Box>
                       </Box>
@@ -1683,29 +1661,39 @@ export function MenuPage() {
               ) : (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
                   <Search sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                  <Typography color="text.secondary">"{searchQuery}" için sonuç bulunamadı</Typography>
+                  <Typography color="text.secondary">
+                    "{searchQuery}" {language === 'tr' ? 'için sonuç bulunamadı' : 'not found'}
+                  </Typography>
                 </Box>
               )
             ) : (
               <Box sx={{ textAlign: 'center', py: 6 }}>
                 <Search sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography color="text.secondary">Ürün adı yazarak arama yapın</Typography>
+                <Typography color="text.secondary">
+                  {language === 'tr' ? 'Ürün adı yazarak arama yapın' : 'Type product name to search'}
+                </Typography>
               </Box>
             )}
           </DialogContent>
         </Dialog>
 
-        {/* ========== KATEGORİ ÜRÜN MODAL ========== */}
-        {/* KALDIRILDI - Artık sayfa olarak gösteriliyor */}
-
         {/* ========== ÜRÜN DETAY MODAL ========== */}
-        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onTagClick={handleTagSelect} />
+        <ProductDetailModal 
+          product={selectedProduct} 
+          onClose={() => setSelectedProduct(null)} 
+          onTagClick={handleTagSelect}
+          language={language}
+          t={t}
+          tArray={tArray}
+        />
 
         {/* ========== YORUM FORMU MODAL ========== */}
         <Dialog open={showReviewForm} onClose={() => setShowReviewForm(false)} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6" fontWeight={700}>💬 Görüş & Yorumunuz</Typography>
+              <Typography variant="h6" fontWeight={700}>
+                💬 {language === 'tr' ? 'Görüş & Yorumunuz' : 'Your Feedback'}
+              </Typography>
               <IconButton onClick={() => setShowReviewForm(false)} size="small"><Close /></IconButton>
             </Stack>
           </DialogTitle>
@@ -1713,15 +1701,17 @@ export function MenuPage() {
             <Stack spacing={3} sx={{ mt: 2 }}>
               <TextField 
                 fullWidth 
-                label="Adınız" 
+                label={language === 'tr' ? 'Adınız' : 'Your Name'}
                 value={reviewForm.customerName} 
                 onChange={e => setReviewForm({ ...reviewForm, customerName: e.target.value })} 
                 required 
-                placeholder="İsminizi girin"
+                placeholder={language === 'tr' ? 'İsminizi girin' : 'Enter your name'}
               />
               
               <Box>
-                <Typography variant="subtitle2" gutterBottom>Puanınız *</Typography>
+                <Typography variant="subtitle2" gutterBottom>
+                  {language === 'tr' ? 'Puanınız' : 'Your Rating'} *
+                </Typography>
                 <Rating 
                   value={reviewForm.rating} 
                   onChange={(e, v) => setReviewForm({ ...reviewForm, rating: v })} 
@@ -1732,26 +1722,28 @@ export function MenuPage() {
               
               <TextField 
                 fullWidth 
-                label="Yorumunuz" 
+                label={language === 'tr' ? 'Yorumunuz' : 'Your Comment'}
                 value={reviewForm.comment} 
                 onChange={e => setReviewForm({ ...reviewForm, comment: e.target.value })} 
                 multiline 
                 rows={4} 
-                placeholder="Deneyiminizi bizimle paylaşın..." 
+                placeholder={language === 'tr' ? 'Deneyiminizi bizimle paylaşın...' : 'Share your experience with us...'} 
               />
               
               <TextField 
                 fullWidth 
-                label="İletişim Bilginiz (Opsiyonel)" 
+                label={language === 'tr' ? 'İletişim Bilginiz (Opsiyonel)' : 'Contact Info (Optional)'}
                 value={reviewForm.contact} 
                 onChange={e => setReviewForm({ ...reviewForm, contact: e.target.value })} 
-                placeholder="Telefon veya email" 
-                helperText="Size geri dönüş yapabilmemiz için" 
+                placeholder={language === 'tr' ? 'Telefon veya email' : 'Phone or email'}
+                helperText={language === 'tr' ? 'Size geri dönüş yapabilmemiz için' : 'So we can get back to you'} 
               />
             </Stack>
           </DialogContent>
           <DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider' }}>
-            <Button onClick={() => setShowReviewForm(false)} sx={{ mr: 1 }}>İptal</Button>
+            <Button onClick={() => setShowReviewForm(false)} sx={{ mr: 1 }}>
+              {language === 'tr' ? 'İptal' : 'Cancel'}
+            </Button>
             <Button 
               variant="contained" 
               onClick={handleSubmitReview} 
@@ -1759,7 +1751,10 @@ export function MenuPage() {
               startIcon={submittingReview ? <CircularProgress size={20} /> : <Send />}
               sx={{ px: 4 }}
             >
-              {submittingReview ? 'Gönderiliyor...' : 'Gönder'}
+              {submittingReview 
+                ? (language === 'tr' ? 'Gönderiliyor...' : 'Sending...') 
+                : (language === 'tr' ? 'Gönder' : 'Send')
+              }
             </Button>
           </DialogActions>
         </Dialog>
@@ -1770,26 +1765,46 @@ export function MenuPage() {
 }
 
 // ==================== PRODUCT DETAIL MODAL ====================
-function ProductDetailModal({ product, onClose, onTagClick }) {
+function ProductDetailModal({ product, onClose, onTagClick, language = 'tr', t, tArray }) {
   const [showAR, setShowAR] = useState(false)
   const modelViewerRef = useRef(null)
+
+  // Fallback t ve tArray fonksiyonları
+  const getText = t || ((item, field) => {
+    if (!item) return ''
+    const enField = field + 'EN'
+    if (language === 'en' && item[enField]) return item[enField]
+    return item[field] || ''
+  })
+
+  const getArray = tArray || ((item, field) => {
+    if (!item) return []
+    const enField = field + 'EN'
+    if (language === 'en' && item[enField] && item[enField].length > 0) return item[enField]
+    return item[field] || []
+  })
 
   if (!product) return null
 
   const handleTagClick = (tag) => {
     if (onTagClick && typeof tag === 'object' && tag.slug) {
-      onClose() // Önce ürün modalını kapat
-      onTagClick(tag) // Sonra etiket sayfasını aç
+      onClose()
+      onTagClick(tag)
     }
+  }
+
+  // Kategori adını dile göre al
+  const getCategoryName = () => {
+    if (language === 'en' && product.categoryNameEN) return product.categoryNameEN
+    return product.categoryName || ''
   }
 
   return (
     <Dialog open={!!product} onClose={onClose} maxWidth="sm" fullWidth>
       <Box sx={{ position: 'relative' }}>
-        {/* Image */}
         <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default' }}>
           {product.thumbnail ? (
-            <Box component="img" src={getImageUrl(product.thumbnail)} alt={product.name}
+            <Box component="img" src={getImageUrl(product.thumbnail)} alt={getText(product, 'name')}
               sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1800,21 +1815,19 @@ function ProductDetailModal({ product, onClose, onTagClick }) {
             <Close sx={{ color: 'white' }} />
           </IconButton>
 
-          {/* Badges */}
           <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, left: 8 }}>
             {product.isCampaign && product.campaignPrice && (
               <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" />
             )}
-            {product.isFeatured && <Chip label="⭐ Öne Çıkan" size="small" color="warning" />}
+            {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
           </Stack>
         </Box>
 
-        {/* Content */}
         <DialogContent>
-          <Typography variant="h5" fontWeight={700}>{product.name}</Typography>
-          {product.categoryName && (
+          <Typography variant="h5" fontWeight={700}>{getText(product, 'name')}</Typography>
+          {getCategoryName() && (
             <Typography variant="body2" color="text.secondary">
-              {product.categoryName}
+              {getCategoryName()}
             </Typography>
           )}
 
@@ -1829,35 +1842,56 @@ function ProductDetailModal({ product, onClose, onTagClick }) {
             )}
           </Stack>
 
-          {product.description && (
-            <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.8 }}>{product.description}</Typography>
+          {getText(product, 'description') && (
+            <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.8 }}>
+              {getText(product, 'description')}
+            </Typography>
           )}
 
-          {/* Details */}
           <Stack direction="row" spacing={2} sx={{ mt: 3 }} flexWrap="wrap" useFlexGap>
-            {product.calories && <Chip icon={<Info />} label={`${product.calories} kcal`} variant="outlined" size="small" />}
-            {product.preparationTime && <Chip icon={<AccessTime />} label={`${product.preparationTime} dk`} variant="outlined" size="small" />}
+            {product.calories && (
+              <Chip 
+                icon={<Info />} 
+                label={`${product.calories} kcal`} 
+                variant="outlined" 
+                size="small" 
+              />
+            )}
+            {product.preparationTime && (
+              <Chip 
+                icon={<AccessTime />} 
+                label={`${product.preparationTime} ${language === 'tr' ? 'dk' : 'min'}`} 
+                variant="outlined" 
+                size="small" 
+              />
+            )}
           </Stack>
 
-          {product.allergens?.length > 0 && (
+          {getArray(product, 'allergens')?.length > 0 && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="caption" color="text.secondary">Alerjenler:</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {language === 'tr' ? 'Alerjenler:' : 'Allergens:'}
+              </Typography>
               <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-                {product.allergens.map((a, i) => <Chip key={i} label={a} size="small" color="warning" variant="outlined" />)}
+                {getArray(product, 'allergens').map((a, i) => (
+                  <Chip key={i} label={a} size="small" color="warning" variant="outlined" />
+                ))}
               </Stack>
             </Box>
           )}
 
           {product.tags?.length > 0 && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Etiketler:</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                {language === 'tr' ? 'Etiketler:' : 'Tags:'}
+              </Typography>
               <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                 {product.tags.map((tag, i) => {
                   const isClickable = typeof tag === 'object' && tag.slug
                   return (
                     <Chip 
                       key={tag.id || tag.slug || i} 
-                      label={typeof tag === 'string' ? tag : tag.name} 
+                      label={typeof tag === 'string' ? tag : getText(tag, 'name')} 
                       size="small" 
                       variant="outlined"
                       clickable={isClickable}
@@ -1865,11 +1899,7 @@ function ProductDetailModal({ product, onClose, onTagClick }) {
                       sx={isClickable ? {
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        '&:hover': {
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          borderColor: 'primary.main'
-                        }
+                        '&:hover': { bgcolor: 'primary.main', color: 'white', borderColor: 'primary.main' }
                       } : {}}
                     />
                   )
@@ -1878,12 +1908,11 @@ function ProductDetailModal({ product, onClose, onTagClick }) {
             </Box>
           )}
 
-          {/* AR Button */}
           {product.hasGlb && product.glbFile && (
             <Box sx={{ mt: 3 }}>
               <Button variant="contained" fullWidth size="large" startIcon={<ViewInAr />} onClick={() => setShowAR(true)}
                 sx={{ py: 1.5, background: 'linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)' }}>
-                3D Modeli Görüntüle (AR)
+                {language === 'tr' ? '3D Modeli Görüntüle (AR)' : 'View 3D Model (AR)'}
               </Button>
             </Box>
           )}
@@ -1898,15 +1927,14 @@ function ProductDetailModal({ product, onClose, onTagClick }) {
           </IconButton>
 
           <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 10 }}>
-            <Typography variant="h6" color="white" fontWeight={700}>{product.name}</Typography>
+            <Typography variant="h6" color="white" fontWeight={700}>{getText(product, 'name')}</Typography>
             <Typography variant="body2" color="grey.400">3D Model</Typography>
           </Box>
 
-          {/* Model Viewer */}
           <model-viewer
             ref={modelViewerRef}
             src={getGlbUrl(product.glbFile)}
-            alt={product.name}
+            alt={getText(product, 'name')}
             ar
             ar-modes="webxr scene-viewer quick-look"
             camera-controls
@@ -1919,13 +1947,16 @@ function ProductDetailModal({ product, onClose, onTagClick }) {
               padding: '12px 24px', background: '#e53935', color: 'white', border: 'none',
               borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
             }}>
-              📱 AR'da Görüntüle
+              📱 {language === 'tr' ? "AR'da Görüntüle" : 'View in AR'}
             </button>
           </model-viewer>
 
           <Box sx={{ position: 'absolute', bottom: 24, left: 24, right: 24 }}>
             <Alert severity="info" sx={{ bgcolor: 'rgba(30,136,229,0.2)' }}>
-              Modeli parmağınızla döndürebilir, yakınlaştırabilirsiniz. AR butonu ile gerçek ortamda görün!
+              {language === 'tr' 
+                ? 'Modeli parmağınızla döndürebilir, yakınlaştırabilirsiniz. AR butonu ile gerçek ortamda görün!'
+                : 'You can rotate and zoom the model. Use AR button to view in real environment!'
+              }
             </Alert>
           </Box>
         </Box>

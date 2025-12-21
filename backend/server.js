@@ -11,9 +11,9 @@ require('dotenv').config()
 const app = express()
 
 // ==================== CONFIG ====================
-const PORT = process.env.PORT || 3001;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ar-menu';
-const JWT_SECRET = process.env.JWT_SECRET || 'ar-menu-secret-key-change-in-production';
+const PORT = 3001;
+const MONGODB_URI =  'mongodb://localhost:27017/ar-menu';
+const JWT_SECRET =  'ar-menu-secret-key-change-in-production';
 const API_KEY = "test123";
 
 // ==================== MIDDLEWARE ====================
@@ -67,7 +67,7 @@ const sectionSchema = new mongoose.Schema({
   color: { type: String, default: '#e53935' }
 }, { timestamps: true })
 
-// Tag (Etiket) - YENİ
+// Tag (Etiket)
 const tagSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   name: { type: String, required: true },
@@ -79,12 +79,13 @@ const tagSchema = new mongoose.Schema({
   order: { type: Number, default: 0 }
 }, { timestamps: true })
 
-// Category
+// Category - nameEN eklendi
 const categorySchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   name: { type: String, required: true },
-  icon: { type: String, default: '📁' },
+  nameEN: { type: String, default: '' },  // İngilizce isim
+  icon: { type: String, default: '' },
   image: { type: String, default: null },
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
@@ -108,8 +109,10 @@ const productSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   name: { type: String, required: true },
+  nameEN: { type: String, default: '' },           // YENİ
   price: { type: Number, required: true },
   description: { type: String, default: '' },
+  descriptionEN: { type: String, default: '' },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   thumbnail: { type: String, default: null },
   images: [{ type: String }],
@@ -121,7 +124,8 @@ const productSchema = new mongoose.Schema({
   calories: { type: Number, default: null },
   preparationTime: { type: Number, default: null },
   allergens: [{ type: String }],
-  tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }], // DEĞİŞTİ: String -> ObjectId
+  allergensEN: [{ type: String }],                 // YENİ
+  tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
   viewCount: { type: Number, default: 0 },
   sectionPrices: [{
     section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section' },
@@ -244,6 +248,76 @@ const createSlug = (text) => {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+// ==================== TRANSLATE API ====================
+app.post('/api/translate', authMiddleware, async (req, res) => {
+  try {
+    const { text, targetLang = 'en', sourceLang = 'tr' } = req.body
+    
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Text is required' })
+    }
+
+    // MyMemory Translation API (Ücretsiz, günlük 5000 kelime)
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`
+    
+    const response = await fetch(url)
+    const data = await response.json()
+    
+    if (data.responseStatus === 200 && data.responseData) {
+      res.json({ 
+        success: true,
+        translatedText: data.responseData.translatedText,
+        source: text,
+        sourceLang,
+        targetLang
+      })
+    } else {
+      res.status(400).json({ 
+        error: 'Translation failed', 
+        details: data.responseDetails 
+      })
+    }
+  } catch (err) {
+    console.error('Translation error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Toplu çeviri endpoint'i
+app.post('/api/translate/bulk', authMiddleware, async (req, res) => {
+  try {
+    const { texts, targetLang = 'en', sourceLang = 'tr' } = req.body
+    
+    if (!texts || !Array.isArray(texts) || texts.length === 0) {
+      return res.status(400).json({ error: 'Texts array is required' })
+    }
+
+    const translations = await Promise.all(
+      texts.map(async (text) => {
+        if (!text || !text.trim()) return { source: text, translated: '' }
+        
+        try {
+          const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`
+          const response = await fetch(url)
+          const data = await response.json()
+          
+          return {
+            source: text,
+            translated: data.responseData?.translatedText || ''
+          }
+        } catch {
+          return { source: text, translated: '' }
+        }
+      })
+    )
+
+    res.json({ success: true, translations })
+  } catch (err) {
+    console.error('Bulk translation error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ==================== PUBLIC ROUTES ====================
 
 // Get all branches for selection screen
@@ -357,7 +431,7 @@ app.get('/api/public/branches/:slug/products/by-tag/:tagSlug', async (req, res) 
       tags: tag._id,
       isActive: true
     })
-    .populate('category', 'name icon')
+    .populate('category', 'name nameEN icon')
     .populate('tags', 'name slug icon color')
     .sort({ isFeatured: -1, name: 1 })
     
@@ -383,6 +457,7 @@ app.get('/api/public/branches/:slug/products/by-tag/:tagSlug', async (req, res) 
         glbFile: p.glbFile,
         categoryId: p.category?._id,
         categoryName: p.category?.name,
+        categoryNameEN: p.category?.nameEN || '',
         categoryIcon: p.category?.icon,
         tags: p.tags?.map(t => ({
           id: t._id,
@@ -399,27 +474,32 @@ app.get('/api/public/branches/:slug/products/by-tag/:tagSlug', async (req, res) 
   }
 })
 
-// Get categories with layout info
+// Get categories with layout info - nameEN eklendi
 app.get('/api/public/branches/:slug/categories', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
     const categories = await Category.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
     res.json(categories.map(c => ({ 
-      id: c._id, name: c.name, icon: c.icon, image: c.image, 
-      description: c.description, layoutSize: c.layoutSize
+      id: c._id, 
+      name: c.name, 
+      nameEN: c.nameEN || '',
+      icon: c.icon, 
+      image: c.image, 
+      description: c.description, 
+      layoutSize: c.layoutSize
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get category layouts (PUBLIC)
+// Get category layouts (PUBLIC) - nameEN eklendi
 app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
     
     const layouts = await CategoryLayout.find({ branch: branch._id })
-      .populate('categories.category', 'name icon image description')
+      .populate('categories.category', 'name nameEN icon image description')
       .sort({ rowOrder: 1 })
     
     const result = layouts.map(l => ({
@@ -431,6 +511,7 @@ app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
           id: c.category._id,
           _id: c.category._id,
           name: c.category.name,
+          nameEN: c.category.nameEN || '',
           icon: c.category.icon,
           image: c.category.image,
           description: c.category.description
@@ -456,7 +537,7 @@ app.get('/api/public/branches/:slug/products', async (req, res) => {
     if (req.query.isFeatured === 'true') filter.isFeatured = true
     
     const products = await Product.find(filter)
-      .populate('category', 'name icon')
+      .populate('category', 'name nameEN icon')
       .populate('tags', 'name slug icon color')
       .sort({ isFeatured: -1, name: 1 })
     
@@ -483,14 +564,20 @@ app.get('/api/public/branches/:slug/products', async (req, res) => {
       })) || [],
       categoryId: p.category?._id || null,
       categoryName: p.category?.name || null,
+      categoryNameEN: p.category?.nameEN || '',
       categoryIcon: p.category?.icon || null,
-      category: p.category ? { id: p.category._id, name: p.category.name, icon: p.category.icon } : null,
+      category: p.category ? { 
+        id: p.category._id, 
+        name: p.category.name, 
+        nameEN: p.category.nameEN || '',
+        icon: p.category.icon 
+      } : null,
       sectionPrices: p.sectionPrices || []
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get menu with section filter
+// Get menu with section filter - nameEN eklendi
 app.get('/api/public/branches/:slug/menu', async (req, res) => {
   try {
     const { section: sectionSlug } = req.query
@@ -513,7 +600,7 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
       productFilter.$or = [{ section: null }, { section: selectedSection._id }]
     }
     const products = await Product.find(productFilter)
-      .populate('category', 'name icon')
+      .populate('category', 'name nameEN icon')
       .populate('tags', 'name slug icon color')
       .populate('sectionPrices.section', 'name slug')
       .sort({ isFeatured: -1, createdAt: -1 })
@@ -529,7 +616,7 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
       layoutFilter.$or = [{ section: null }, { section: selectedSection._id }]
     }
     const layouts = await CategoryLayout.find(layoutFilter)
-      .populate('categories.category', 'name icon image')
+      .populate('categories.category', 'name nameEN icon image')
       .sort({ rowOrder: 1 })
 
     // Etiketleri de getir
@@ -540,6 +627,7 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
       product.id = p._id
       product.categoryId = p.category?._id
       product.categoryName = p.category?.name
+      product.categoryNameEN = p.category?.nameEN || ''
       product.categoryIcon = p.category?.icon
       product.hasGlb = !!p.glbFile
       product.tags = p.tags?.map(t => ({
@@ -580,7 +668,12 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
         workingHours: branch.workingHours, theme: branch.theme
       },
       categories: categories.map(c => ({ 
-        id: c._id, name: c.name, icon: c.icon, image: c.image, description: c.description
+        id: c._id, 
+        name: c.name, 
+        nameEN: c.nameEN || '',
+        icon: c.icon, 
+        image: c.image, 
+        description: c.description
       })),
       products: processedProducts,
       announcements: announcements.map(a => ({
@@ -590,8 +683,11 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
         id: l._id, rowOrder: l.rowOrder,
         categories: l.categories.map(c => ({
           category: c.category ? {
-            id: c.category._id, name: c.category.name,
-            icon: c.category.icon, image: c.category.image
+            id: c.category._id, 
+            name: c.category.name,
+            nameEN: c.category.nameEN || '',
+            icon: c.category.icon, 
+            image: c.category.image
           } : null,
           size: c.size
         })).filter(c => c.category)
@@ -893,7 +989,7 @@ app.put('/api/branches/:branchId/sections/reorder', authMiddleware, async (req, 
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ==================== TAGS (YENİ) ====================
+// ==================== TAGS ====================
 app.get('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
   try {
     const tags = await Tag.find({ branch: req.params.branchId }).sort({ order: 1, name: 1 })
@@ -1136,7 +1232,7 @@ app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ==================== CATEGORIES ====================
+// ==================== CATEGORIES ==================== (nameEN eklendi)
 app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) => {
   try {
     const { section } = req.query
@@ -1154,7 +1250,9 @@ app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) =
     const countMap = {}
     counts.forEach(c => { if (c._id) countMap[c._id.toString()] = c.count })
     res.json(categories.map(c => ({ 
-      ...c.toObject(), id: c._id, 
+      ...c.toObject(), 
+      id: c._id,
+      nameEN: c.nameEN || '',
       productCount: countMap[c._id.toString()] || 0,
       sectionName: c.section?.name
     })))
@@ -1199,7 +1297,7 @@ app.post('/api/categories/:id/image', authMiddleware, upload.single('image'), as
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ==================== CATEGORY LAYOUTS ====================
+// ==================== CATEGORY LAYOUTS ==================== (nameEN populate eklendi)
 app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, res) => {
   try {
     const { section } = req.query
@@ -1210,7 +1308,7 @@ app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, 
     }
     
     const layouts = await CategoryLayout.find(filter)
-      .populate('categories.category', 'name icon image')
+      .populate('categories.category', 'name nameEN icon image')
       .sort({ rowOrder: 1 })
     res.json(layouts.map(l => ({ ...l.toObject(), id: l._id })))
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -1265,7 +1363,7 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
     }
     
     const newLayouts = await CategoryLayout.find(filter)
-      .populate('categories.category', 'name icon image')
+      .populate('categories.category', 'name nameEN icon image')
       .sort({ rowOrder: 1 })
     
     res.json(newLayouts.map(l => ({ 
@@ -1296,7 +1394,7 @@ app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => 
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const [products, total] = await Promise.all([
       Product.find(filter)
-        .populate('category', 'name icon')
+        .populate('category', 'name nameEN icon')
         .populate('section', 'name icon')
         .populate('tags', 'name slug icon color')
         .sort({ createdAt: -1 })
@@ -1308,7 +1406,10 @@ app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => 
     res.json({
       products: products.map(p => ({
         ...p.toObject(), id: p._id, 
-        categoryId: p.category?._id, categoryName: p.category?.name, categoryIcon: p.category?.icon,
+        categoryId: p.category?._id, 
+        categoryName: p.category?.name, 
+        categoryNameEN: p.category?.nameEN || '',
+        categoryIcon: p.category?.icon,
         sectionId: p.section?._id, sectionName: p.section?.name,
         hasGlb: !!p.glbFile,
         tags: p.tags?.map(t => ({
