@@ -15,8 +15,8 @@ import {
 } from '@mui/icons-material'
 
 // ==================== CONFIG ====================
-export const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.3:3001/api'
-export const FILES_URL = import.meta.env.VITE_FILES_URL || 'http://192.168.1.3:3001'
+export const API_URL = 'https://api.armenuqr.com/api'
+export const FILES_URL ='https://api.armenuqr.com'
 
 // ==================== AXIOS ====================
 export const api = axios.create({ baseURL: API_URL })
