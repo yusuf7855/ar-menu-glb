@@ -15,8 +15,8 @@ import {
 } from '@mui/icons-material'
 
 // ==================== CONFIG ====================
-export const API_URL = 'https://apiremi.armenuqr.com/api'
-export const FILES_URL ='https://apiremi.armenuqr.com'
+export const API_URL = 'https://api.armenuqr.com/api'
+export const FILES_URL ='https://api.armenuqr.com'
 
 // ==================== AXIOS ====================
 export const api = axios.create({ baseURL: API_URL })
