@@ -12,7 +12,7 @@ const app = express()
 
 // ==================== CONFIG ====================
 const PORT = 3001;
-const MONGODB_URI =  'mongodb://localhost:27017/ar-menu';
+const MONGODB_URI =  'mongodb://localhost:27017/ar-menu-remi';
 const JWT_SECRET =  'ar-menu-secret-key-change-in-production';
 const API_KEY = "test123";
 

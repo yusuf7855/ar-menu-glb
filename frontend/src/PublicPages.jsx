@@ -294,6 +294,9 @@ export function MenuPage() {
   // Arama state
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  
+  // 3D Carousel state
+  const [showCarousel, setShowCarousel] = useState(false)
 
   // Dil değiştirme fonksiyonu
   const toggleLanguage = () => {
@@ -496,6 +499,12 @@ export function MenuPage() {
     [products]
   )
 
+  // 3D modeli olan ürünler
+  const products3D = useMemo(() => 
+    products.filter(p => p.hasGlb && p.glbFile), 
+    [products]
+  )
+
   // Kategori bazlı ürün sayısı hesaplama
   const getCategoryProductCount = (categoryId) => {
     if (!categoryId) return 0
@@ -540,23 +549,23 @@ export function MenuPage() {
 
   // Dil buton komponenti
   const LanguageButton = () => (
-  <IconButton 
-    onClick={toggleLanguage}
-    sx={{ 
-      bgcolor: 'rgba(0,0,0,0.5)', 
-      backdropFilter: 'blur(10px)',
-      color: 'white',
-      width: 40,
-      height: 40,
-      fontSize: '0.75rem',
-      fontWeight: 700,
-      border: '1px solid rgba(255,255,255,0.2)',
-      '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
-    }}
-  >
-    {language === 'tr' ? 'TR' : 'EN'}
-  </IconButton>
-)
+    <IconButton 
+      onClick={toggleLanguage}
+      sx={{ 
+        bgcolor: 'rgba(0,0,0,0.5)', 
+        backdropFilter: 'blur(10px)',
+        color: 'white',
+        width: 40,
+        height: 40,
+        fontSize: '0.8rem',
+        fontWeight: 700,
+        border: '1px solid rgba(255,255,255,0.2)',
+        '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+      }}
+    >
+      {language === 'tr' ? 'TR' : 'EN'}
+    </IconButton>
+  )
 
   if (loading) {
     return (
@@ -768,35 +777,25 @@ export function MenuPage() {
                       '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
                     }}
                   >
-                    <Box 
-                      sx={{ 
-                        width: 64, 
-                        height: 64, 
-                        borderRadius: 1.5,
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                        bgcolor: 'background.paper'
-                      }}
-                    >
-                      {product.thumbnail ? (
+                    {product.thumbnail && (
+                      <Box 
+                        sx={{ 
+                          width: 64, 
+                          height: 64, 
+                          borderRadius: 1.5,
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          bgcolor: 'background.paper'
+                        }}
+                      >
                         <Box 
                           component="img" 
                           src={getImageUrl(product.thumbnail)} 
                           alt={t(product, 'name')}
                           sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
-                      ) : (
-                        <Box sx={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center' 
-                        }}>
-                          <Restaurant sx={{ fontSize: 24, color: 'text.secondary' }} />
-                        </Box>
-                      )}
-                    </Box>
+                      </Box>
+                    )}
 
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography fontWeight={600} noWrap>
@@ -940,35 +939,25 @@ export function MenuPage() {
                       '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
                     }}
                   >
-                    <Box 
-                      sx={{ 
-                        width: 64, 
-                        height: 64, 
-                        borderRadius: 1.5,
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                        bgcolor: 'background.paper'
-                      }}
-                    >
-                      {product.thumbnail ? (
+                    {product.thumbnail && (
+                      <Box 
+                        sx={{ 
+                          width: 64, 
+                          height: 64, 
+                          borderRadius: 1.5,
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          bgcolor: 'background.paper'
+                        }}
+                      >
                         <Box 
                           component="img" 
                           src={getImageUrl(product.thumbnail)} 
                           alt={t(product, 'name')}
                           sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
-                      ) : (
-                        <Box sx={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center' 
-                        }}>
-                          <Restaurant sx={{ fontSize: 24, color: 'text.secondary' }} />
-                        </Box>
-                      )}
-                    </Box>
+                      </Box>
+                    )}
 
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography fontWeight={600} noWrap>
@@ -1759,8 +1748,484 @@ export function MenuPage() {
           </DialogActions>
         </Dialog>
 
+        {/* ========== 3D FLOATING BUTTON ========== */}
+        <Floating3DButton 
+          onClick={() => setShowCarousel(true)} 
+          productCount={products3D.length}
+          language={language}
+        />
+
+        {/* ========== 3D CAROUSEL MODAL ========== */}
+        <Carousel3DModal
+          open={showCarousel}
+          onClose={() => setShowCarousel(false)}
+          products={products3D}
+          language={language}
+          t={t}
+          onProductSelect={(product) => {
+            setShowCarousel(false)
+            setSelectedProduct(product)
+          }}
+        />
+
       </Box>
     </ThemeProvider>
+  )
+}
+
+// ==================== 3D FLOATING BUTTON ====================
+function Floating3DButton({ onClick, productCount, language = 'tr' }) {
+  const [pulse, setPulse] = useState(true)
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setPulse(false), 5000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (productCount === 0) return null
+
+  return (
+    <Tooltip title={language === 'tr' ? '3D Menüde Gezin' : 'Browse 3D Menu'} placement="left">
+      <Box
+        onClick={onClick}
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          zIndex: 1000,
+          cursor: 'pointer',
+        }}
+      >
+        {/* Pulse animasyonu */}
+        {pulse && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: -8,
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+              animation: 'pulse3d 2s infinite',
+              '@keyframes pulse3d': {
+                '0%': { transform: 'scale(1)', opacity: 0.5 },
+                '50%': { transform: 'scale(1.3)', opacity: 0 },
+                '100%': { transform: 'scale(1)', opacity: 0.5 },
+              }
+            }}
+          />
+        )}
+        
+        {/* Ana buton */}
+        <Box
+          sx={{
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #e53935 0%, #c62828 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(229, 57, 53, 0.5)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'scale(1.1)',
+              boxShadow: '0 6px 30px rgba(229, 57, 53, 0.7)',
+            },
+            '&:active': {
+              transform: 'scale(0.95)',
+            }
+          }}
+        >
+          <ViewInAr sx={{ fontSize: 32, color: 'white' }} />
+        </Box>
+        
+        {/* Badge - ürün sayısı */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -4,
+            right: -4,
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            bgcolor: '#1e88e5',
+            color: 'white',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '2px solid #0a0a0a',
+          }}
+        >
+          {productCount}
+        </Box>
+      </Box>
+    </Tooltip>
+  )
+}
+
+// ==================== 3D CAROUSEL MODAL ====================
+function Carousel3DModal({ open, onClose, products, language = 'tr', t, onProductSelect }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [touchStart, setTouchStart] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const modelViewerRef = useRef(null)
+
+  // Dile göre metin
+  const getText = t || ((item, field) => {
+    if (!item) return ''
+    const enField = field + 'EN'
+    if (language === 'en' && item[enField]) return item[enField]
+    return item[field] || ''
+  })
+
+  // Kategorileri çıkar
+  const categories = useMemo(() => {
+    const cats = []
+    const seen = new Set()
+    products.forEach(p => {
+      const catId = p.categoryId || p.category?._id || p.category?.id
+      const catName = getText(p, 'categoryName') || p.categoryName || 'Diğer'
+      if (catId && !seen.has(catId)) {
+        seen.add(catId)
+        cats.push({ id: catId, name: catName })
+      }
+    })
+    return cats
+  }, [products, language])
+
+  // Filtrelenmiş ürünler
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === 'all') return products
+    return products.filter(p => {
+      const catId = p.categoryId || p.category?._id || p.category?.id
+      return catId === selectedCategory
+    })
+  }, [products, selectedCategory])
+
+  // Modal açıldığında sıfırla
+  useEffect(() => {
+    if (open) {
+      setCurrentIndex(0)
+      setSelectedCategory('all')
+    }
+  }, [open])
+
+  // Kategori değiştiğinde index sıfırla
+  useEffect(() => {
+    setCurrentIndex(0)
+  }, [selectedCategory])
+
+  const currentProduct = filteredProducts[currentIndex]
+
+  const handlePrev = () => {
+    setCurrentIndex(prev => prev === 0 ? filteredProducts.length - 1 : prev - 1)
+  }
+
+  const handleNext = () => {
+    setCurrentIndex(prev => prev === filteredProducts.length - 1 ? 0 : prev + 1)
+  }
+
+  // Touch/Swipe
+  const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX)
+  const handleTouchEnd = (e) => {
+    if (!touchStart) return
+    const diff = touchStart - e.changedTouches[0].clientX
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) handleNext()
+      else handlePrev()
+    }
+    setTouchStart(null)
+  }
+
+  // Gerçek AR'ı aç
+  const handleOpenRealAR = () => {
+    const modelViewer = modelViewerRef.current
+    if (modelViewer && modelViewer.canActivateAR) {
+      modelViewer.activateAR()
+    } else {
+      alert(language === 'tr' ? 'AR bu cihazda desteklenmiyor. Android veya iOS cihaz gerekli.' : 'AR not supported. Android or iOS device required.')
+    }
+  }
+
+  if (!open || products.length === 0) return null
+
+  return (
+    <Dialog open={open} onClose={onClose} fullScreen PaperProps={{ sx: { bgcolor: '#0a0a0a' } }}>
+      
+      {/* Header */}
+      <Box sx={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        zIndex: 10,
+        p: 2,
+        pb: 1,
+        bgcolor: 'rgba(0,0,0,0.95)',
+      }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+          <Box>
+            <Typography variant="h6" fontWeight={700} color="white">
+              {language === 'tr' ? '3D Menü' : '3D Menu'}
+            </Typography>
+            <Typography variant="caption" color="grey.400">
+              {currentIndex + 1} / {filteredProducts.length} {language === 'tr' ? 'ürün' : 'products'}
+            </Typography>
+          </Box>
+          <IconButton onClick={onClose} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}>
+            <Close />
+          </IconButton>
+        </Stack>
+
+        {/* Kategori Filtresi */}
+        {categories.length > 1 && (
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1, 
+            overflowX: 'auto', 
+            pb: 1,
+            '&::-webkit-scrollbar': { display: 'none' },
+          }}>
+            <Chip
+              label={language === 'tr' ? 'Tümü' : 'All'}
+              onClick={() => setSelectedCategory('all')}
+              sx={{
+                bgcolor: selectedCategory === 'all' ? 'primary.main' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                fontWeight: 600,
+                '&:hover': { bgcolor: selectedCategory === 'all' ? 'primary.dark' : 'rgba(255,255,255,0.2)' },
+              }}
+            />
+            {categories.map(cat => (
+              <Chip
+                key={cat.id}
+                label={cat.name}
+                onClick={() => setSelectedCategory(cat.id)}
+                sx={{
+                  bgcolor: selectedCategory === cat.id ? 'primary.main' : 'rgba(255,255,255,0.1)',
+                  color: 'white',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  '&:hover': { bgcolor: selectedCategory === cat.id ? 'primary.dark' : 'rgba(255,255,255,0.2)' },
+                }}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
+
+      {/* Model Viewer Area */}
+      <Box 
+        sx={{ 
+          position: 'absolute',
+          top: categories.length > 1 ? 110 : 70,
+          left: 0,
+          right: 0,
+          bottom: 220,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {filteredProducts.length > 0 ? (
+          <>
+            {/* Sol Ok */}
+            <IconButton
+              onClick={handlePrev}
+              sx={{
+                position: 'absolute',
+                left: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 5,
+                bgcolor: 'rgba(255,255,255,0.15)',
+                color: 'white',
+                width: 48,
+                height: 48,
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
+              }}
+            >
+              <ChevronLeft sx={{ fontSize: 28 }} />
+            </IconButton>
+
+            {/* Model Viewer */}
+            <model-viewer
+              ref={modelViewerRef}
+              key={`carousel-${currentProduct?.id}`}
+              src={getGlbUrl(currentProduct?.glbFile)}
+              alt={getText(currentProduct, 'name')}
+              ar
+              ar-modes="webxr scene-viewer quick-look"
+              camera-controls
+              auto-rotate
+              rotation-per-second="25deg"
+              shadow-intensity="1"
+              exposure="1"
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                backgroundColor: '#0a0a0a',
+              }}
+            >
+              <button slot="ar-button" style={{ display: 'none' }} />
+            </model-viewer>
+
+            {/* Sağ Ok */}
+            <IconButton
+              onClick={handleNext}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 5,
+                bgcolor: 'rgba(255,255,255,0.15)',
+                color: 'white',
+                width: 48,
+                height: 48,
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
+              }}
+            >
+              <ChevronRight sx={{ fontSize: 28 }} />
+            </IconButton>
+          </>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <Typography color="grey.500">
+              {language === 'tr' ? 'Bu kategoride ürün yok' : 'No products in this category'}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      {/* Sol Alt - Gerçek Ortamda Gör Butonu */}
+      <Box sx={{
+        position: 'absolute',
+        left: 16,
+        bottom: 230,
+        zIndex: 15,
+      }}>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<ViewInAr />}
+          onClick={handleOpenRealAR}
+          sx={{
+            py: 1.5,
+            px: 2.5,
+            background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+            fontWeight: 700,
+            borderRadius: 3,
+            boxShadow: '0 4px 20px rgba(76,175,80,0.5)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #66BB6A 0%, #388E3C 100%)',
+            },
+          }}
+        >
+          {language === 'tr' ? 'Masaya Yerleştir' : 'Place on Table'}
+        </Button>
+      </Box>
+
+      {/* Alt Panel */}
+      <Box sx={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        bgcolor: 'rgba(0,0,0,0.98)',
+        p: 2,
+      }}>
+        {/* Thumbnails */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          overflowX: 'auto', 
+          pb: 1.5,
+          justifyContent: filteredProducts.length <= 5 ? 'center' : 'flex-start',
+          '&::-webkit-scrollbar': { display: 'none' },
+        }}>
+          {filteredProducts.map((product, index) => (
+            <Box
+              key={product.id}
+              onClick={() => setCurrentIndex(index)}
+              sx={{
+                minWidth: 52,
+                width: 52,
+                height: 52,
+                borderRadius: 1.5,
+                overflow: 'hidden',
+                cursor: 'pointer',
+                border: '3px solid',
+                borderColor: index === currentIndex ? 'primary.main' : 'transparent',
+                opacity: index === currentIndex ? 1 : 0.5,
+                transform: index === currentIndex ? 'scale(1.1)' : 'scale(1)',
+                transition: 'all 0.2s',
+                '&:hover': { opacity: 1 },
+              }}
+            >
+              {product.thumbnail ? (
+                <Box component="img" src={getImageUrl(product.thumbnail)} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <Box sx={{ width: '100%', height: '100%', bgcolor: 'grey.800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ViewInAr sx={{ fontSize: 20, color: 'grey.500' }} />
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
+
+        {/* Ürün Bilgisi */}
+        {currentProduct && (
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1.5 }}>
+            <Box sx={{ flex: 1, mr: 2 }}>
+              <Typography variant="h6" fontWeight={700} color="white" noWrap>
+                {getText(currentProduct, 'name')}
+              </Typography>
+              {getText(currentProduct, 'description') && (
+                <Typography variant="body2" color="grey.400" sx={{ 
+                  mt: 0.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' 
+                }}>
+                  {getText(currentProduct, 'description')}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ textAlign: 'right' }}>
+              {currentProduct?.isCampaign && currentProduct?.campaignPrice ? (
+                <>
+                  <Typography variant="h5" color="error.main" fontWeight={700}>
+                    {formatPrice(currentProduct.campaignPrice)}
+                  </Typography>
+                  <Typography variant="body2" color="grey.500" sx={{ textDecoration: 'line-through' }}>
+                    {formatPrice(currentProduct.price)}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="h5" color="primary.main" fontWeight={700}>
+                  {formatPrice(currentProduct?.price)}
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+        )}
+
+        {/* Detaylar Butonu */}
+        <Button
+          variant="outlined"
+          fullWidth
+          size="large"
+          startIcon={<Info />}
+          onClick={() => { onClose(); onProductSelect(currentProduct) }}
+          sx={{
+            py: 1.2,
+            borderColor: 'grey.700',
+            color: 'white',
+            '&:hover': { borderColor: 'grey.500', bgcolor: 'rgba(255,255,255,0.05)' },
+          }}
+        >
+          {language === 'tr' ? 'Ürün Detayları' : 'Product Details'}
+        </Button>
+      </Box>
+    </Dialog>
   )
 }
 
@@ -1799,31 +2264,55 @@ function ProductDetailModal({ product, onClose, onTagClick, language = 'tr', t, 
     return product.categoryName || ''
   }
 
+  // Resim var mı kontrol
+  const hasImage = product.thumbnail
+
   return (
     <Dialog open={!!product} onClose={onClose} maxWidth="sm" fullWidth>
       <Box sx={{ position: 'relative' }}>
-        <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default' }}>
-          {product.thumbnail ? (
+        
+        {/* Resim Alanı - Sadece resim varsa göster */}
+        {hasImage && (
+          <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default' }}>
             <Box component="img" src={getImageUrl(product.thumbnail)} alt={getText(product, 'name')}
               sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Restaurant sx={{ fontSize: 80, color: 'text.secondary' }} />
-            </Box>
-          )}
-          <IconButton onClick={onClose} sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}>
-            <Close sx={{ color: 'white' }} />
-          </IconButton>
+            
+            <IconButton onClick={onClose} sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}>
+              <Close sx={{ color: 'white' }} />
+            </IconButton>
 
-          <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, left: 8 }}>
-            {product.isCampaign && product.campaignPrice && (
-              <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" />
-            )}
-            {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
-          </Stack>
-        </Box>
+            <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, left: 8 }}>
+              {product.isCampaign && product.campaignPrice && (
+                <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" />
+              )}
+              {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
+            </Stack>
+          </Box>
+        )}
 
-        <DialogContent>
+        {/* Resim yoksa üst bar */}
+        {!hasImage && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            p: 2,
+            borderBottom: 1,
+            borderColor: 'divider'
+          }}>
+            <Stack direction="row" spacing={0.5}>
+              {product.isCampaign && product.campaignPrice && (
+                <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" />
+              )}
+              {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
+            </Stack>
+            <IconButton onClick={onClose} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+        )}
+
+        <DialogContent sx={{ pt: hasImage ? 2 : 1 }}>
           <Typography variant="h5" fontWeight={700}>{getText(product, 'name')}</Typography>
           {getCategoryName() && (
             <Typography variant="body2" color="text.secondary">
@@ -1848,24 +2337,26 @@ function ProductDetailModal({ product, onClose, onTagClick, language = 'tr', t, 
             </Typography>
           )}
 
-          <Stack direction="row" spacing={2} sx={{ mt: 3 }} flexWrap="wrap" useFlexGap>
-            {product.calories && (
-              <Chip 
-                icon={<Info />} 
-                label={`${product.calories} kcal`} 
-                variant="outlined" 
-                size="small" 
-              />
-            )}
-            {product.preparationTime && (
-              <Chip 
-                icon={<AccessTime />} 
-                label={`${product.preparationTime} ${language === 'tr' ? 'dk' : 'min'}`} 
-                variant="outlined" 
-                size="small" 
-              />
-            )}
-          </Stack>
+          {(product.calories || product.preparationTime) && (
+            <Stack direction="row" spacing={2} sx={{ mt: 3 }} flexWrap="wrap" useFlexGap>
+              {product.calories && (
+                <Chip 
+                  icon={<Info />} 
+                  label={`${product.calories} kcal`} 
+                  variant="outlined" 
+                  size="small" 
+                />
+              )}
+              {product.preparationTime && (
+                <Chip 
+                  icon={<AccessTime />} 
+                  label={`${product.preparationTime} ${language === 'tr' ? 'dk' : 'min'}`} 
+                  variant="outlined" 
+                  size="small" 
+                />
+              )}
+            </Stack>
+          )}
 
           {getArray(product, 'allergens')?.length > 0 && (
             <Box sx={{ mt: 2 }}>
@@ -1908,6 +2399,7 @@ function ProductDetailModal({ product, onClose, onTagClick, language = 'tr', t, 
             </Box>
           )}
 
+          {/* 3D Model Butonu - Sadece GLB varsa göster */}
           {product.hasGlb && product.glbFile && (
             <Box sx={{ mt: 3 }}>
               <Button variant="contained" fullWidth size="large" startIcon={<ViewInAr />} onClick={() => setShowAR(true)}
@@ -1919,48 +2411,50 @@ function ProductDetailModal({ product, onClose, onTagClick, language = 'tr', t, 
         </DialogContent>
       </Box>
 
-      {/* AR Viewer Dialog */}
-      <Dialog open={showAR} onClose={() => setShowAR(false)} fullScreen>
-        <Box sx={{ position: 'relative', width: '100%', height: '100%', bgcolor: '#1a1a1a' }}>
-          <IconButton onClick={() => setShowAR(false)} sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10, bgcolor: 'rgba(0,0,0,0.5)' }}>
-            <Close sx={{ color: 'white' }} />
-          </IconButton>
+      {/* AR Viewer Dialog - Sadece GLB varsa */}
+      {product.hasGlb && product.glbFile && (
+        <Dialog open={showAR} onClose={() => setShowAR(false)} fullScreen>
+          <Box sx={{ position: 'relative', width: '100%', height: '100%', bgcolor: '#1a1a1a' }}>
+            <IconButton onClick={() => setShowAR(false)} sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10, bgcolor: 'rgba(0,0,0,0.5)' }}>
+              <Close sx={{ color: 'white' }} />
+            </IconButton>
 
-          <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 10 }}>
-            <Typography variant="h6" color="white" fontWeight={700}>{getText(product, 'name')}</Typography>
-            <Typography variant="body2" color="grey.400">3D Model</Typography>
+            <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 10 }}>
+              <Typography variant="h6" color="white" fontWeight={700}>{getText(product, 'name')}</Typography>
+              <Typography variant="body2" color="grey.400">3D Model</Typography>
+            </Box>
+
+            <model-viewer
+              ref={modelViewerRef}
+              src={getGlbUrl(product.glbFile)}
+              alt={getText(product, 'name')}
+              ar
+              ar-modes="webxr scene-viewer quick-look"
+              camera-controls
+              auto-rotate
+              shadow-intensity="1"
+              style={{ width: '100%', height: '100%' }}
+            >
+              <button slot="ar-button" style={{
+                position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
+                padding: '12px 24px', background: '#e53935', color: 'white', border: 'none',
+                borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
+              }}>
+                📱 {language === 'tr' ? "AR'da Görüntüle" : 'View in AR'}
+              </button>
+            </model-viewer>
+
+            <Box sx={{ position: 'absolute', bottom: 24, left: 24, right: 24 }}>
+              <Alert severity="info" sx={{ bgcolor: 'rgba(30,136,229,0.2)' }}>
+                {language === 'tr' 
+                  ? 'Modeli parmağınızla döndürebilir, yakınlaştırabilirsiniz. AR butonu ile gerçek ortamda görün!'
+                  : 'You can rotate and zoom the model. Use AR button to view in real environment!'
+                }
+              </Alert>
+            </Box>
           </Box>
-
-          <model-viewer
-            ref={modelViewerRef}
-            src={getGlbUrl(product.glbFile)}
-            alt={getText(product, 'name')}
-            ar
-            ar-modes="webxr scene-viewer quick-look"
-            camera-controls
-            auto-rotate
-            shadow-intensity="1"
-            style={{ width: '100%', height: '100%' }}
-          >
-            <button slot="ar-button" style={{
-              position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
-              padding: '12px 24px', background: '#e53935', color: 'white', border: 'none',
-              borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
-            }}>
-              📱 {language === 'tr' ? "AR'da Görüntüle" : 'View in AR'}
-            </button>
-          </model-viewer>
-
-          <Box sx={{ position: 'absolute', bottom: 24, left: 24, right: 24 }}>
-            <Alert severity="info" sx={{ bgcolor: 'rgba(30,136,229,0.2)' }}>
-              {language === 'tr' 
-                ? 'Modeli parmağınızla döndürebilir, yakınlaştırabilirsiniz. AR butonu ile gerçek ortamda görün!'
-                : 'You can rotate and zoom the model. Use AR button to view in real environment!'
-              }
-            </Alert>
-          </Box>
-        </Box>
-      </Dialog>
+        </Dialog>
+      )}
     </Dialog>
   )
 }
