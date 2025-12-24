@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   Box, Grid, Card, CardContent, CardMedia, CardActions, CardHeader,
@@ -7,16 +7,23 @@ import {
   CircularProgress, LinearProgress, Tabs, Tab, Badge, Tooltip,
   FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch,
   IconButton, InputAdornment, Rating, Alert, Divider,
-  ToggleButton, ToggleButtonGroup, alpha, Container, Skeleton
+  ToggleButton, ToggleButtonGroup, alpha, Container, Skeleton,
+  List, ListItem, ListItemText, ListItemAvatar, ListItemSecondaryAction,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Menu
 } from '@mui/material'
 import {
   Add, Edit, Delete, Search, Refresh, Check, Close, Restaurant,
   Category, ViewInAr, Campaign, RateReview, Store, People,
   PhotoCamera, CloudUpload, LocalOffer, ThreeDRotation,
-  Phone, LocationOn, AccessTime, Instagram, WhatsApp,
+  Phone, LocationOn, AccessTime, Instagram, WhatsApp, Facebook, Language,
   GridView, ViewModule, Fullscreen, ArrowUpward, ArrowDownward,
   DragIndicator, Reply, Lock, Star, TouchApp, ThreeSixty, Place,
-  Visibility, VisibilityOff, ContentCopy, OpenInNew ,Translate  
+  Visibility, VisibilityOff, ContentCopy, OpenInNew, Translate,
+  Business, Settings, Dashboard as DashboardIcon, Storefront,
+  Email, Person, AdminPanelSettings, QrCode, Palette, Share,
+  Link as LinkIcon, NotificationsActive, Schedule,
+  ExpandMore, KeyboardArrowRight
 } from '@mui/icons-material'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useDropzone } from 'react-dropzone'
@@ -27,7 +34,7 @@ import {
 } from './App'
 
 // ==================== PAGE WRAPPER ====================
-function PageWrapper({ children }) {
+export function PageWrapper({ children }) {
   return (
     <Box sx={{ width: '100%', maxWidth: '100%' }}>
       {children}
@@ -36,7 +43,7 @@ function PageWrapper({ children }) {
 }
 
 // ==================== IMAGE UPLOADER ====================
-function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'medium', disabled = false }) {
+export function ImageUploader({ value, onChange, onRemove, label, aspectRatio = '16/9', size = 'medium', disabled = false }) {
   const showSnackbar = useSnackbar()
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(null)
@@ -59,6 +66,16 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
       }
     }
   }, [value])
+
+  const handleRemove = (e) => {
+    e.stopPropagation()
+    if (onRemove) {
+      onRemove()
+    } else {
+      onChange(null)
+      setPreview(null)
+    }
+  }
 
   const handleDrop = useCallback(async (acceptedFiles) => {
     if (disabled) return
@@ -107,12 +124,29 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
           <>
             <Box component="img" src={preview} alt={label} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none' }} />
             {!disabled && (
-              <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.5)', opacity: 0, transition: 'opacity 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', '&:hover': { opacity: 1 } }}>
-                <Stack alignItems="center" spacing={1}>
-                  <PhotoCamera sx={{ fontSize: 40, color: 'white' }} />
-                  <Typography color="white" variant="body2">Değiştir</Typography>
-                </Stack>
-              </Box>
+              <>
+                <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.5)', opacity: 0, transition: 'opacity 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', '&:hover': { opacity: 1 } }}>
+                  <Stack alignItems="center" spacing={1}>
+                    <PhotoCamera sx={{ fontSize: 40, color: 'white' }} />
+                    <Typography color="white" variant="body2">Değiştir</Typography>
+                  </Stack>
+                </Box>
+                <IconButton
+                  onClick={handleRemove}
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    bgcolor: 'error.main',
+                    color: 'white',
+                    '&:hover': { bgcolor: 'error.dark' },
+                    zIndex: 2
+                  }}
+                  size="small"
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </>
             )}
           </>
         ) : (
@@ -127,7 +161,7 @@ function ImageUploader({ value, onChange, label, aspectRatio = '16/9', size = 'm
 }
 
 // ==================== 3D MODEL VIEWER ====================
-function ModelViewer3D({ glbFile, productName, size = 'medium' }) {
+export function ModelViewer3D({ glbFile, productName, size = 'medium' }) {
   const modelRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -195,7 +229,7 @@ function ModelViewer3D({ glbFile, productName, size = 'medium' }) {
 }
 
 // ==================== SHARED COMPONENTS ====================
-function ConfirmDialog({ open, title, message, onConfirm, onCancel, confirmText = 'Sil', severity = 'error' }) {
+export function ConfirmDialog({ open, title, message, onConfirm, onCancel, confirmText = 'Sil', severity = 'error' }) {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
       <DialogTitle>{title}</DialogTitle>
@@ -208,7 +242,7 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel, confirmText 
   )
 }
 
-function EmptyState({ icon, title, description, action }) {
+export function EmptyState({ icon, title, description, action }) {
   return (
     <Paper sx={{ p: 6, textAlign: 'center' }}>
       <Box sx={{ color: 'text.secondary', mb: 2 }}>{icon}</Box>
@@ -219,7 +253,7 @@ function EmptyState({ icon, title, description, action }) {
   )
 }
 
-function StatCard({ title, value, icon, color = 'primary', subtitle, onClick }) {
+export function StatCard({ title, value, icon, color = 'primary', subtitle, onClick }) {
   return (
     <Card sx={{ cursor: onClick ? 'pointer' : 'default', transition: 'transform 0.2s', '&:hover': onClick ? { transform: 'translateY(-4px)' } : {} }} onClick={onClick}>
       <CardContent>
@@ -236,6 +270,183 @@ function StatCard({ title, value, icon, color = 'primary', subtitle, onClick }) 
   )
 }
 
+// ==================== RESTAURANT DASHBOARD ====================
+export function RestaurantDashboardPage() {
+  const { restaurantId } = useParams()
+  const { user } = useAuth()
+  const showSnackbar = useSnackbar()
+  const navigate = useNavigate()
+  const [restaurant, setRestaurant] = useState(null)
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { 
+    if (restaurantId) loadData() 
+  }, [restaurantId])
+
+  const loadData = async () => {
+    try {
+      const [restaurantRes, statsRes] = await Promise.all([
+        api.get(`/restaurants/${restaurantId}`),
+        api.get(`/restaurants/${restaurantId}/dashboard`)
+      ])
+      setRestaurant(restaurantRes.data)
+      setStats(statsRes.data)
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Veriler yüklenemedi', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+
+  return (
+    <PageWrapper>
+      <Stack spacing={3}>
+        {/* Header */}
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>{restaurant?.name}</Typography>
+            <Typography color="text.secondary">Restoran Paneli</Typography>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button 
+              startIcon={<Settings />}
+              onClick={() => navigate(`/admin/restaurant/${restaurantId}/settings`)}
+            >
+              Ayarlar
+            </Button>
+            <Button 
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate(`/admin/restaurant/${restaurantId}/branches/new`)}
+            >
+              Yeni Şube
+            </Button>
+          </Stack>
+        </Stack>
+
+        {/* Stats */}
+        <Grid container spacing={2}>
+          <Grid item xs={6} sm={6} md={3}>
+            <StatCard 
+              title="Toplam Şube" 
+              value={stats?.counts?.branches || 0} 
+              icon={<Store />} 
+              color="primary"
+              onClick={() => navigate(`/admin/restaurant/${restaurantId}/branches`)}
+            />
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <StatCard 
+              title="Toplam Ürün" 
+              value={stats?.counts?.products || 0} 
+              icon={<Restaurant />} 
+              color="secondary"
+            />
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <StatCard 
+              title="Kategoriler" 
+              value={stats?.counts?.categories || 0} 
+              icon={<Category />} 
+              color="info"
+            />
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <StatCard 
+              title="Kullanıcılar" 
+              value={stats?.counts?.users || 0} 
+              icon={<People />} 
+              color="warning"
+              onClick={() => navigate(`/admin/restaurant/${restaurantId}/users`)}
+            />
+          </Grid>
+        </Grid>
+
+        {/* Branch Stats */}
+        <Card>
+          <CardHeader 
+            title="Şube İstatistikleri" 
+            action={
+              <Button 
+                size="small" 
+                onClick={() => navigate(`/admin/restaurant/${restaurantId}/branches`)}
+              >
+                Tümünü Gör
+              </Button>
+            }
+          />
+          <CardContent>
+            {stats?.branchStats?.length > 0 ? (
+              <Grid container spacing={2}>
+                {stats.branchStats.map((branch, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="subtitle2" fontWeight={600}>{branch.name}</Typography>
+                        <Chip label={`${branch.count} ürün`} size="small" color="primary" />
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <EmptyState 
+                icon={<Store sx={{ fontSize: 48 }} />} 
+                title="Henüz şube yok"
+                action={
+                  <Button 
+                    variant="contained" 
+                    startIcon={<Add />}
+                    onClick={() => navigate(`/admin/restaurant/${restaurantId}/branches/new`)}
+                  >
+                    İlk Şubeyi Ekle
+                  </Button>
+                }
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Reviews */}
+        <Card>
+          <CardHeader title="Son Yorumlar" />
+          <CardContent>
+            {stats?.recentReviews?.length > 0 ? (
+              <Stack spacing={2}>
+                {stats.recentReviews.map(review => (
+                  <Paper key={review._id} variant="outlined" sx={{ p: 2 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="start">
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Rating value={review.rating} readOnly size="small" />
+                          <Typography variant="caption" color="text.secondary">
+                            {review.branch?.name}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="body2" sx={{ mt: 0.5 }} noWrap>
+                          {review.comment || 'Yorum yazılmamış'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {review.customerName} • {formatRelativeTime(review.createdAt)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            ) : (
+              <EmptyState icon={<RateReview sx={{ fontSize: 48 }} />} title="Henüz yorum yok" />
+            )}
+          </CardContent>
+        </Card>
+      </Stack>
+    </PageWrapper>
+  )
+}
 
 // ==================== DASHBOARD PAGE ====================
 export function DashboardPage() {
@@ -513,8 +724,6 @@ export function SectionsPage() {
           </Stack>
         </Stack>
 
-  
-
         {sections.length > 0 ? (
           <Grid container spacing={3}>
             {sections.map((section, index) => (
@@ -527,7 +736,6 @@ export function SectionsPage() {
                   transition: 'all 0.2s',
                   '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
                 }}>
-                  {/* Görsel Alanı */}
                   {section.image ? (
                     <CardMedia 
                       component="img" 
@@ -555,7 +763,6 @@ export function SectionsPage() {
                     </Box>
                   )}
                   
-                  {/* Status Badge */}
                   <Chip 
                     label={section.isActive ? 'Aktif' : 'Gizli'} 
                     size="small" 
@@ -564,7 +771,6 @@ export function SectionsPage() {
                     sx={{ position: 'absolute', top: 12, right: 12 }} 
                   />
 
-                  {/* Sıralama Butonları */}
                   <Stack 
                     direction="column" 
                     spacing={0.5} 
@@ -590,14 +796,12 @@ export function SectionsPage() {
                   
                   <CardContent>
                     <Stack spacing={1.5}>
-                      {/* Başlık */}
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography variant="h6" fontWeight={700}>
                           {section.icon} {section.name}
                         </Typography>
                       </Stack>
                       
-                      {/* Açıklama */}
                       {section.description && (
                         <Typography 
                           variant="body2" 
@@ -614,7 +818,6 @@ export function SectionsPage() {
                         </Typography>
                       )}
                       
-                      {/* İstatistikler */}
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                         <Chip 
                           icon={<Restaurant fontSize="small" />} 
@@ -630,7 +833,6 @@ export function SectionsPage() {
                         />
                       </Stack>
                       
-                      {/* Slug */}
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography variant="caption" color="text.secondary">
                           Slug: <strong>/{section.slug}</strong>
@@ -707,7 +909,6 @@ export function SectionsPage() {
         )}
       </Stack>
 
-      {/* Section Modal */}
       <SectionModal 
         open={modalOpen} 
         onClose={() => { setModalOpen(false); setEditingSection(null) }} 
@@ -716,7 +917,6 @@ export function SectionsPage() {
         onSuccess={() => { setModalOpen(false); setEditingSection(null); loadSections() }} 
       />
       
-      {/* Delete Dialog */}
       <ConfirmDialog 
         open={!!deleteDialog} 
         onCancel={() => setDeleteDialog(null)} 
@@ -738,7 +938,7 @@ export function SectionsPage() {
 }
 
 // ==================== SECTION MODAL ====================
-function SectionModal({ open, onClose, section, branchId, onSuccess }) {
+export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
   const showSnackbar = useSnackbar()
   const isEditing = !!section?.id
   const [saving, setSaving] = useState(false)
@@ -857,7 +1057,6 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
       
       <DialogContent dividers>
         <Grid container spacing={3}>
-          {/* Sol Kolon - Form Alanları */}
           <Grid item xs={12} md={6}>
             <Stack spacing={2.5}>
               <TextField 
@@ -889,7 +1088,6 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
                 placeholder="Bölüm hakkında kısa açıklama..."
               />
               
-              {/* İkon Seçimi */}
               <Box>
                 <Typography variant="subtitle2" gutterBottom>İkon Seçin</Typography>
                 <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 140, overflow: 'auto' }}>
@@ -899,12 +1097,7 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
                         key={icon} 
                         variant={form.icon === icon ? 'contained' : 'outlined'} 
                         onClick={() => setForm({ ...form, icon })} 
-                        sx={{ 
-                          minWidth: 44, 
-                          height: 44, 
-                          fontSize: 20,
-                          p: 0
-                        }}
+                        sx={{ minWidth: 44, height: 44, fontSize: 20, p: 0 }}
                       >
                         {icon}
                       </Button>
@@ -913,7 +1106,6 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
                 </Paper>
               </Box>
               
-              {/* Renk Seçimi */}
               <Box>
                 <Typography variant="subtitle2" gutterBottom>Arka Plan Rengi</Typography>
                 <Stack direction="row" flexWrap="wrap" gap={0.5}>
@@ -954,10 +1146,8 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
             </Stack>
           </Grid>
           
-          {/* Sağ Kolon - Görseller ve Önizleme */}
           <Grid item xs={12} md={6}>
             <Stack spacing={2.5}>
-              {/* Önizleme */}
               <Box>
                 <Typography variant="subtitle2" gutterBottom>Önizleme</Typography>
                 <Paper 
@@ -981,7 +1171,6 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
                 </Paper>
               </Box>
               
-              {/* Bölüm Görseli */}
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
                   Bölüm Görseli {!isEditing && <Chip label="Kaydet" size="small" sx={{ ml: 1 }} />}
@@ -1078,7 +1267,6 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
                 )}
               </Box>
               
-              {/* Anasayfa Görseli */}
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
                   Anasayfa Görseli (Opsiyonel)
@@ -1191,11 +1379,6 @@ function SectionModal({ open, onClose, section, branchId, onSuccess }) {
 }
 
 // ==================== PRODUCTS PAGE ====================
-// AdminPages.jsx dosyasındaki mevcut ProductsPage ve ProductModal'ı bu kod ile değiştirin
-// 
-// ÖNEMLİ: Import kısmına Translate ikonunu eklemeyi unutmayın:
-// import { ... Translate ... } from '@mui/icons-material'
-
 export function ProductsPage() {
   const { branchId, sectionId } = useParams()
   const { currentSection } = useBranch()
@@ -1280,12 +1463,7 @@ export function ProductsPage() {
                   </Select>
                 </FormControl>
                 {currentSection && (
-                  <Chip 
-                    icon={<Place />} 
-                    label={`${currentSection.icon} ${currentSection.name}`} 
-                    color="primary" 
-                    variant="outlined"
-                  />
+                  <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />
                 )}
                 <FormControl size="small" sx={{ minWidth: 150 }}>
                   <InputLabel>Durum</InputLabel>
@@ -1314,62 +1492,20 @@ export function ProductsPage() {
           <Chip label={`Kampanya: ${products.filter(p => p.isCampaign).length}`} color="error" variant="outlined" />
         </Stack>
 
-        {/* SABİT BOYUTLU ÜRÜN KARTLARI */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: 2,
-          justifyContent: { xs: 'center', sm: 'flex-start' }
-        }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
           {filteredProducts.map(product => (
-            <Card 
-              key={product.id}
-              sx={{ 
-                width: 200,   // SABİT GENİŞLİK
-                height: 320,  // SABİT YÜKSEKLİK
-                display: 'flex', 
-                flexDirection: 'column',
-                flexShrink: 0
-              }}
-            >
-              {/* SABİT BOYUTLU GÖRSEL */}
-              <Box sx={{ 
-                position: 'relative', 
-                width: 200,
-                height: 160,
-                bgcolor: 'background.default',
-                overflow: 'hidden',
-                flexShrink: 0
-              }}>
+            <Card key={product.id} sx={{ width: 200, height: 320, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+              <Box sx={{ position: 'relative', width: 200, height: 160, bgcolor: 'background.default', overflow: 'hidden', flexShrink: 0 }}>
                 {product.thumbnail ? (
-                  <Box
-                    component="img"
-                    src={getImageUrl(product.thumbnail)}
-                    alt={product.name}
-                    sx={{ 
-                      width: 200,
-                      height: 160,
-                      objectFit: 'cover',
-                      objectPosition: 'center'
-                    }}
-                  />
+                  <Box component="img" src={getImageUrl(product.thumbnail)} alt={product.name} sx={{ width: 200, height: 160, objectFit: 'cover', objectPosition: 'center' }} />
                 ) : (
-                  <Box sx={{ 
-                    width: 200,
-                    height: 160,
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
-                  }}>
+                  <Box sx={{ width: 200, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' }}>
                     <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
                   </Box>
                 )}
                 <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }} flexWrap="wrap">
                   {product.hasGlb && (
-                    <Chip label="3D" size="small" color="info" icon={<ViewInAr />} 
-                      onClick={(e) => { e.stopPropagation(); setPreviewDialog({ open: true, product }) }}
-                      sx={{ cursor: 'pointer' }} />
+                    <Chip label="3D" size="small" color="info" icon={<ViewInAr />} onClick={(e) => { e.stopPropagation(); setPreviewDialog({ open: true, product }) }} sx={{ cursor: 'pointer' }} />
                   )}
                   {product.isFeatured && <Chip label="⭐" size="small" color="warning" />}
                   {product.isCampaign && <Chip label="🔥" size="small" color="error" />}
@@ -1434,69 +1570,145 @@ export function ProductsPage() {
   )
 }
 
+// ==================== CASCADE MENU ITEM ====================
+function CascadeMenuItem({ category, onSelect, level = 0 }) {
+  const [subMenuAnchor, setSubMenuAnchor] = useState(null)
+  const hasChildren = category.children && category.children.length > 0
+  const catId = category.id || category._id
+
+  const handleMouseEnter = (e) => {
+    if (hasChildren) {
+      setSubMenuAnchor(e.currentTarget)
+    }
+  }
+
+  const handleMouseLeave = () => {
+    setSubMenuAnchor(null)
+  }
+
+  const handleClick = () => {
+    onSelect(catId)
+  }
+
+  return (
+    <Box onMouseLeave={handleMouseLeave}>
+      <MenuItem
+        onMouseEnter={handleMouseEnter}
+        onClick={handleClick}
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          pl: 2 + level * 1.5
+        }}
+      >
+        <Typography>
+          {category.icon} {category.name}
+        </Typography>
+        {hasChildren && <KeyboardArrowRight sx={{ ml: 2, color: 'text.secondary' }} />}
+      </MenuItem>
+
+      {hasChildren && (
+        <Menu
+          anchorEl={subMenuAnchor}
+          open={Boolean(subMenuAnchor)}
+          onClose={() => setSubMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: { minWidth: 180, maxHeight: 300 },
+            onMouseLeave: () => setSubMenuAnchor(null)
+          }}
+          MenuListProps={{ onMouseLeave: () => setSubMenuAnchor(null) }}
+        >
+          {category.children.map(child => (
+            <CascadeMenuItem
+              key={child.id || child._id}
+              category={child}
+              onSelect={onSelect}
+              level={0}
+            />
+          ))}
+        </Menu>
+      )}
+    </Box>
+  )
+}
+
 // ==================== PRODUCT MODAL ====================
 function ProductModal({ open, product, categories, tags = [], sectionId, glbFiles, branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
-  
   const isEditing = !!product?.id
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState(0)
-  const [translating, setTranslating] = useState({
-    name: false,
-    description: false,
-    allergens: false
-  })
+  const [translating, setTranslating] = useState({ name: false, description: false, allergens: false })
   const [form, setForm] = useState({
-    name: '', 
-    nameEN: '',           // YENİ
-    price: '', 
-    description: '', 
-    descriptionEN: '',    // YENİ
-    categoryId: '', 
-    isActive: true,
-    isFeatured: false, 
-    isCampaign: false, 
-    campaignPrice: '', 
-    glbFile: '',
-    calories: '', 
-    preparationTime: '', 
-    allergens: '', 
-    allergensEN: '',      // YENİ
-    selectedTags: []
+    name: '', nameEN: '', price: '', description: '', descriptionEN: '',
+    categoryId: '', isActive: true, isFeatured: false, isCampaign: false,
+    campaignPrice: '', glbFile: '', calories: '', preparationTime: '',
+    allergens: '', allergensEN: '', selectedTags: []
   })
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [thumbnailPreview, setThumbnailPreview] = useState(null)
+  const [categoryMenuAnchor, setCategoryMenuAnchor] = useState(null)
+  const [hoveredCategory, setHoveredCategory] = useState(null)
+
+  // Hiyerarşik kategori yapısı
+  const buildCategoryTree = useCallback((cats, parentId = null) => {
+    return cats
+      .filter(c => {
+        const catParent = c.parent?._id || c.parent || null
+        return catParent === parentId
+      })
+      .map(c => ({
+        ...c,
+        children: buildCategoryTree(cats, c.id || c._id)
+      }))
+  }, [])
+
+  const categoryTree = useMemo(() => buildCategoryTree(categories), [categories, buildCategoryTree])
+
+  // Seçili kategorinin tam yolunu bul
+  const getCategoryPath = useCallback((categoryId, cats = categories) => {
+    const path = []
+    let current = cats.find(c => (c.id || c._id) === categoryId)
+    while (current) {
+      path.unshift(current)
+      const parentId = current.parent?._id || current.parent
+      current = parentId ? cats.find(c => (c.id || c._id) === parentId) : null
+    }
+    return path
+  }, [categories])
+
+  const selectedCategoryPath = useMemo(() =>
+    form.categoryId ? getCategoryPath(form.categoryId) : [],
+    [form.categoryId, getCategoryPath]
+  )
 
   useEffect(() => {
     if (open) {
       if (product) {
         const productTagIds = product.tags?.map(t => t.id || t._id || t) || []
-        
         setForm({
-          name: product.name || '', 
-          nameEN: product.nameEN || '',
-          price: product.price || '', 
-          description: product.description || '',
+          name: product.name || '', nameEN: product.nameEN || '',
+          price: product.price || '', description: product.description || '',
           descriptionEN: product.descriptionEN || '',
-          categoryId: product.categoryId || product.category?._id || '', 
-          isActive: product.isActive !== false,
-          isFeatured: product.isFeatured || false, 
-          isCampaign: product.isCampaign || false,
-          campaignPrice: product.campaignPrice || '', 
-          glbFile: product.glbFile || '',
-          calories: product.calories || '', 
+          categoryId: product.categoryId || product.category?._id || '',
+          isActive: product.isActive !== false, isFeatured: product.isFeatured || false,
+          isCampaign: product.isCampaign || false, campaignPrice: product.campaignPrice || '',
+          glbFile: product.glbFile || '', calories: product.calories || '',
           preparationTime: product.preparationTime || '',
-          allergens: product.allergens?.join(', ') || '', 
+          allergens: product.allergens?.join(', ') || '',
           allergensEN: product.allergensEN?.join(', ') || '',
           selectedTags: productTagIds
         })
         setThumbnailPreview(product.thumbnail ? getImageUrl(product.thumbnail) : null)
       } else {
-        setForm({ 
+        setForm({
           name: '', nameEN: '', price: '', description: '', descriptionEN: '',
-          categoryId: '', isActive: true, isFeatured: false, isCampaign: false, 
-          campaignPrice: '', glbFile: '', calories: '', preparationTime: '', 
-          allergens: '', allergensEN: '', selectedTags: [] 
+          categoryId: '', isActive: true, isFeatured: false, isCampaign: false,
+          campaignPrice: '', glbFile: '', calories: '', preparationTime: '',
+          allergens: '', allergensEN: '', selectedTags: []
         })
         setThumbnailPreview(null)
       }
@@ -1505,24 +1717,16 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
     }
   }, [open, product])
 
-  // Otomatik çeviri fonksiyonu
   const handleAutoTranslate = async (field) => {
     const sourceField = field.replace('EN', '')
     const sourceText = form[sourceField]
-    
-    if (!sourceText || !sourceText.trim()) {
+    if (!sourceText?.trim()) {
       showSnackbar(`Önce ${sourceField === 'name' ? 'ürün adını' : sourceField === 'description' ? 'açıklamayı' : 'alerjenleri'} girin`, 'warning')
       return
     }
-    
     setTranslating(prev => ({ ...prev, [sourceField]: true }))
     try {
-      const res = await api.post('/translate', {
-        text: sourceText,
-        targetLang: 'en',
-        sourceLang: 'tr'
-      })
-      
+      const res = await api.post('/translate', { text: sourceText, targetLang: 'en', sourceLang: 'tr' })
       if (res.data.success && res.data.translatedText) {
         setForm(prev => ({ ...prev, [field]: res.data.translatedText }))
         showSnackbar('Çeviri başarılı', 'success')
@@ -1537,35 +1741,20 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
     }
   }
 
-  // Tümünü çevir
   const handleTranslateAll = async () => {
     const fieldsToTranslate = []
     if (form.name && !form.nameEN) fieldsToTranslate.push({ source: 'name', target: 'nameEN' })
     if (form.description && !form.descriptionEN) fieldsToTranslate.push({ source: 'description', target: 'descriptionEN' })
     if (form.allergens && !form.allergensEN) fieldsToTranslate.push({ source: 'allergens', target: 'allergensEN' })
-    
-    if (fieldsToTranslate.length === 0) {
-      showSnackbar('Çevrilecek alan bulunamadı', 'info')
-      return
-    }
+    if (fieldsToTranslate.length === 0) { showSnackbar('Çevrilecek alan bulunamadı', 'info'); return }
 
     setTranslating({ name: true, description: true, allergens: true })
-    
     try {
       const texts = fieldsToTranslate.map(f => form[f.source])
-      const res = await api.post('/translate/bulk', {
-        texts,
-        targetLang: 'en',
-        sourceLang: 'tr'
-      })
-      
+      const res = await api.post('/translate/bulk', { texts, targetLang: 'en', sourceLang: 'tr' })
       if (res.data.success) {
         const updates = {}
-        res.data.translations.forEach((t, i) => {
-          if (t.translated) {
-            updates[fieldsToTranslate[i].target] = t.translated
-          }
-        })
+        res.data.translations.forEach((t, i) => { if (t.translated) updates[fieldsToTranslate[i].target] = t.translated })
         setForm(prev => ({ ...prev, ...updates }))
         showSnackbar(`${Object.keys(updates).length} alan çevrildi`, 'success')
       }
@@ -1588,16 +1777,12 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
     setSaving(true)
     try {
       const data = {
-        name: form.name, 
-        nameEN: form.nameEN || '',
-        price: parseFloat(form.price), 
-        description: form.description,
+        name: form.name, nameEN: form.nameEN || '',
+        price: parseFloat(form.price), description: form.description,
         descriptionEN: form.descriptionEN || '',
-        categoryId: form.categoryId || null, 
-        section: sectionId,
-        isActive: form.isActive, 
-        isFeatured: form.isFeatured,
-        isCampaign: form.isCampaign, 
+        categoryId: form.categoryId || null, section: sectionId,
+        isActive: form.isActive, isFeatured: form.isFeatured,
+        isCampaign: form.isCampaign,
         campaignPrice: form.campaignPrice ? parseFloat(form.campaignPrice) : null,
         calories: form.calories ? parseInt(form.calories) : null,
         preparationTime: form.preparationTime ? parseInt(form.preparationTime) : null,
@@ -1625,13 +1810,11 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
       }
 
       showSnackbar(isEditing ? 'Ürün güncellendi' : 'Ürün oluşturuldu', 'success')
-      
       onSave()
-    } catch (err) { 
+    } catch (err) {
       console.error(err)
-      showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') 
-    }
-    finally { setSaving(false) }
+      showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error')
+    } finally { setSaving(false) }
   }
 
   const availableGlbFiles = glbFiles.filter(g => !g.isAssigned || g.filename === product?.glbFile)
@@ -1653,7 +1836,6 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
       </Tabs>
 
       <DialogContent sx={{ pt: 3 }}>
-        {/* TAB 0: Genel Bilgiler */}
         {tab === 0 && (
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
@@ -1665,15 +1847,61 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <TextField fullWidth label="Fiyat" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })}
                     InputProps={{ startAdornment: <InputAdornment position="start">₺</InputAdornment> }} required />
-                  <FormControl fullWidth>
-                    <InputLabel>Kategori</InputLabel>
-                    <Select value={form.categoryId} label="Kategori" onChange={e => setForm({ ...form, categoryId: e.target.value })}>
-                      <MenuItem value="">Kategorisiz</MenuItem>
-                      {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.icon} {cat.name}</MenuItem>)}
-                    </Select>
-                  </FormControl>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>Kategori</Typography>
+                    <Paper
+                      variant="outlined"
+                      onClick={(e) => setCategoryMenuAnchor(e.currentTarget)}
+                      sx={{
+                        p: 1.5,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        '&:hover': { borderColor: 'primary.main' }
+                      }}
+                    >
+                      {selectedCategoryPath.length > 0 ? (
+                        <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
+                          {selectedCategoryPath.map((cat, i) => (
+                            <Stack key={cat.id || cat._id} direction="row" alignItems="center" spacing={0.5}>
+                              {i > 0 && <KeyboardArrowRight sx={{ fontSize: 16, color: 'text.secondary' }} />}
+                              <Chip
+                                size="small"
+                                label={`${cat.icon || ''} ${cat.name}`}
+                                sx={{ height: 24 }}
+                              />
+                            </Stack>
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Typography color="text.secondary">Kategori seçin...</Typography>
+                      )}
+                      <ExpandMore />
+                    </Paper>
+
+                    {/* Cascade Kategori Menüsü */}
+                    <Menu
+                      anchorEl={categoryMenuAnchor}
+                      open={Boolean(categoryMenuAnchor)}
+                      onClose={() => { setCategoryMenuAnchor(null); setHoveredCategory(null) }}
+                      PaperProps={{ sx: { minWidth: 200, maxHeight: 400 } }}
+                    >
+                      <MenuItem onClick={() => { setForm({ ...form, categoryId: '' }); setCategoryMenuAnchor(null) }}>
+                        <em>Kategorisiz</em>
+                      </MenuItem>
+                      <Divider />
+                      {categoryTree.map(cat => (
+                        <CascadeMenuItem
+                          key={cat.id || cat._id}
+                          category={cat}
+                          onSelect={(catId) => { setForm({ ...form, categoryId: catId }); setCategoryMenuAnchor(null) }}
+                          level={0}
+                        />
+                      ))}
+                    </Menu>
+                  </Box>
                 </Stack>
-                
                 <TextField fullWidth label="Açıklama (Türkçe)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3} />
                 <Divider />
                 <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
@@ -1691,212 +1919,118 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
           </Grid>
         )}
 
-        {/* TAB 1: Çeviriler */}
         {tab === 1 && (
           <Stack spacing={3}>
             <Alert severity="info" icon={<Translate />}>
               Türkçe içerikleri otomatik olarak İngilizceye çevirebilirsiniz.
-              <Button 
-                size="small" 
-                variant="outlined" 
-                sx={{ ml: 2 }}
-                onClick={handleTranslateAll}
-                disabled={translating.name || translating.description || translating.allergens}
-              >
+              <Button size="small" variant="outlined" sx={{ ml: 2 }} onClick={handleTranslateAll}
+                disabled={translating.name || translating.description || translating.allergens}>
                 Tümünü Çevir
               </Button>
             </Alert>
 
-            {/* Ürün Adı Çevirisi */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>Ürün Adı</Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={5}>
-                  <TextField 
-                    fullWidth 
-                    label="Türkçe" 
-                    value={form.name} 
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment>
-                    }}
-                  />
+                  <TextField fullWidth label="Türkçe" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                    InputProps={{ startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment> }} />
                 </Grid>
                 <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Tooltip title="Türkçeden İngilizceye Çevir">
                     <span>
-                      <IconButton 
-                        onClick={() => handleAutoTranslate('nameEN')}
-                        disabled={translating.name || !form.name.trim()}
-                        color="primary"
-                      >
+                      <IconButton onClick={() => handleAutoTranslate('nameEN')} disabled={translating.name || !form.name?.trim()} color="primary">
                         {translating.name ? <CircularProgress size={24} /> : <Translate />}
                       </IconButton>
                     </span>
                   </Tooltip>
                 </Grid>
                 <Grid item xs={12} sm={5}>
-                  <TextField 
-                    fullWidth 
-                    label="İngilizce" 
-                    value={form.nameEN} 
-                    onChange={e => setForm({ ...form, nameEN: e.target.value })}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment>
-                    }}
-                  />
+                  <TextField fullWidth label="İngilizce" value={form.nameEN} onChange={e => setForm({ ...form, nameEN: e.target.value })}
+                    InputProps={{ startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment> }} />
                 </Grid>
               </Grid>
             </Box>
 
             <Divider />
 
-            {/* Açıklama Çevirisi */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>Açıklama</Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={5}>
-                  <TextField 
-                    fullWidth 
-                    label="Türkçe" 
-                    value={form.description} 
-                    onChange={e => setForm({ ...form, description: e.target.value })}
-                    multiline
-                    rows={3}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment>
-                    }}
-                  />
+                  <TextField fullWidth label="Türkçe" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3}
+                    InputProps={{ startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment> }} />
                 </Grid>
                 <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', pt: 2 }}>
                   <Tooltip title="Türkçeden İngilizceye Çevir">
                     <span>
-                      <IconButton 
-                        onClick={() => handleAutoTranslate('descriptionEN')}
-                        disabled={translating.description || !form.description.trim()}
-                        color="primary"
-                      >
+                      <IconButton onClick={() => handleAutoTranslate('descriptionEN')} disabled={translating.description || !form.description?.trim()} color="primary">
                         {translating.description ? <CircularProgress size={24} /> : <Translate />}
                       </IconButton>
                     </span>
                   </Tooltip>
                 </Grid>
                 <Grid item xs={12} sm={5}>
-                  <TextField 
-                    fullWidth 
-                    label="İngilizce" 
-                    value={form.descriptionEN} 
-                    onChange={e => setForm({ ...form, descriptionEN: e.target.value })}
-                    multiline
-                    rows={3}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment>
-                    }}
-                  />
+                  <TextField fullWidth label="İngilizce" value={form.descriptionEN} onChange={e => setForm({ ...form, descriptionEN: e.target.value })} multiline rows={3}
+                    InputProps={{ startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment> }} />
                 </Grid>
               </Grid>
             </Box>
 
             <Divider />
 
-            {/* Alerjenler Çevirisi */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>Alerjenler</Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={5}>
-                  <TextField 
-                    fullWidth 
-                    label="Türkçe" 
-                    value={form.allergens} 
-                    onChange={e => setForm({ ...form, allergens: e.target.value })}
-                    placeholder="Gluten, Süt, Fındık..."
-                    helperText="Virgülle ayırarak yazın"
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment>
-                    }}
-                  />
+                  <TextField fullWidth label="Türkçe" value={form.allergens} onChange={e => setForm({ ...form, allergens: e.target.value })}
+                    placeholder="Gluten, Süt, Fındık..." helperText="Virgülle ayırarak yazın"
+                    InputProps={{ startAdornment: <InputAdornment position="start">🇹🇷</InputAdornment> }} />
                 </Grid>
                 <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', pt: 2 }}>
                   <Tooltip title="Türkçeden İngilizceye Çevir">
                     <span>
-                      <IconButton 
-                        onClick={() => handleAutoTranslate('allergensEN')}
-                        disabled={translating.allergens || !form.allergens.trim()}
-                        color="primary"
-                      >
+                      <IconButton onClick={() => handleAutoTranslate('allergensEN')} disabled={translating.allergens || !form.allergens?.trim()} color="primary">
                         {translating.allergens ? <CircularProgress size={24} /> : <Translate />}
                       </IconButton>
                     </span>
                   </Tooltip>
                 </Grid>
                 <Grid item xs={12} sm={5}>
-                  <TextField 
-                    fullWidth 
-                    label="İngilizce" 
-                    value={form.allergensEN} 
-                    onChange={e => setForm({ ...form, allergensEN: e.target.value })}
-                    placeholder="Gluten, Milk, Hazelnut..."
-                    helperText="Separated by commas"
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment>
-                    }}
-                  />
+                  <TextField fullWidth label="İngilizce" value={form.allergensEN} onChange={e => setForm({ ...form, allergensEN: e.target.value })}
+                    placeholder="Gluten, Milk, Hazelnut..." helperText="Separated by commas"
+                    InputProps={{ startAdornment: <InputAdornment position="start">🇬🇧</InputAdornment> }} />
                 </Grid>
               </Grid>
             </Box>
           </Stack>
         )}
 
-        {/* TAB 2: Detaylar & Etiketler */}
         {tab === 2 && (
           <Stack spacing={3}>
-            {/* Etiketler - Select Box */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>Etiketler</Typography>
               {tags.length > 0 ? (
                 <FormControl fullWidth>
                   <InputLabel>Etiketler Seçin</InputLabel>
-                  <Select
-                    multiple
-                    value={form.selectedTags}
-                    label="Etiketler Seçin"
-                    onChange={e => setForm({ ...form, selectedTags: e.target.value })}
+                  <Select multiple value={form.selectedTags} label="Etiketler Seçin" onChange={e => setForm({ ...form, selectedTags: e.target.value })}
                     renderValue={(selected) => (
                       <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                         {selected.map(id => {
                           const tag = tags.find(t => t.id === id)
                           return tag ? (
-                            <Chip 
-                              key={id} 
-                              label={`${tag.icon} ${tag.name}`} 
-                              size="small"
-                              sx={{ bgcolor: tag.color, color: 'white' }}
-                              onDelete={() => setForm({ 
-                                ...form, 
-                                selectedTags: form.selectedTags.filter(t => t !== id) 
-                              })}
-                              onMouseDown={(e) => e.stopPropagation()}
-                            />
+                            <Chip key={id} label={`${tag.icon || ''} ${tag.name}`} size="small" sx={{ bgcolor: tag.color, color: 'white' }}
+                              onDelete={() => setForm({ ...form, selectedTags: form.selectedTags.filter(t => t !== id) })}
+                              onMouseDown={(e) => e.stopPropagation()} />
                           ) : null
                         })}
                       </Stack>
-                    )}
-                  >
+                    )}>
                     {tags.filter(t => t.isActive).map(tag => (
                       <MenuItem key={tag.id} value={tag.id}>
                         <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
-                          <Box 
-                            sx={{ 
-                              width: 28, 
-                              height: 28, 
-                              borderRadius: 1, 
-                              bgcolor: tag.color,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <Typography sx={{ fontSize: 14 }}>{tag.icon}</Typography>
+                          <Box sx={{ width: 28, height: 28, borderRadius: 1, bgcolor: tag.color || 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Typography sx={{ fontSize: 14 }}>{tag.icon || '🏷️'}</Typography>
                           </Box>
                           <Typography sx={{ flex: 1 }}>{tag.name}</Typography>
                           {form.selectedTags.includes(tag.id) && <Check color="primary" />}
@@ -1906,9 +2040,7 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
                   </Select>
                 </FormControl>
               ) : (
-                <Alert severity="info">
-                  Henüz etiket eklenmemiş. Etiketler sayfasından etiket ekleyebilirsiniz.
-                </Alert>
+                <Alert severity="info">Henüz etiket eklenmemiş. Etiketler sayfasından etiket ekleyebilirsiniz.</Alert>
               )}
             </Box>
 
@@ -1924,13 +2056,9 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
           </Stack>
         )}
 
-        {/* TAB 3: 3D Model */}
         {tab === 3 && (
           <Stack spacing={3}>
-            <Alert severity="info" icon={<ViewInAr />}>
-              GLB dosyaları backend/outputs klasörüne yüklenir. Yüklenen dosyaları buradan ürüne atayın.
-            </Alert>
-            
+            <Alert severity="info" icon={<ViewInAr />}>GLB dosyaları backend/outputs klasörüne yüklenir. Yüklenen dosyaları buradan ürüne atayın.</Alert>
             {glbFiles.length > 0 ? (
               <FormControl fullWidth>
                 <InputLabel>3D Model (GLB)</InputLabel>
@@ -1953,7 +2081,6 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
             ) : (
               <Alert severity="warning">Henüz GLB dosyası yüklenmemiş. backend/outputs klasörüne GLB dosyası ekleyin.</Alert>
             )}
-            
             {form.glbFile && (
               <Box>
                 <Typography variant="subtitle2" gutterBottom>3D Model Önizleme</Typography>
@@ -1975,7 +2102,6 @@ function ProductModal({ open, product, categories, tags = [], sectionId, glbFile
 }
 
 // ==================== CATEGORIES PAGE ====================
-
 export function CategoriesPage() {
   const { branchId, sectionId } = useParams()
   const { currentSection } = useBranch()
@@ -2032,15 +2158,33 @@ export function CategoriesPage() {
     }
   }
 
-  // Filtrelenmiş kategoriler
-  const filteredCategories = categories.filter(category => {
+  // Hiyerarşik kategori ağacı oluştur
+  const buildCategoryTree = useCallback((cats, parentId = null, level = 0) => {
+    return cats
+      .filter(c => {
+        const catParent = c.parent?._id || c.parent || null
+        return catParent === parentId
+      })
+      .flatMap(c => [
+        { ...c, level },
+        ...buildCategoryTree(cats, c.id || c._id, level + 1)
+      ])
+  }, [])
+
+  // Üst kategori adını bul
+  const getParentName = (category) => {
+    if (!category.parent) return null
+    const parentId = category.parent?._id || category.parent
+    const parent = categories.find(c => (c.id || c._id) === parentId)
+    return parent ? parent.name : null
+  }
+
+  const hierarchicalCategories = useMemo(() => buildCategoryTree(categories), [categories, buildCategoryTree])
+
+  const filteredCategories = hierarchicalCategories.filter(category => {
     if (!search.trim()) return true
     const searchLower = search.toLowerCase()
-    return (
-      category.name?.toLowerCase().includes(searchLower) ||
-      category.nameEN?.toLowerCase().includes(searchLower) ||
-      category.icon?.includes(search)
-    )
+    return category.name?.toLowerCase().includes(searchLower) || category.nameEN?.toLowerCase().includes(searchLower) || category.icon?.includes(search)
   })
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
@@ -2048,300 +2192,242 @@ export function CategoriesPage() {
   return (
     <PageWrapper>
       <Stack spacing={3}>
-        {/* Header */}
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
             <Typography variant="h6" fontWeight={700}>{categories.length} Kategori</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {currentSection?.icon} {currentSection?.name} bölümü kategorileri
-            </Typography>
+            <Typography variant="body2" color="text.secondary">{currentSection?.icon} {currentSection?.name} bölümü kategorileri</Typography>
           </Box>
           <Stack direction="row" spacing={2} alignItems="center">
-            {currentSection && (
-              <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />
-            )}
+            {currentSection && <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />}
             <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>Yeni Kategori</Button>
           </Stack>
         </Stack>
 
-        {/* Arama Çubuğu */}
-        <TextField
-          fullWidth
-          placeholder="Kategori ara... (isim veya ikon)"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+        <TextField fullWidth placeholder="Kategori ara... (isim veya ikon)" value={search} onChange={e => setSearch(e.target.value)}
           InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search color="action" />
-              </InputAdornment>
-            ),
-            endAdornment: search && (
-              <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setSearch('')}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </InputAdornment>
-            )
+            startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>,
+            endAdornment: search && <InputAdornment position="end"><IconButton size="small" onClick={() => setSearch('')}><Close fontSize="small" /></IconButton></InputAdornment>
           }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              bgcolor: 'background.paper',
-              borderRadius: 2
-            }
-          }}
-        />
+          sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'background.paper', borderRadius: 2 } }} />
 
-        {/* Arama sonucu bilgisi */}
-        {search && (
-          <Typography variant="body2" color="text.secondary">
-            {filteredCategories.length} sonuç bulundu
-          </Typography>
-        )}
+        {search && <Typography variant="body2" color="text.secondary">{filteredCategories.length} sonuç bulundu</Typography>}
 
-        {/* Kategori Kartları - SABİT BOYUT */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: 2,
-          justifyContent: { xs: 'center', sm: 'flex-start' }
-        }}>
-          {filteredCategories.map(category => (
-            <Card 
-              key={category.id}
-              sx={{ 
-                width: 220,   // SABİT GENİŞLİK
-                height: 320,  // SABİT YÜKSEKLİK
-                display: 'flex', 
-                flexDirection: 'column',
-                flexShrink: 0
-              }}
-            >
-              {/* SABİT BOYUTLU GÖRSEL ALANI */}
-              <Box sx={{ 
-                position: 'relative', 
-                width: 220,   // SABİT GENİŞLİK
-                height: 160,  // SABİT YÜKSEKLİK
-                bgcolor: 'background.default',
-                overflow: 'hidden',
-                flexShrink: 0
-              }}>
-                {category.image ? (
-                  <Box
-                    component="img"
-                    src={getImageUrl(category.image)}
-                    alt={category.name}
-                    sx={{ 
-                      width: 220,
-                      height: 160,
-                      objectFit: 'cover',
-                      objectPosition: 'center'
-                    }} 
-                  />
-                ) : (
-                  <Box sx={{ 
-                    width: 220,
-                    height: 160,
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
-                  }}>
-                    <Typography variant="h2">{category.icon}</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {filteredCategories.map(category => {
+            const isMainCategory = category.level === 0
+
+            // Ana kategori - resimli büyük kart
+            if (isMainCategory) {
+              return (
+                <Card key={category.id} sx={{ display: 'flex', flexDirection: 'row', overflow: 'hidden', maxWidth: 500 }}>
+                  <Box sx={{ position: 'relative', width: 160, minHeight: 160, bgcolor: 'background.default', overflow: 'hidden', flexShrink: 0 }}>
+                    {category.image ? (
+                      <Box component="img" src={getImageUrl(category.image)} alt={category.name} sx={{ width: 160, height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                    ) : (
+                      <Box sx={{ width: 160, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' }}>
+                        <Typography variant="h2">{category.icon}</Typography>
+                      </Box>
+                    )}
+                    <Tooltip title="Görsel Yükle">
+                      <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}>
+                        <PhotoCamera sx={{ color: 'white', fontSize: 20 }} />
+                        <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
-                )}
-                
-                {/* Görsel yükleme butonu */}
-                <Tooltip title="Görsel Yükle">
-                  <IconButton 
-                    component="label" 
-                    size="small" 
-                    sx={{ 
-                      position: 'absolute', 
-                      bottom: 8, 
-                      right: 8, 
-                      bgcolor: 'rgba(0,0,0,0.6)', 
-                      '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } 
-                    }}
-                  >
-                    <PhotoCamera sx={{ color: 'white', fontSize: 20 }} />
-                    <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
-                  </IconButton>
-                </Tooltip>
-                
-                {/* Aktif/Pasif chip */}
-                <Chip 
-                  label={category.isActive ? 'Aktif' : 'Pasif'} 
-                  size="small" 
-                  color={category.isActive ? 'success' : 'default'} 
-                  sx={{ position: 'absolute', top: 8, right: 8 }} 
-                />
-              </Box>
+                  <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <Box>
+                        <Typography variant="h6" fontWeight={700}>{category.icon} {category.name}</Typography>
+                        {category.nameEN && <Typography variant="body2" color="text.secondary">🇬🇧 {category.nameEN}</Typography>}
+                      </Box>
+                      <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} />
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>{category.productCount || 0} ürün</Typography>
+                    <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
+                      <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" sx={{ height: 20, fontSize: '0.65rem' }} />
+                    </Stack>
+                    <Stack direction="row" spacing={1} sx={{ mt: 'auto', pt: 1 }}>
+                      <Button size="small" startIcon={<Edit />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>Düzenle</Button>
+                      <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete fontSize="small" /></IconButton>
+                    </Stack>
+                  </Box>
+                </Card>
+              )
+            }
 
-              {/* Kategori bilgileri */}
-              <CardContent sx={{ flex: 1, p: 1.5, overflow: 'hidden' }}>
-                <Typography variant="subtitle2" fontWeight={700} noWrap>
-                  {category.icon} {category.name}
-                </Typography>
-                
-                {/* İngilizce isim varsa göster */}
-                {category.nameEN && (
-                  <Typography variant="caption" color="text.secondary" noWrap display="block">
-                    🇬🇧 {category.nameEN}
-                  </Typography>
-                )}
-                
-                <Typography variant="caption" color="text.secondary">
-                  {category.productCount || 0} ürün
-                </Typography>
-                
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-                  <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" />
+            // Alt kategori - kompakt satır görünümü (resimsiz)
+            return (
+              <Paper
+                key={category.id}
+                variant="outlined"
+                sx={{
+                  ml: category.level * 4,
+                  p: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  borderLeft: '3px solid',
+                  borderColor: 'primary.main',
+                  maxWidth: 500 - (category.level * 32)
+                }}
+              >
+                <Typography variant="h5" sx={{ minWidth: 40, textAlign: 'center' }}>{category.icon}</Typography>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="subtitle2" fontWeight={600} noWrap>{category.name}</Typography>
+                    <Chip label={`${category.level}. seviye`} size="small" color="primary" sx={{ height: 18, fontSize: '0.6rem' }} />
+                    <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} sx={{ height: 18, fontSize: '0.6rem' }} />
+                  </Stack>
+                  {category.nameEN && <Typography variant="caption" color="text.secondary" noWrap>🇬🇧 {category.nameEN}</Typography>}
+                  <Typography variant="caption" color="text.secondary" display="block">{category.productCount || 0} ürün • ↳ {getParentName(category)}</Typography>
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton size="small" onClick={() => { setEditingCategory(category); setModalOpen(true) }}><Edit fontSize="small" /></IconButton>
+                  <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete fontSize="small" /></IconButton>
                 </Stack>
-              </CardContent>
-
-              {/* Aksiyonlar */}
-              <CardActions sx={{ p: 1, pt: 0 }}>
-                <Button size="small" startIcon={<Edit />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>
-                  Düzenle
-                </Button>
-                <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}>
-                  <Delete fontSize="small" />
-                </IconButton>
-              </CardActions>
-            </Card>
-          ))}
+              </Paper>
+            )
+          })}
         </Box>
 
-        {/* Boş durum */}
         {filteredCategories.length === 0 && !search && (
-          <EmptyState 
-            icon={<Category sx={{ fontSize: 64 }} />} 
-            title="Henüz kategori yok"
-            action={
-              <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>
-                İlk Kategoriyi Ekle
-              </Button>
-            } 
-          />
+          <EmptyState icon={<Category sx={{ fontSize: 64 }} />} title="Henüz kategori yok"
+            action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>İlk Kategoriyi Ekle</Button>} />
         )}
 
-        {/* Arama sonucu boş */}
         {filteredCategories.length === 0 && search && (
-          <EmptyState 
-            icon={<Search sx={{ fontSize: 64 }} />} 
-            title="Sonuç bulunamadı"
-            description={`"${search}" için kategori bulunamadı`}
-            action={
-              <Button variant="outlined" onClick={() => setSearch('')}>
-                Aramayı Temizle
-              </Button>
-            } 
-          />
+          <EmptyState icon={<Search sx={{ fontSize: 64 }} />} title="Sonuç bulunamadı" description={`"${search}" için kategori bulunamadı`}
+            action={<Button variant="outlined" onClick={() => setSearch('')}>Aramayı Temizle</Button>} />
         )}
 
-        {/* Modaller */}
-        <CategoryModal 
-          open={modalOpen} 
-          category={editingCategory} 
-          sectionId={sectionId} 
-          branchId={branchId}
+        <CategoryModal open={modalOpen} category={editingCategory} sectionId={sectionId} branchId={branchId}
           onClose={() => { setModalOpen(false); setEditingCategory(null) }}
-          onSave={() => { setModalOpen(false); setEditingCategory(null); loadData() }} 
-        />
+          onSave={() => { setModalOpen(false); setEditingCategory(null); loadData() }} />
 
-        <ConfirmDialog 
-          open={deleteDialog.open} 
-          title="Kategori Sil"
-          message={
-            <>
-              <Typography>"{deleteDialog.category?.name}" kategorisini silmek istediğinize emin misiniz?</Typography>
-              <Alert severity="warning" sx={{ mt: 2 }}>Bu kategorideki ürünler kategorisiz kalacak.</Alert>
-            </>
-          }
-          onConfirm={handleDelete} 
-          onCancel={() => setDeleteDialog({ open: false, category: null })} 
-        />
+        <ConfirmDialog open={deleteDialog.open} title="Kategori Sil"
+          message={<><Typography>"{deleteDialog.category?.name}" kategorisini silmek istediğinize emin misiniz?</Typography><Alert severity="warning" sx={{ mt: 2 }}>Bu kategorideki ürünler kategorisiz kalacak.</Alert></>}
+          onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, category: null })} />
       </Stack>
     </PageWrapper>
   )
 }
+
 // ==================== CATEGORY MODAL ====================
 function CategoryModal({ open, category, sectionId, branchId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
-  
   const isEditing = !!category?.id
   const [saving, setSaving] = useState(false)
   const [translating, setTranslating] = useState(false)
-  const [form, setForm] = useState({ 
-    name: '', 
-    nameEN: '',
-    icon: '', 
-    description: '', 
-    isActive: true, 
-    layoutSize: 'half' 
-  })
+  const [allCategories, setAllCategories] = useState([])
+  const [form, setForm] = useState({ name: '', nameEN: '', icon: '', description: '', isActive: true, layoutSize: 'half', categoryType: 'product_title', parentId: '' })
 
   const icons = ['🍕', '🍔', '🌮', '🍜', '🍣', '🥗', '🍰', '☕', '🍺', '🥤', '🍳', '🥪', '🍝', '🥘', '🍱', '🧁', '🍦', '🥩', '🍗', '🥙', '🌯', '🥡', '🍛', '🍲', '🥧', '🧇', '🥞', '🧆', '🍤', '🦐']
+
+  const categoryTypes = [
+    { value: 'category_title', label: 'Kategori Başlığı', description: 'En büyük başlık (örn: YEMEKLER)', size: 'h4' },
+    { value: 'product_main_title', label: 'Ürün Ana Başlık', description: 'Büyük başlık (örn: Ana Yemekler)', size: 'h5' },
+    { value: 'product_title', label: 'Ürün Başlığı', description: 'Normal başlık (örn: Izgara Çeşitleri)', size: 'h6' },
+    { value: 'product_subtitle', label: 'Alt Ürün Başlığı', description: 'Küçük başlık (örn: Ekstra Soslar)', size: 'subtitle1' }
+  ]
+
+  // Kategorileri yükle
+  useEffect(() => {
+    if (open && branchId) {
+      loadCategories()
+    }
+  }, [open, branchId, sectionId])
+
+  const loadCategories = async () => {
+    try {
+      const res = await api.get(`/branches/${branchId}/categories${sectionId ? `?section=${sectionId}` : ''}`)
+      setAllCategories(res.data || [])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  // Hiyerarşik kategori listesi oluştur
+  const buildCategoryTree = (categories, parentId = null, level = 0) => {
+    return categories
+      .filter(c => (c.parent || null) === parentId || (c.parent?._id || c.parent) === parentId)
+      .flatMap(c => [
+        { ...c, level },
+        ...buildCategoryTree(categories, c.id || c._id, level + 1)
+      ])
+  }
+
+  const categoryTree = useMemo(() => {
+    // Düzenlenen kategoriyi ve alt kategorilerini hariç tut
+    const filtered = allCategories.filter(c => {
+      if (!isEditing) return true
+      const catId = c.id || c._id
+      if (catId === category?.id) return false
+      // Alt kategorileri de hariç tut (döngü önleme)
+      let parent = c.parent
+      while (parent) {
+        const parentId = parent._id || parent
+        if (parentId === category?.id) return false
+        const parentCat = allCategories.find(p => (p.id || p._id) === parentId)
+        parent = parentCat?.parent
+      }
+      return true
+    })
+    return buildCategoryTree(filtered)
+  }, [allCategories, isEditing, category?.id])
 
   useEffect(() => {
     if (open) {
       if (category) {
-        setForm({ 
-          name: category.name || '', 
+        setForm({
+          name: category.name || '',
           nameEN: category.nameEN || '',
-          icon: category.icon || '', 
-          description: category.description || '', 
-          isActive: category.isActive !== false, 
-          layoutSize: category.layoutSize || 'half'
+          icon: category.icon || '',
+          description: category.description || '',
+          isActive: category.isActive !== false,
+          layoutSize: category.layoutSize || 'half',
+          categoryType: category.categoryType || 'product_title',
+          parentId: category.parent?._id || category.parent || ''
         })
       } else {
-        setForm({ name: '', nameEN: '', icon: '', description: '', isActive: true, layoutSize: 'half' })
+        setForm({ name: '', nameEN: '', icon: '', description: '', isActive: true, layoutSize: 'half', categoryType: 'product_title', parentId: '' })
       }
     }
   }, [open, category])
 
-  // Otomatik çeviri fonksiyonu
   const handleAutoTranslate = async () => {
-    if (!form.name.trim()) {
-      showSnackbar('Önce kategori adını girin', 'warning')
-      return
-    }
-    
+    if (!form.name.trim()) { showSnackbar('Önce kategori adını girin', 'warning'); return }
     setTranslating(true)
     try {
-      const res = await api.post('/translate', {
-        text: form.name,
-        targetLang: 'en',
-        sourceLang: 'tr'
-      })
-      
+      const res = await api.post('/translate', { text: form.name, targetLang: 'en', sourceLang: 'tr' })
       if (res.data.success && res.data.translatedText) {
         setForm(prev => ({ ...prev, nameEN: res.data.translatedText }))
         showSnackbar('Çeviri başarılı', 'success')
-      } else {
-        showSnackbar('Çeviri yapılamadı', 'error')
-      }
+      } else { showSnackbar('Çeviri yapılamadı', 'error') }
     } catch (err) {
       console.error('Translation error:', err)
       showSnackbar('Çeviri hatası: ' + (err.response?.data?.error || err.message), 'error')
-    } finally {
-      setTranslating(false)
-    }
+    } finally { setTranslating(false) }
   }
 
   const handleSubmit = async () => {
     if (!form.name) { showSnackbar('Kategori adı zorunludur', 'error'); return }
     setSaving(true)
     try {
-      const data = { ...form, section: sectionId }
-      if (isEditing) {
-        await api.put(`/categories/${category.id}`, data)
-      } else {
-        await api.post(`/branches/${branchId}/categories`, data)
+      const data = {
+        name: form.name,
+        nameEN: form.nameEN,
+        icon: form.icon,
+        description: form.description,
+        isActive: form.isActive,
+        layoutSize: form.layoutSize,
+        categoryType: form.categoryType,
+        section: sectionId,
+        parent: form.parentId || null
       }
+      if (isEditing) { await api.put(`/categories/${category.id}`, data) }
+      else { await api.post(`/branches/${branchId}/categories`, data) }
       showSnackbar(isEditing ? 'Kategori güncellendi' : 'Kategori oluşturuldu', 'success')
-      
       onSave()
     } catch (err) { showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') }
     finally { setSaving(false) }
@@ -2357,48 +2443,93 @@ function CategoryModal({ open, category, sectionId, branchId, onClose, onSave })
       </DialogTitle>
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
-          {/* Kategori Adı (Türkçe) */}
-          <TextField 
-            fullWidth 
-            label="Kategori Adı (Türkçe)" 
-            value={form.name} 
-            onChange={e => setForm({ ...form, name: e.target.value })} 
-            required 
-            placeholder="Örn: Ana Yemekler"
-          />
-          
-          {/* İngilizce İsim */}
-          <Stack direction="row" spacing={1} alignItems="flex-start">
-            <TextField 
-              fullWidth 
-              label="Kategori Adı (İngilizce)" 
-              value={form.nameEN} 
-              onChange={e => setForm({ ...form, nameEN: e.target.value })}
-              placeholder="Örn: Main Courses"
-            />
-            <Tooltip title="Türkçeden İngilizceye Otomatik Çevir">
-              <span>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleAutoTranslate}
-                  disabled={translating || !form.name.trim()}
-                  sx={{ 
-                    minWidth: 56, 
-                    height: 56,
-                    px: 2
+          {/* Kategori Tipi Seçimi */}
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>Başlık Tipi</Typography>
+            <Stack spacing={1}>
+              {categoryTypes.map(type => (
+                <Paper
+                  key={type.value}
+                  variant="outlined"
+                  onClick={() => setForm({ ...form, categoryType: type.value })}
+                  sx={{
+                    p: 1.5,
+                    cursor: 'pointer',
+                    borderColor: form.categoryType === type.value ? 'primary.main' : 'divider',
+                    borderWidth: form.categoryType === type.value ? 2 : 1,
+                    bgcolor: form.categoryType === type.value ? 'primary.50' : 'transparent',
+                    '&:hover': { borderColor: 'primary.main' }
                   }}
                 >
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>{type.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">{type.description}</Typography>
+                    </Box>
+                    <Typography
+                      variant={type.size}
+                      fontWeight={700}
+                      sx={{
+                        color: form.categoryType === type.value ? 'primary.main' : 'text.secondary',
+                        fontSize: type.value === 'category_title' ? 20 : type.value === 'product_main_title' ? 17 : type.value === 'product_title' ? 14 : 12
+                      }}
+                    >
+                      Aa
+                    </Typography>
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          </Box>
+
+          {/* Üst Kategori Seçimi */}
+          {categoryTree.length > 0 && (
+            <FormControl fullWidth>
+              <InputLabel>Üst Kategori (Opsiyonel)</InputLabel>
+              <Select
+                value={form.parentId}
+                label="Üst Kategori (Opsiyonel)"
+                onChange={e => setForm({ ...form, parentId: e.target.value })}
+              >
+                <MenuItem value="">
+                  <em>Ana Kategori (Üst kategori yok)</em>
+                </MenuItem>
+                {categoryTree.map(cat => (
+                  <MenuItem key={cat.id || cat._id} value={cat.id || cat._id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography sx={{ ml: cat.level * 2, color: cat.level > 0 ? 'text.secondary' : 'text.primary' }}>
+                        {'─'.repeat(cat.level)} {cat.icon} {cat.name}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          <TextField fullWidth label="Kategori Adı (Türkçe)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Örn: Ana Yemekler" />
+          <Stack direction="row" spacing={1} alignItems="flex-start">
+            <TextField fullWidth label="Kategori Adı (İngilizce)" value={form.nameEN} onChange={e => setForm({ ...form, nameEN: e.target.value })} placeholder="Örn: Main Courses" />
+            <Tooltip title="Türkçeden İngilizceye Otomatik Çevir">
+              <span>
+                <Button variant="outlined" onClick={handleAutoTranslate} disabled={translating || !form.name.trim()} sx={{ minWidth: 56, height: 56, px: 2 }}>
                   {translating ? <CircularProgress size={20} /> : <Translate />}
                 </Button>
               </span>
             </Tooltip>
           </Stack>
-          
-       
 
-        
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>İkon Seçin</Typography>
+            <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 140, overflow: 'auto' }}>
+              <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                {icons.map(icon => (
+                  <Button key={icon} variant={form.icon === icon ? 'contained' : 'outlined'} onClick={() => setForm({ ...form, icon })} sx={{ minWidth: 44, height: 44, fontSize: 20, p: 0 }}>{icon}</Button>
+                ))}
+              </Stack>
+            </Paper>
+          </Box>
 
-          {/* Yerleşim Boyutu */}
           <Box>
             <Typography variant="subtitle2" gutterBottom>Yerleşim Boyutu</Typography>
             <ToggleButtonGroup value={form.layoutSize} exclusive onChange={(e, v) => { if (v) setForm({ ...form, layoutSize: v }) }} fullWidth>
@@ -2408,7 +2539,6 @@ function CategoryModal({ open, category, sectionId, branchId, onClose, onSave })
             </ToggleButtonGroup>
           </Box>
 
-          {/* Aktif/Pasif */}
           <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
         </Stack>
       </DialogContent>
@@ -2440,24 +2570,15 @@ export function CategoryLayoutPage() {
         api.get(`/branches/${branchId}/categories?section=${sectionId}`),
         api.get(`/branches/${branchId}/category-layouts?section=${sectionId}`)
       ])
-      
       const cats = categoriesRes.data || []
       const lays = layoutsRes.data || []
-      
       setCategories(cats)
-      
       if (lays.length === 0 && cats.length > 0) {
         setLayouts(createDefaultLayouts(cats))
       } else {
-        setLayouts(lays.map(l => ({
-          ...l,
-          categories: l.categories?.map(c => ({ category: c.category || c, size: c.size || 'half' })) || []
-        })))
+        setLayouts(lays.map(l => ({ ...l, categories: l.categories?.map(c => ({ category: c.category || c, size: c.size || 'half' })) || [] })))
       }
-    } catch (err) { 
-      console.error(err)
-      showSnackbar('Veriler yüklenemedi', 'error') 
-    }
+    } catch (err) { console.error(err); showSnackbar('Veriler yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
 
@@ -2465,34 +2586,28 @@ export function CategoryLayoutPage() {
     const result = []
     let currentRow = { rowOrder: 0, categories: [] }
     let currentWidth = 0
-
     cats.forEach(cat => {
       const size = cat.layoutSize || 'half'
       const width = size === 'full' ? 1 : size === 'half' ? 0.5 : 0.333
-
       if (currentWidth + width > 1.01) {
         if (currentRow.categories.length > 0) result.push(currentRow)
         currentRow = { rowOrder: result.length, categories: [] }
         currentWidth = 0
       }
-
       currentRow.categories.push({ category: cat, size })
       currentWidth += width
-
       if (currentWidth >= 0.99) {
         result.push(currentRow)
         currentRow = { rowOrder: result.length, categories: [] }
         currentWidth = 0
       }
     })
-
     if (currentRow.categories.length > 0) result.push(currentRow)
     return result
   }
 
   const addRow = () => setLayouts([...layouts, { rowOrder: layouts.length, categories: [] }])
   const removeRow = (rowIndex) => setLayouts(layouts.filter((_, i) => i !== rowIndex).map((l, i) => ({ ...l, rowOrder: i })))
-
   const moveRow = (rowIndex, direction) => {
     const newLayouts = [...layouts]
     const targetIndex = rowIndex + direction
@@ -2500,54 +2615,35 @@ export function CategoryLayoutPage() {
     [newLayouts[rowIndex], newLayouts[targetIndex]] = [newLayouts[targetIndex], newLayouts[rowIndex]]
     setLayouts(newLayouts.map((l, i) => ({ ...l, rowOrder: i })))
   }
-
   const addCategoryToRow = (rowIndex, category, size) => {
     const newLayouts = [...layouts]
     newLayouts[rowIndex].categories.push({ category, size })
     setLayouts(newLayouts)
   }
-
   const removeCategoryFromRow = (rowIndex, catIndex) => {
     const newLayouts = [...layouts]
     newLayouts[rowIndex].categories.splice(catIndex, 1)
     setLayouts(newLayouts)
   }
-
   const changeCategorySize = (rowIndex, catIndex, size) => {
     const newLayouts = [...layouts]
     newLayouts[rowIndex].categories[catIndex].size = size
     setLayouts(newLayouts)
   }
-
   const getRowWidth = (row) => (row.categories || []).reduce((sum, c) => sum + (c.size === 'full' ? 1 : c.size === 'half' ? 0.5 : 0.333), 0)
 
   const saveLayouts = async () => {
     setSaving(true)
     try {
-      const layoutsToSave = layouts.map(l => ({
-        rowOrder: l.rowOrder,
-        categories: l.categories.map(c => ({
-          category: c.category?.id || c.category?._id || c.category,
-          size: c.size
-        }))
-      }))
-      await api.put(`/branches/${branchId}/category-layouts/bulk`, { 
-        layouts: layoutsToSave,
-        section: sectionId
-      })
+      const layoutsToSave = layouts.map(l => ({ rowOrder: l.rowOrder, categories: l.categories.map(c => ({ category: c.category?.id || c.category?._id || c.category, size: c.size })) }))
+      await api.put(`/branches/${branchId}/category-layouts/bulk`, { layouts: layoutsToSave, section: sectionId })
       showSnackbar('Düzen kaydedildi', 'success')
-    } catch (err) { 
-      console.error(err)
-      showSnackbar('Kaydetme başarısız', 'error') 
-    }
+    } catch (err) { console.error(err); showSnackbar('Kaydetme başarısız', 'error') }
     finally { setSaving(false) }
   }
 
   const usedCategoryIds = layouts.flatMap(l => (l.categories || []).map(c => c.category?.id || c.category?._id || c.category)).filter(Boolean)
-  
-  // Kategoriler zaten API'den section'a göre filtrelenmiş geliyor
   const unusedCategories = categories.filter(c => !usedCategoryIds.includes(c.id))
-
   const getGridSize = (size) => size === 'full' ? 12 : size === 'half' ? 6 : 4
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
@@ -2558,18 +2654,12 @@ export function CategoryLayoutPage() {
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
             <Typography variant="h6" fontWeight={700}>Kategori Düzeni</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {currentSection?.icon} {currentSection?.name} bölümü için menü düzeni
-            </Typography>
+            <Typography variant="body2" color="text.secondary">{currentSection?.icon} {currentSection?.name} bölümü için menü düzeni</Typography>
           </Box>
           <Stack direction="row" spacing={1}>
-            {currentSection && (
-              <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />
-            )}
+            {currentSection && <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />}
             <Button onClick={loadData} startIcon={<Refresh />}>Yenile</Button>
-            <Button variant="contained" onClick={saveLayouts} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>
-              {saving ? 'Kaydediliyor...' : 'Kaydet'}
-            </Button>
+            <Button variant="contained" onClick={saveLayouts} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button>
           </Stack>
         </Stack>
 
@@ -2584,37 +2674,24 @@ export function CategoryLayoutPage() {
                   <Grid item xs={4} sm={3} md={2} key={cat.id}>
                     <Paper variant="outlined" sx={{ p: 1, cursor: 'pointer', transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', transform: 'scale(1.02)' } }}
                       onClick={() => {
-                        if (layouts.length === 0) {
-                          setLayouts([{ rowOrder: 0, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
-                        } else {
+                        if (layouts.length === 0) { setLayouts([{ rowOrder: 0, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }]) }
+                        else {
                           const lastRowIndex = layouts.length - 1
-                          if (getRowWidth(layouts[lastRowIndex]) < 0.99) {
-                            addCategoryToRow(lastRowIndex, cat, cat.layoutSize || 'half')
-                          } else {
-                            setLayouts([...layouts, { rowOrder: layouts.length, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }])
-                          }
+                          if (getRowWidth(layouts[lastRowIndex]) < 0.99) { addCategoryToRow(lastRowIndex, cat, cat.layoutSize || 'half') }
+                          else { setLayouts([...layouts, { rowOrder: layouts.length, categories: [{ category: cat, size: cat.layoutSize || 'half' }] }]) }
                         }
                       }}>
                       <Box sx={{ position: 'relative', pt: '75%', bgcolor: 'background.default', borderRadius: 1, overflow: 'hidden', mb: 1 }}>
-                        {cat.image ? (
-                          <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="h4">{cat.icon}</Typography>
-                          </Box>
-                        )}
-                        <IconButton size="small" sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}>
-                          <Add fontSize="small" />
-                        </IconButton>
+                        {cat.image ? <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Typography variant="h4">{cat.icon}</Typography></Box>}
+                        <IconButton size="small" sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}><Add fontSize="small" /></IconButton>
                       </Box>
                       <Typography variant="caption" fontWeight={600} noWrap display="block" textAlign="center">{cat.name}</Typography>
                     </Paper>
                   </Grid>
                 ))}
               </Grid>
-            ) : (
-              <Typography color="text.secondary" textAlign="center">Tüm kategoriler düzene eklenmiş ✓</Typography>
-            )}
+            ) : <Typography color="text.secondary" textAlign="center">Tüm kategoriler düzene eklenmiş ✓</Typography>}
           </CardContent>
         </Card>
 
@@ -2624,7 +2701,6 @@ export function CategoryLayoutPage() {
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <DragIndicator color="action" />
                     <Typography variant="subtitle2">Satır {rowIndex + 1}</Typography>
                     <Chip label={`${Math.round(getRowWidth(row) * 100)}%`} size="small" color={getRowWidth(row) > 1.01 ? 'error' : getRowWidth(row) >= 0.99 ? 'success' : 'warning'} />
                   </Stack>
@@ -2646,21 +2722,12 @@ export function CategoryLayoutPage() {
                             <IconButton size="small" sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'error.main' } }} onClick={() => removeCategoryFromRow(rowIndex, catIndex)}>
                               <Close fontSize="small" sx={{ color: 'white' }} />
                             </IconButton>
-                            
                             <Box sx={{ position: 'relative', pt: item.size === 'full' ? '40%' : '60%', bgcolor: 'background.default' }}>
-                              {cat.image ? (
-                                <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)' }}>
-                                  <Typography variant="h2">{cat.icon || ''}</Typography>
-                                </Box>
-                              )}
+                              {cat.image ? <Box component="img" src={getImageUrl(cat.image)} alt={cat.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)' }}><Typography variant="h2">{cat.icon || ''}</Typography></Box>}
                               <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)' }} />
-                              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 2 }}>
-                                <Typography variant="subtitle1" fontWeight={700} color="white">{cat.icon} {cat.name || 'Kategori'}</Typography>
-                              </Box>
+                              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 2 }}><Typography variant="subtitle1" fontWeight={700} color="white">{cat.icon} {cat.name || 'Kategori'}</Typography></Box>
                             </Box>
-
                             <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
                               <Typography variant="caption" color="text.secondary" gutterBottom display="block">Boyut:</Typography>
                               <ToggleButtonGroup size="small" value={item.size} exclusive onChange={(e, v) => v && changeCategorySize(rowIndex, catIndex, v)} fullWidth>
@@ -2674,19 +2741,12 @@ export function CategoryLayoutPage() {
                       )
                     })}
                   </Grid>
-                ) : (
-                  <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '2px dashed', borderColor: 'divider', borderRadius: 2 }}>
-                    <Typography>Yukarıdan kategori seçerek ekleyin</Typography>
-                  </Box>
-                )}
+                ) : <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '2px dashed', borderColor: 'divider', borderRadius: 2 }}><Typography>Yukarıdan kategori seçerek ekleyin</Typography></Box>}
 
                 {getRowWidth(row) < 0.99 && unusedCategories.length > 0 && (
                   <FormControl size="small" sx={{ mt: 2, minWidth: 200 }}>
                     <InputLabel>Kategori Ekle</InputLabel>
-                    <Select value="" label="Kategori Ekle" onChange={(e) => {
-                      const cat = categories.find(c => c.id === e.target.value)
-                      if (cat) addCategoryToRow(rowIndex, cat, cat.layoutSize || 'half')
-                    }}>
+                    <Select value="" label="Kategori Ekle" onChange={(e) => { const cat = categories.find(c => c.id === e.target.value); if (cat) addCategoryToRow(rowIndex, cat, cat.layoutSize || 'half') }}>
                       {unusedCategories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.icon} {cat.name}</MenuItem>)}
                     </Select>
                   </FormControl>
@@ -2713,13 +2773,8 @@ export function GlbFilesPage() {
   useEffect(() => { if (branchId) loadFiles() }, [branchId])
 
   const loadFiles = async () => {
-    try {
-      const res = await api.get(`/branches/${branchId}/glb`)
-      setFiles(res.data || [])
-    } catch (err) { 
-      console.error(err)
-      showSnackbar('Dosyalar yüklenemedi', 'error') 
-    }
+    try { const res = await api.get(`/branches/${branchId}/glb`); setFiles(res.data || []) }
+    catch (err) { console.error(err); showSnackbar('Dosyalar yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
 
@@ -2733,28 +2788,13 @@ export function GlbFilesPage() {
       <Stack spacing={3}>
         <Grid container spacing={2}>
           <Grid item xs={4}>
-            <Card><CardContent>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}><ViewInAr /></Avatar>
-                <Box><Typography variant="h4" fontWeight={700}>{files.length}</Typography><Typography variant="body2" color="text.secondary">Toplam</Typography></Box>
-              </Stack>
-            </CardContent></Card>
+            <Card><CardContent><Stack direction="row" alignItems="center" spacing={2}><Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}><ViewInAr /></Avatar><Box><Typography variant="h4" fontWeight={700}>{files.length}</Typography><Typography variant="body2" color="text.secondary">Toplam</Typography></Box></Stack></CardContent></Card>
           </Grid>
           <Grid item xs={4}>
-            <Card><CardContent>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}><Check /></Avatar>
-                <Box><Typography variant="h4" fontWeight={700}>{assignedCount}</Typography><Typography variant="body2" color="text.secondary">Atanmış</Typography></Box>
-              </Stack>
-            </CardContent></Card>
+            <Card><CardContent><Stack direction="row" alignItems="center" spacing={2}><Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}><Check /></Avatar><Box><Typography variant="h4" fontWeight={700}>{assignedCount}</Typography><Typography variant="body2" color="text.secondary">Atanmış</Typography></Box></Stack></CardContent></Card>
           </Grid>
           <Grid item xs={4}>
-            <Card><CardContent>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: 'warning.main', width: 48, height: 48 }}><Close /></Avatar>
-                <Box><Typography variant="h4" fontWeight={700}>{unassignedCount}</Typography><Typography variant="body2" color="text.secondary">Atanmamış</Typography></Box>
-              </Stack>
-            </CardContent></Card>
+            <Card><CardContent><Stack direction="row" alignItems="center" spacing={2}><Avatar sx={{ bgcolor: 'warning.main', width: 48, height: 48 }}><Close /></Avatar><Box><Typography variant="h4" fontWeight={700}>{unassignedCount}</Typography><Typography variant="body2" color="text.secondary">Atanmamış</Typography></Box></Stack></CardContent></Card>
           </Grid>
         </Grid>
 
@@ -2771,40 +2811,22 @@ export function GlbFilesPage() {
                       <Stack spacing={2}>
                         <Stack direction="row" alignItems="center" spacing={2}>
                           <Avatar sx={{ bgcolor: file.isAssigned ? 'success.main' : 'grey.600', width: 48, height: 48 }}><ViewInAr /></Avatar>
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="subtitle2" fontWeight={600} noWrap>{file.filename}</Typography>
-                            <Typography variant="caption" color="text.secondary">{file.sizeFormatted}</Typography>
-                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}><Typography variant="subtitle2" fontWeight={600} noWrap>{file.filename}</Typography><Typography variant="caption" color="text.secondary">{file.sizeFormatted}</Typography></Box>
                         </Stack>
-                        {file.isAssigned ? (
-                          <Chip label={`✓ ${file.assignedTo}`} color="success" variant="outlined" size="small" icon={<Restaurant />} />
-                        ) : (
-                          <Chip label="Atanmamış" color="warning" variant="outlined" size="small" />
-                        )}
+                        {file.isAssigned ? <Chip label={`✓ ${file.assignedTo}`} color="success" variant="outlined" size="small" icon={<Restaurant />} /> : <Chip label="Atanmamış" color="warning" variant="outlined" size="small" />}
                         <Button variant="outlined" size="small" startIcon={<ThreeSixty />} onClick={() => setPreviewDialog({ open: true, file })}>3D Önizle</Button>
                       </Stack>
                     </Paper>
                   </Grid>
                 ))}
               </Grid>
-            ) : (
-              <EmptyState icon={<ViewInAr sx={{ fontSize: 64 }} />} title="Henüz 3D model yok" description="backend/outputs klasörüne .glb dosyası ekleyin" />
-            )}
+            ) : <EmptyState icon={<ViewInAr sx={{ fontSize: 64 }} />} title="Henüz 3D model yok" description="backend/outputs klasörüne .glb dosyası ekleyin" />}
           </CardContent>
         </Card>
 
         <Dialog open={previewDialog.open} onClose={() => setPreviewDialog({ open: false, file: null })} maxWidth="sm" fullWidth>
-          <DialogTitle>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6" fontWeight={700}>{previewDialog.file?.filename}</Typography>
-              <IconButton onClick={() => setPreviewDialog({ open: false, file: null })}><Close /></IconButton>
-            </Stack>
-          </DialogTitle>
-          <DialogContent>
-            {previewDialog.file && (
-              <ModelViewer3D glbFile={previewDialog.file.filename} productName={previewDialog.file.filename} size="large" />
-            )}
-          </DialogContent>
+          <DialogTitle><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6" fontWeight={700}>{previewDialog.file?.filename}</Typography><IconButton onClick={() => setPreviewDialog({ open: false, file: null })}><Close /></IconButton></Stack></DialogTitle>
+          <DialogContent>{previewDialog.file && <ModelViewer3D glbFile={previewDialog.file.filename} productName={previewDialog.file.filename} size="large" />}</DialogContent>
         </Dialog>
       </Stack>
     </PageWrapper>
@@ -2825,59 +2847,31 @@ export function TagsPage() {
   useEffect(() => { if (branchId) loadTags() }, [branchId])
 
   const loadTags = async () => {
-    try {
-      const res = await api.get(`/branches/${branchId}/tags`)
-      setTags(res.data)
-    } catch (err) { 
-      console.error(err)
-      showSnackbar('Etiketler yüklenemedi', 'error') 
-    }
+    try { const res = await api.get(`/branches/${branchId}/tags`); setTags(res.data) }
+    catch (err) { console.error(err); showSnackbar('Etiketler yüklenemedi', 'error') }
     finally { setLoading(false) }
   }
 
   const handleDelete = async () => {
-    try {
-      await api.delete(`/tags/${deleteDialog.item.id}`)
-      showSnackbar('Etiket silindi', 'success')
-      setDeleteDialog({ open: false, item: null })
-      loadTags()
-    } catch (err) { 
-      console.error(err)
-      showSnackbar('Silinemedi', 'error') 
-    }
+    try { await api.delete(`/tags/${deleteDialog.item.id}`); showSnackbar('Etiket silindi', 'success'); setDeleteDialog({ open: false, item: null }); loadTags() }
+    catch (err) { console.error(err); showSnackbar('Silinemedi', 'error') }
   }
 
   const handleToggleActive = async (tag) => {
-    try {
-      await api.put(`/tags/${tag.id}`, { isActive: !tag.isActive })
-      showSnackbar(tag.isActive ? 'Etiket gizlendi' : 'Etiket aktifleştirildi', 'success')
-      loadTags()
-    } catch (err) {
-      console.error(err)
-      showSnackbar('İşlem başarısız', 'error')
-    }
+    try { await api.put(`/tags/${tag.id}`, { isActive: !tag.isActive }); showSnackbar(tag.isActive ? 'Etiket gizlendi' : 'Etiket aktifleştirildi', 'success'); loadTags() }
+    catch (err) { console.error(err); showSnackbar('İşlem başarısız', 'error') }
   }
 
   const handleReorder = async (index, direction) => {
     const newTags = [...tags]
     const targetIndex = index + direction
     if (targetIndex < 0 || targetIndex >= newTags.length) return
-
     [newTags[index], newTags[targetIndex]] = [newTags[targetIndex], newTags[index]]
     setTags(newTags)
-
     setReordering(true)
-    try {
-      await api.put(`/branches/${branchId}/tags/reorder`, {
-        tagIds: newTags.map(t => t.id)
-      })
-    } catch (err) {
-      console.error(err)
-      showSnackbar('Sıralama kaydedilemedi', 'error')
-      loadTags()
-    } finally {
-      setReordering(false)
-    }
+    try { await api.put(`/branches/${branchId}/tags/reorder`, { tagIds: newTags.map(t => t.id) }) }
+    catch (err) { console.error(err); showSnackbar('Sıralama kaydedilemedi', 'error'); loadTags() }
+    finally { setReordering(false) }
   }
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
@@ -2888,113 +2882,274 @@ export function TagsPage() {
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
             <Typography variant="h5" fontWeight={700}>Etiketler</Typography>
-            <Typography color="text.secondary">
-              Ürünlerinizi gruplamak için etiketler oluşturun (Vegan, Glutensiz, Acılı vb.)
-            </Typography>
+            <Typography color="text.secondary">Ürünlerinizi gruplamak için etiketler oluşturun (Vegan, Glutensiz, Acılı vb.)</Typography>
           </Box>
           <Stack direction="row" spacing={1}>
             <Button startIcon={<Refresh />} onClick={loadTags} disabled={reordering}>Yenile</Button>
-            <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>
-              Yeni Etiket
-            </Button>
+            <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>Yeni Etiket</Button>
           </Stack>
         </Stack>
 
         <Alert severity="info" icon={<LocalOffer />}>
           <Typography variant="subtitle2" gutterBottom>Etiketler Nasıl Çalışır?</Typography>
-          <Typography variant="body2">
-            • Etiketler ürünleri gruplamak için kullanılır (örn: Vegan, Glutensiz, Acılı, Şefin Önerisi)<br/>
-            • Bir ürüne birden fazla etiket atayabilirsiniz<br/>
-            • Müşteriler menüde etiketlere tıklayarak o etiketteki ürünleri görebilir
-          </Typography>
+          <Typography variant="body2">• Etiketler ürünleri gruplamak için kullanılır (örn: Vegan, Glutensiz, Acılı, Şefin Önerisi)<br/>• Bir ürüne birden fazla etiket atayabilirsiniz<br/>• Müşteriler menüde etiketlere tıklayarak o etiketteki ürünleri görebilir</Typography>
         </Alert>
 
         {tags.length > 0 ? (
           <Grid container spacing={2}>
             {tags.map((tag, index) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={tag.id}>
-                <Card sx={{ 
-                  height: '100%',
-                  opacity: tag.isActive ? 1 : 0.6,
-                  transition: 'all 0.2s',
-                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
-                }}>
+                <Card sx={{ height: '100%', opacity: tag.isActive ? 1 : 0.6, transition: 'all 0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 } }}>
                   <CardContent>
                     <Stack spacing={2}>
-                      {/* Header - Sıralama */}
                       <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                         <Box>
-                          <Typography variant="h6" fontWeight={700}>
-                            {tag.name}
-                          </Typography>
-                          {tag.description && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                              {tag.description}
-                            </Typography>
-                          )}
+                          <Typography variant="h6" fontWeight={700}>{tag.name}</Typography>
+                          {tag.description && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{tag.description}</Typography>}
                         </Box>
                         <Stack direction="row" spacing={0.5}>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleReorder(index, -1)}
-                            disabled={index === 0 || reordering}
-                          >
-                            <ArrowUpward fontSize="small" />
-                          </IconButton>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleReorder(index, 1)}
-                            disabled={index === tags.length - 1 || reordering}
-                          >
-                            <ArrowDownward fontSize="small" />
-                          </IconButton>
+                          <IconButton size="small" onClick={() => handleReorder(index, -1)} disabled={index === 0 || reordering}><ArrowUpward fontSize="small" /></IconButton>
+                          <IconButton size="small" onClick={() => handleReorder(index, 1)} disabled={index === tags.length - 1 || reordering}><ArrowDownward fontSize="small" /></IconButton>
                         </Stack>
                       </Stack>
-
-                      {/* İstatistikler */}
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        <Chip 
-                          icon={<Restaurant fontSize="small" />} 
-                          label={`${tag.productCount || 0} ürün`} 
-                          size="small" 
-                          variant="outlined" 
-                        />
-                        <Chip 
-                          label={tag.isActive ? 'Aktif' : 'Gizli'} 
-                          size="small" 
-                          color={tag.isActive ? 'success' : 'default'}
-                        />
+                        <Chip icon={<Restaurant fontSize="small" />} label={`${tag.productCount || 0} ürün`} size="small" variant="outlined" />
+                        <Chip label={tag.isActive ? 'Aktif' : 'Gizli'} size="small" color={tag.isActive ? 'success' : 'default'} />
                       </Stack>
                     </Stack>
                   </CardContent>
-                  
                   <Divider />
-                  
+                  <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                    <Stack direction="row" spacing={0.5}>
+                      <Tooltip title="Düzenle"><IconButton size="small" onClick={() => { setEditing(tag); setModalOpen(true) }}><Edit fontSize="small" /></IconButton></Tooltip>
+                      <Tooltip title={tag.isActive ? 'Gizle' : 'Aktifleştir'}><IconButton size="small" onClick={() => handleToggleActive(tag)}>{tag.isActive ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}</IconButton></Tooltip>
+                      <Tooltip title="Sil"><IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, item: tag })} disabled={tag.productCount > 0}><Delete fontSize="small" /></IconButton></Tooltip>
+                    </Stack>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <EmptyState icon={<LocalOffer sx={{ fontSize: 64 }} />} title="Henüz etiket yok" description="Ürünlerinizi gruplamak için etiketler oluşturun"
+            action={<Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>İlk Etiketi Ekle</Button>} />
+        )}
+      </Stack>
+
+      <TagModal open={modalOpen} onClose={() => { setModalOpen(false); setEditing(null) }} tag={editing} branchId={branchId} onSuccess={() => { setModalOpen(false); setEditing(null); loadTags() }} />
+      <ConfirmDialog open={deleteDialog.open} onCancel={() => setDeleteDialog({ open: false, item: null })} onConfirm={handleDelete} title="Etiket Sil"
+        message={<><Typography gutterBottom><strong>"{deleteDialog.item?.name}"</strong> etiketini silmek istediğinize emin misiniz?</Typography>
+          {deleteDialog.item?.productCount > 0 && <Alert severity="warning" sx={{ mt: 2 }}>Bu etiket <strong>{deleteDialog.item.productCount} ürüne</strong> atanmış. Önce ürünlerden bu etiketi kaldırın.</Alert>}</>} />
+    </PageWrapper>
+  )
+}
+
+// ==================== TAG MODAL ====================
+function TagModal({ open, onClose, tag, branchId, onSuccess }) {
+  const showSnackbar = useSnackbar()
+  const isEditing = !!tag?.id
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ name: '', description: '', isActive: true })
+
+  useEffect(() => {
+    if (open) {
+      if (tag) { setForm({ name: tag.name || '', description: tag.description || '', isActive: tag.isActive !== false }) }
+      else { setForm({ name: '', description: '', isActive: true }) }
+    }
+  }, [tag, open])
+
+  const handleSubmit = async () => {
+    if (!form.name.trim()) { showSnackbar('Etiket adı gerekli', 'error'); return }
+    setSaving(true)
+    try {
+      if (isEditing) { await api.put(`/tags/${tag.id}`, form); showSnackbar('Etiket güncellendi', 'success') }
+      else { await api.post(`/branches/${branchId}/tags`, form); showSnackbar('Etiket eklendi', 'success') }
+      onSuccess()
+    } catch (err) { console.error(err); showSnackbar(err.response?.data?.error || 'Kaydedilemedi', 'error') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6" fontWeight={700}>{isEditing ? 'Etiketi Düzenle' : 'Yeni Etiket Ekle'}</Typography><IconButton onClick={onClose} size="small"><Close /></IconButton></Stack></DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={3}>
+          <TextField fullWidth label="Etiket Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Vegan, Glutensiz, Şefin Önerisi..." autoFocus />
+          <TextField fullWidth label="Açıklama (Opsiyonel)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} placeholder="Etiket hakkında kısa açıklama..." />
+          <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
+            label={<Box><Typography variant="body2" fontWeight={600}>Aktif</Typography><Typography variant="caption" color="text.secondary">Pasif etiketler menüde görünmez</Typography></Box>} />
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={saving}>İptal</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>{saving ? 'Kaydediliyor...' : isEditing ? 'Güncelle' : 'Kaydet'}</Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+// ==================== ANNOUNCEMENTS PAGE ====================
+export function AnnouncementsPage() {
+  const { branchId } = useParams()
+  const showSnackbar = useSnackbar()
+  const [announcements, setAnnouncements] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null })
+
+  useEffect(() => { if (branchId) loadAnnouncements() }, [branchId])
+
+  const loadAnnouncements = async () => {
+    try {
+      const res = await api.get(`/branches/${branchId}/announcements`)
+      setAnnouncements(res.data || [])
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Duyurular yüklenemedi', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/announcements/${deleteDialog.item.id}`)
+      showSnackbar('Duyuru silindi', 'success')
+      setDeleteDialog({ open: false, item: null })
+      loadAnnouncements()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Silinemedi', 'error')
+    }
+  }
+
+  const handleToggleActive = async (announcement) => {
+    try {
+      await api.put(`/announcements/${announcement.id}`, { isActive: !announcement.isActive })
+      showSnackbar(announcement.isActive ? 'Duyuru gizlendi' : 'Duyuru aktifleştirildi', 'success')
+      loadAnnouncements()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('İşlem başarısız', 'error')
+    }
+  }
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+
+  return (
+    <PageWrapper>
+      <Stack spacing={3}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>Duyurular</Typography>
+            <Typography color="text.secondary">Menüde gösterilecek duyuru ve kampanyalar</Typography>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button startIcon={<Refresh />} onClick={loadAnnouncements}>Yenile</Button>
+            <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>
+              Yeni Duyuru
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Alert severity="info" icon={<Campaign />}>
+          <Typography variant="subtitle2" gutterBottom>Duyurular Nasıl Çalışır?</Typography>
+          <Typography variant="body2">
+            • Duyurular menü sayfasının üst kısmında kaydırılır şekilde gösterilir<br/>
+            • Başlangıç ve bitiş tarihi belirleyerek zaman sınırlı kampanyalar oluşturabilirsiniz<br/>
+            • Aktif olmayan duyurular müşterilere gösterilmez
+          </Typography>
+        </Alert>
+
+        {announcements.length > 0 ? (
+          <Grid container spacing={2}>
+            {announcements.map((announcement) => (
+              <Grid item xs={12} sm={6} md={4} key={announcement.id}>
+                <Card sx={{
+                  height: '100%',
+                  opacity: announcement.isActive ? 1 : 0.6,
+                  transition: 'all 0.2s',
+                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                }}>
+                  {announcement.image && (
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={getImageUrl(announcement.image)}
+                      alt={announcement.title}
+                      sx={{ objectFit: 'cover' }}
+                    />
+                  )}
+                  <CardContent>
+                    <Stack spacing={1.5}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                        <Typography variant="h6" fontWeight={700}>{announcement.title}</Typography>
+                        <Chip
+                          label={announcement.isActive ? 'Aktif' : 'Pasif'}
+                          size="small"
+                          color={announcement.isActive ? 'success' : 'default'}
+                        />
+                      </Stack>
+
+                      {announcement.description && (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
+                          }}
+                        >
+                          {announcement.description}
+                        </Typography>
+                      )}
+
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Chip
+                          icon={<Schedule fontSize="small" />}
+                          label={announcement.startDate ? formatDate(announcement.startDate) : 'Süresiz'}
+                          size="small"
+                          variant="outlined"
+                        />
+                        {announcement.endDate && (
+                          <Chip
+                            label={`→ ${formatDate(announcement.endDate)}`}
+                            size="small"
+                            variant="outlined"
+                            color={new Date(announcement.endDate) < new Date() ? 'error' : 'default'}
+                          />
+                        )}
+                      </Stack>
+
+                      {announcement.type && (
+                        <Chip
+                          label={announcement.type === 'campaign' ? '🔥 Kampanya' : announcement.type === 'info' ? 'ℹ️ Bilgi' : '📢 Duyuru'}
+                          size="small"
+                          color={announcement.type === 'campaign' ? 'error' : 'primary'}
+                        />
+                      )}
+                    </Stack>
+                  </CardContent>
+
+                  <Divider />
+
                   <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
                     <Stack direction="row" spacing={0.5}>
                       <Tooltip title="Düzenle">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => { setEditing(tag); setModalOpen(true) }}
-                        >
+                        <IconButton size="small" onClick={() => { setEditing(announcement); setModalOpen(true) }}>
                           <Edit fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title={tag.isActive ? 'Gizle' : 'Aktifleştir'}>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleToggleActive(tag)}
-                        >
-                          {tag.isActive ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      <Tooltip title={announcement.isActive ? 'Gizle' : 'Aktifleştir'}>
+                        <IconButton size="small" onClick={() => handleToggleActive(announcement)}>
+                          {announcement.isActive ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Sil">
-                        <IconButton 
-                          size="small" 
-                          color="error" 
-                          onClick={() => setDeleteDialog({ open: true, item: tag })}
-                          disabled={tag.productCount > 0}
-                        >
+                        <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, item: announcement })}>
                           <Delete fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -3005,105 +3160,135 @@ export function TagsPage() {
             ))}
           </Grid>
         ) : (
-          <EmptyState 
-            icon={<LocalOffer sx={{ fontSize: 64 }} />} 
-            title="Henüz etiket yok" 
-            description="Ürünlerinizi gruplamak için etiketler oluşturun" 
+          <EmptyState
+            icon={<Campaign sx={{ fontSize: 64 }} />}
+            title="Henüz duyuru yok"
+            description="Kampanya ve duyurularınızı buradan yönetin"
             action={
-              <Button 
-                variant="contained" 
-                startIcon={<Add />} 
-                onClick={() => setModalOpen(true)}
-              >
-                İlk Etiketi Ekle
+              <Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>
+                İlk Duyuruyu Ekle
               </Button>
-            } 
+            }
           />
         )}
       </Stack>
 
-      {/* Tag Modal */}
-      <TagModal 
-        open={modalOpen} 
-        onClose={() => { setModalOpen(false); setEditing(null) }} 
-        tag={editing} 
-        branchId={branchId} 
-        onSuccess={() => { setModalOpen(false); setEditing(null); loadTags() }} 
+      <AnnouncementModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditing(null) }}
+        announcement={editing}
+        branchId={branchId}
+        onSuccess={() => { setModalOpen(false); setEditing(null); loadAnnouncements() }}
       />
-      
-      {/* Delete Dialog */}
-      <ConfirmDialog 
-        open={deleteDialog.open} 
-        onCancel={() => setDeleteDialog({ open: false, item: null })} 
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onCancel={() => setDeleteDialog({ open: false, item: null })}
         onConfirm={handleDelete}
-        title="Etiket Sil" 
-        message={
-          <>
-            <Typography gutterBottom>
-              <strong>"{deleteDialog.item?.name}"</strong> etiketini silmek istediğinize emin misiniz?
-            </Typography>
-            {deleteDialog.item?.productCount > 0 && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                Bu etiket <strong>{deleteDialog.item.productCount} ürüne</strong> atanmış. Önce ürünlerden bu etiketi kaldırın.
-              </Alert>
-            )}
-          </>
-        } 
+        title="Duyuru Sil"
+        message={`"${deleteDialog.item?.title}" duyurusunu silmek istediğinize emin misiniz?`}
       />
     </PageWrapper>
   )
 }
 
-// ==================== TAG MODAL ====================
-function TagModal({ open, onClose, tag, branchId, onSuccess }) {
+// ==================== ANNOUNCEMENT MODAL ====================
+function AnnouncementModal({ open, onClose, announcement, branchId, onSuccess }) {
   const showSnackbar = useSnackbar()
-  const isEditing = !!tag?.id
+  const isEditing = !!announcement?.id
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
-    name: '', 
-    description: '', 
-    isActive: true
+    title: '',
+    description: '',
+    type: 'announcement',
+    startDate: '',
+    endDate: '',
+    isActive: true,
+    link: ''
   })
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
 
   useEffect(() => {
     if (open) {
-      if (tag) {
+      if (announcement) {
         setForm({
-          name: tag.name || '', 
-          description: tag.description || '',
-          isActive: tag.isActive !== false
+          title: announcement.title || '',
+          description: announcement.description || '',
+          type: announcement.type || 'announcement',
+          startDate: announcement.startDate ? announcement.startDate.split('T')[0] : '',
+          endDate: announcement.endDate ? announcement.endDate.split('T')[0] : '',
+          isActive: announcement.isActive !== false,
+          link: announcement.link || ''
         })
+        setImagePreview(announcement.image ? getImageUrl(announcement.image) : null)
       } else {
-        setForm({ 
-          name: '', 
-          description: '', 
-          isActive: true
+        setForm({
+          title: '',
+          description: '',
+          type: 'announcement',
+          startDate: '',
+          endDate: '',
+          isActive: true,
+          link: ''
         })
+        setImagePreview(null)
       }
+      setImageFile(null)
     }
-  }, [tag, open])
+  }, [announcement, open])
+
+  const handleImageChange = (file) => {
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) {
-      showSnackbar('Etiket adı gerekli', 'error')
+    if (!form.title.trim()) {
+      showSnackbar('Duyuru başlığı gerekli', 'error')
       return
     }
-    
+
     setSaving(true)
     try {
-      if (isEditing) {
-        await api.put(`/tags/${tag.id}`, form)
-        showSnackbar('Etiket güncellendi', 'success')
-      } else {
-        await api.post(`/branches/${branchId}/tags`, form)
-        showSnackbar('Etiket eklendi', 'success')
+      let announcementId = announcement?.id
+
+      const data = {
+        title: form.title,
+        description: form.description,
+        type: form.type,
+        startDate: form.startDate || null,
+        endDate: form.endDate || null,
+        isActive: form.isActive,
+        link: form.link || null
       }
+
+      if (isEditing) {
+        await api.put(`/announcements/${announcementId}`, data)
+      } else {
+        const res = await api.post(`/branches/${branchId}/announcements`, data)
+        announcementId = res.data.id
+      }
+
+      if (imageFile && announcementId) {
+        let processedFile = imageFile
+        if (isHeicFile(imageFile)) {
+          processedFile = await convertHeicToJpg(imageFile)
+        }
+        const formData = new FormData()
+        formData.append('image', processedFile)
+        await api.post(`/announcements/${announcementId}/image`, formData)
+      }
+
+      showSnackbar(isEditing ? 'Duyuru güncellendi' : 'Duyuru eklendi', 'success')
       onSuccess()
-    } catch (err) { 
+    } catch (err) {
       console.error(err)
-      showSnackbar(err.response?.data?.error || 'Kaydedilemedi', 'error') 
+      showSnackbar(err.response?.data?.error || 'Kaydedilemedi', 'error')
+    } finally {
+      setSaving(false)
     }
-    finally { setSaving(false) }
   }
 
   return (
@@ -3111,58 +3296,94 @@ function TagModal({ open, onClose, tag, branchId, onSuccess }) {
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography variant="h6" fontWeight={700}>
-            {isEditing ? 'Etiketi Düzenle' : 'Yeni Etiket Ekle'}
+            {isEditing ? 'Duyuru Düzenle' : 'Yeni Duyuru'}
           </Typography>
           <IconButton onClick={onClose} size="small"><Close /></IconButton>
         </Stack>
       </DialogTitle>
-      
+
       <DialogContent dividers>
-        <Stack spacing={3}>
-          <TextField 
-            fullWidth 
-            label="Etiket Adı" 
-            value={form.name} 
-            onChange={e => setForm({ ...form, name: e.target.value })} 
-            required 
-            placeholder="Vegan, Glutensiz, Şefin Önerisi..."
-            autoFocus
+        <Stack spacing={2.5}>
+          <TextField
+            fullWidth
+            label="Başlık"
+            value={form.title}
+            onChange={e => setForm({ ...form, title: e.target.value })}
+            required
+            placeholder="Yaz Kampanyası Başladı!"
           />
-          
-          <TextField 
-            fullWidth 
-            label="Açıklama (Opsiyonel)" 
-            value={form.description} 
-            onChange={e => setForm({ ...form, description: e.target.value })} 
-            multiline 
-            rows={2} 
-            placeholder="Etiket hakkında kısa açıklama..."
+
+          <TextField
+            fullWidth
+            label="Açıklama"
+            value={form.description}
+            onChange={e => setForm({ ...form, description: e.target.value })}
+            multiline
+            rows={3}
+            placeholder="Tüm içeceklerde %20 indirim..."
           />
-          
-          <FormControlLabel 
-            control={
-              <Switch 
-                checked={form.isActive} 
-                onChange={e => setForm({ ...form, isActive: e.target.checked })} 
-              />
-            } 
+
+          <FormControl fullWidth>
+            <InputLabel>Duyuru Tipi</InputLabel>
+            <Select value={form.type} label="Duyuru Tipi" onChange={e => setForm({ ...form, type: e.target.value })}>
+              <MenuItem value="announcement">📢 Duyuru</MenuItem>
+              <MenuItem value="campaign">🔥 Kampanya</MenuItem>
+              <MenuItem value="info">ℹ️ Bilgilendirme</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField
+              fullWidth
+              label="Başlangıç Tarihi"
+              type="date"
+              value={form.startDate}
+              onChange={e => setForm({ ...form, startDate: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              label="Bitiş Tarihi"
+              type="date"
+              value={form.endDate}
+              onChange={e => setForm({ ...form, endDate: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+
+          <TextField
+            fullWidth
+            label="Bağlantı (Opsiyonel)"
+            value={form.link}
+            onChange={e => setForm({ ...form, link: e.target.value })}
+            placeholder="https://..."
+            InputProps={{ startAdornment: <InputAdornment position="start"><LinkIcon /></InputAdornment> }}
+          />
+
+          <ImageUploader
+            label="Duyuru Görseli (Opsiyonel)"
+            value={imageFile || imagePreview}
+            onChange={handleImageChange}
+            aspectRatio="16/9"
+          />
+
+          <FormControlLabel
+            control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
             label={
               <Box>
                 <Typography variant="body2" fontWeight={600}>Aktif</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Pasif etiketler menüde görünmez
-                </Typography>
+                <Typography variant="caption" color="text.secondary">Pasif duyurular müşterilere görünmez</Typography>
               </Box>
             }
           />
         </Stack>
       </DialogContent>
-      
+
       <DialogActions sx={{ p: 2.5 }}>
         <Button onClick={onClose} disabled={saving}>İptal</Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
           disabled={saving}
           startIcon={saving ? <CircularProgress size={20} /> : <Check />}
         >
@@ -3173,50 +3394,70 @@ function TagModal({ open, onClose, tag, branchId, onSuccess }) {
   )
 }
 
-// ==================== ANNOUNCEMENTS PAGE ====================
-export function AnnouncementsPage() {
-  const { branchId } = useParams()
+// ==================== REVIEWS PAGE ====================
+export function ReviewsPage() {
+  const { branchId, sectionId } = useParams()
+  const { currentSection } = useBranch()
   const showSnackbar = useSnackbar()
-  const [announcements, setAnnouncements] = useState([])
-  const [sections, setSections] = useState([])
+  const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState(null)
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null })
+  const [filter, setFilter] = useState('all')
+  const [replyDialog, setReplyDialog] = useState({ open: false, review: null })
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, review: null })
 
-  useEffect(() => { if (branchId) loadData() }, [branchId])
+  useEffect(() => { if (branchId) loadReviews() }, [branchId, sectionId])
 
-  const loadData = async () => {
+  const loadReviews = async () => {
     try {
-      const [announcementsRes, sectionsRes] = await Promise.all([
-        api.get(`/branches/${branchId}/announcements`),
-        api.get(`/branches/${branchId}/sections`)
-      ])
-      setAnnouncements(announcementsRes.data)
-      setSections(sectionsRes.data)
-    } catch { showSnackbar('Duyurular yüklenemedi', 'error') }
-    finally { setLoading(false) }
+      const url = sectionId
+        ? `/branches/${branchId}/reviews?section=${sectionId}`
+        : `/branches/${branchId}/reviews`
+      const res = await api.get(url)
+      setReviews(res.data || [])
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Yorumlar yüklenemedi', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleToggle = async (item) => {
+  const handleApprove = async (review) => {
     try {
-      await api.put(`/announcements/${item.id}`, { isActive: !item.isActive })
-      showSnackbar(item.isActive ? 'Duyuru gizlendi' : 'Duyuru yayınlandı', 'success')
-      loadData()
-    } catch { showSnackbar('İşlem başarısız', 'error') }
+      await api.put(`/reviews/${review.id}/approve`)
+      showSnackbar('Yorum onaylandı', 'success')
+      loadReviews()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('İşlem başarısız', 'error')
+    }
   }
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/announcements/${deleteDialog.item.id}`)
-      showSnackbar('Duyuru silindi', 'success')
-      setDeleteDialog({ open: false, item: null })
-      loadData()
-    } catch { showSnackbar('Silme başarısız', 'error') }
+      await api.delete(`/reviews/${deleteDialog.review.id}`)
+      showSnackbar('Yorum silindi', 'success')
+      setDeleteDialog({ open: false, review: null })
+      loadReviews()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Silinemedi', 'error')
+    }
   }
 
-  const typeColors = { info: 'info', warning: 'warning', success: 'success', promo: 'error' }
-  const typeLabels = { info: 'Bilgi', warning: 'Uyarı', success: 'Başarı', promo: 'Promosyon' }
+  const filteredReviews = reviews.filter(r => {
+    if (filter === 'pending') return !r.isApproved
+    if (filter === 'approved') return r.isApproved
+    if (filter === 'replied') return r.reply
+    return true
+  })
+
+  const stats = {
+    total: reviews.length,
+    pending: reviews.filter(r => !r.isApproved).length,
+    approved: reviews.filter(r => r.isApproved).length,
+    avgRating: reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0
+  }
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
@@ -3224,422 +3465,606 @@ export function AnnouncementsPage() {
     <PageWrapper>
       <Stack spacing={3}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
-          <Typography variant="h6" fontWeight={700}>{announcements.length} Duyuru</Typography>
-          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>Yeni Duyuru</Button>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>Müşteri Yorumları</Typography>
+            <Typography color="text.secondary">
+              {currentSection ? `${currentSection.icon} ${currentSection.name} bölümü` : 'Tüm bölümler'}
+            </Typography>
+          </Box>
+          <Button startIcon={<Refresh />} onClick={loadReviews}>Yenile</Button>
         </Stack>
 
-        {announcements.length > 0 ? (
-          <Grid container spacing={2}>
-            {announcements.map(item => (
-              <Grid item xs={12} md={6} key={item.id}>
-                <Card sx={{ opacity: item.isActive ? 1 : 0.6 }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={2} alignItems="flex-start">
-                      <Typography variant="h2">{item.icon}</Typography>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Stack direction="row" spacing={1} alignItems="center" mb={1} flexWrap="wrap">
-                          <Typography variant="h6" fontWeight={600}>{item.title}</Typography>
-                          <Chip label={typeLabels[item.type]} size="small" color={typeColors[item.type]} />
-                          {!item.isActive && <Chip label="Gizli" size="small" />}
-                        </Stack>
-                        <Typography color="text.secondary">{item.message}</Typography>
-                        <Typography variant="caption" color="text.secondary" display="block" mt={1}>{formatDate(item.createdAt)}</Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                  <CardActions>
-                    <Button size="small" onClick={() => handleToggle(item)}>{item.isActive ? 'Gizle' : 'Yayınla'}</Button>
-                    <Button size="small" startIcon={<Edit />} onClick={() => { setEditing(item); setModalOpen(true) }}>Düzenle</Button>
-                    <Button size="small" color="error" startIcon={<Delete />} onClick={() => setDeleteDialog({ open: true, item })}>Sil</Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
+        <Grid container spacing={2}>
+          <Grid item xs={6} sm={3}>
+            <StatCard title="Toplam" value={stats.total} icon={<RateReview />} color="primary" />
           </Grid>
+          <Grid item xs={6} sm={3}>
+            <StatCard title="Bekleyen" value={stats.pending} icon={<Schedule />} color="warning" />
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <StatCard title="Onaylanan" value={stats.approved} icon={<Check />} color="success" />
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <Card>
+              <CardContent>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography color="text.secondary" variant="body2">Ortalama</Typography>
+                  <Rating value={parseFloat(stats.avgRating)} precision={0.1} readOnly size="small" />
+                </Stack>
+                <Typography variant="h4" fontWeight={700} color="warning.main">{stats.avgRating}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        <Card>
+          <CardContent sx={{ pb: 0 }}>
+            <Tabs value={filter} onChange={(e, v) => setFilter(v)}>
+              <Tab label={`Tümü (${stats.total})`} value="all" />
+              <Tab label={<Badge badgeContent={stats.pending} color="warning">Bekleyen</Badge>} value="pending" />
+              <Tab label="Onaylanan" value="approved" />
+              <Tab label="Yanıtlanan" value="replied" />
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {filteredReviews.length > 0 ? (
+          <Stack spacing={2}>
+            {filteredReviews.map(review => (
+              <Card key={review.id}>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'flex-start' }} spacing={1}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          {review.customerName?.charAt(0)?.toUpperCase() || 'M'}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={600}>{review.customerName || 'Misafir'}</Typography>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Rating value={review.rating} readOnly size="small" />
+                            <Typography variant="caption" color="text.secondary">
+                              {formatRelativeTime(review.createdAt)}
+                            </Typography>
+                          </Stack>
+                        </Box>
+                      </Stack>
+                      <Stack direction="row" spacing={1}>
+                        {!review.isApproved && (
+                          <Chip label="Onay Bekliyor" size="small" color="warning" />
+                        )}
+                        {review.product && (
+                          <Chip
+                            icon={<Restaurant fontSize="small" />}
+                            label={review.product.name}
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
+                      </Stack>
+                    </Stack>
+
+                    {review.comment && (
+                      <Typography variant="body1" sx={{ pl: 7 }}>
+                        "{review.comment}"
+                      </Typography>
+                    )}
+
+                    {review.reply && (
+                      <Paper variant="outlined" sx={{ p: 2, ml: 7, bgcolor: alpha('#e53935', 0.05) }}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                          <Reply sx={{ fontSize: 18, color: 'primary.main' }} />
+                          <Typography variant="subtitle2" color="primary">İşletme Yanıtı</Typography>
+                        </Stack>
+                        <Typography variant="body2">{review.reply}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                          {review.replyDate && formatRelativeTime(review.replyDate)}
+                        </Typography>
+                      </Paper>
+                    )}
+
+                    <Divider />
+
+                    <Stack direction="row" spacing={1} sx={{ pl: 7 }}>
+                      {!review.isApproved && (
+                        <Button size="small" startIcon={<Check />} color="success" onClick={() => handleApprove(review)}>
+                          Onayla
+                        </Button>
+                      )}
+                      {!review.reply && (
+                        <Button size="small" startIcon={<Reply />} onClick={() => setReplyDialog({ open: true, review })}>
+                          Yanıtla
+                        </Button>
+                      )}
+                      <Button size="small" startIcon={<Delete />} color="error" onClick={() => setDeleteDialog({ open: true, review })}>
+                        Sil
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ))}
+          </Stack>
         ) : (
-          <EmptyState icon={<Campaign sx={{ fontSize: 64 }} />} title="Henüz duyuru yok"
-            action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>İlk Duyuruyu Ekle</Button>} />
+          <EmptyState
+            icon={<RateReview sx={{ fontSize: 64 }} />}
+            title={filter === 'pending' ? 'Bekleyen yorum yok' : 'Henüz yorum yok'}
+            description={filter === 'all' ? 'Müşterilerinizden gelen yorumlar burada görünecek' : undefined}
+          />
         )}
-
-        <AnnouncementModal open={modalOpen} announcement={editing} branchId={branchId} sections={sections}
-          onClose={() => { setModalOpen(false); setEditing(null) }}
-          onSave={() => { setModalOpen(false); setEditing(null); loadData() }} />
-
-        <ConfirmDialog open={deleteDialog.open} title="Duyuru Sil" message={`"${deleteDialog.item?.title}" duyurusunu silmek istediğinize emin misiniz?`}
-          onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, item: null })} />
       </Stack>
+
+      <ReplyDialog
+        open={replyDialog.open}
+        review={replyDialog.review}
+        onClose={() => setReplyDialog({ open: false, review: null })}
+        onSuccess={() => { setReplyDialog({ open: false, review: null }); loadReviews() }}
+      />
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onCancel={() => setDeleteDialog({ open: false, review: null })}
+        onConfirm={handleDelete}
+        title="Yorumu Sil"
+        message={`${deleteDialog.review?.customerName || 'Misafir'} kullanıcısının yorumunu silmek istediğinize emin misiniz?`}
+      />
     </PageWrapper>
   )
 }
 
-// ==================== ANNOUNCEMENT MODAL ====================
-function AnnouncementModal({ open, announcement, branchId, sections = [], onClose, onSave }) {
+// ==================== REPLY DIALOG ====================
+function ReplyDialog({ open, review, onClose, onSuccess }) {
   const showSnackbar = useSnackbar()
-  
-  const isEditing = !!announcement?.id
+  const [reply, setReply] = useState('')
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ title: '', message: '', icon: '📢', type: 'info', isActive: true, section: '' })
-
-  const icons = ['📢', '🎉', '🔥', '⚠️', '✅', '❌', '💰', '🎁', '🆕', '⭐', '❤️', '🍽️', '☕', '🍕', '🍔', '🎊']
-  const types = [{ value: 'info', label: 'Bilgi', color: 'info' }, { value: 'warning', label: 'Uyarı', color: 'warning' }, { value: 'success', label: 'Başarı', color: 'success' }, { value: 'promo', label: 'Promosyon', color: 'error' }]
 
   useEffect(() => {
-    if (open) {
-      if (announcement) setForm({ 
-        title: announcement.title || '', 
-        message: announcement.message || '', 
-        icon: announcement.icon || '📢', 
-        type: announcement.type || 'info', 
-        isActive: announcement.isActive !== false,
-        section: announcement.section || ''
-      })
-      else setForm({ title: '', message: '', icon: '📢', type: 'info', isActive: true, section: '' })
-    }
-  }, [open, announcement])
+    if (open) setReply(review?.reply || '')
+  }, [open, review])
 
   const handleSubmit = async () => {
-    if (!form.title || !form.message) { showSnackbar('Başlık ve mesaj zorunludur', 'error'); return }
+    if (!reply.trim()) {
+      showSnackbar('Yanıt yazın', 'error')
+      return
+    }
+
     setSaving(true)
     try {
-      const data = { ...form, section: form.section || null }
-      if (isEditing) await api.put(`/announcements/${announcement.id}`, data)
-      else await api.post(`/branches/${branchId}/announcements`, data)
-      showSnackbar(isEditing ? 'Duyuru güncellendi' : 'Duyuru oluşturuldu', 'success')
-      
-      onSave()
-    } catch (err) { showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') }
-    finally { setSaving(false) }
+      await api.put(`/reviews/${review.id}/reply`, { reply })
+      showSnackbar('Yanıt gönderildi', 'success')
+      onSuccess()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Gönderilemedi', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6" fontWeight={700}>{isEditing ? 'Duyuru Düzenle' : 'Yeni Duyuru'}</Typography><IconButton onClick={onClose} size="small"><Close /></IconButton></Stack></DialogTitle>
-      <DialogContent>
-        <Stack spacing={3} sx={{ mt: 1 }}>
-          <TextField fullWidth label="Başlık" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
-          <TextField fullWidth label="Mesaj" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} multiline rows={3} required />
-          
-          {sections.length > 0 && (
-            <FormControl fullWidth>
-              <InputLabel>Bölüm</InputLabel>
-              <Select value={form.section} label="Bölüm" onChange={e => setForm({ ...form, section: e.target.value })}>
-                <MenuItem value="">🌐 Genel (Tüm Bölümler)</MenuItem>
-                <Divider />
-                {sections.map(sec => <MenuItem key={sec.id} value={sec.id}>{sec.icon} {sec.name}</MenuItem>)}
-              </Select>
-            </FormControl>
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={700}>Yoruma Yanıt Ver</Typography>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Stack>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        <Stack spacing={2}>
+          {review && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <Avatar sx={{ width: 32, height: 32 }}>{review.customerName?.charAt(0)}</Avatar>
+                <Typography variant="subtitle2">{review.customerName}</Typography>
+                <Rating value={review.rating} readOnly size="small" />
+              </Stack>
+              <Typography variant="body2" color="text.secondary">"{review.comment}"</Typography>
+            </Paper>
           )}
-          
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>İkon</Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {icons.map(icon => <IconButton key={icon} onClick={() => setForm({ ...form, icon })} sx={{ fontSize: 24, width: 44, height: 44, border: 2, borderColor: form.icon === icon ? 'primary.main' : 'transparent' }}>{icon}</IconButton>)}
-            </Box>
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>Tip</Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              {types.map(type => <Chip key={type.value} label={type.label} color={type.color} variant={form.type === type.value ? 'filled' : 'outlined'} onClick={() => setForm({ ...form, type: type.value })} sx={{ cursor: 'pointer' }} />)}
-            </Stack>
-          </Box>
-          <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
+
+          <TextField
+            fullWidth
+            label="Yanıtınız"
+            value={reply}
+            onChange={e => setReply(e.target.value)}
+            multiline
+            rows={4}
+            placeholder="Değerli yorumunuz için teşekkür ederiz..."
+          />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}><Button onClick={onClose}>İptal</Button><Button onClick={handleSubmit} variant="contained" disabled={saving}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button></DialogActions>
+
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={saving}>İptal</Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={20} /> : <Reply />}
+        >
+          {saving ? 'Gönderiliyor...' : 'Yanıtla'}
+        </Button>
+      </DialogActions>
     </Dialog>
-  )
-}
-
-// ==================== REVIEWS PAGE ====================
-export function ReviewsPage() {
-  const { branchId } = useParams()
-  const showSnackbar = useSnackbar()
-  const [reviews, setReviews] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState(0)
-  const [replyDialog, setReplyDialog] = useState({ open: false, review: null, text: '' })
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, review: null })
-
-  useEffect(() => { if (branchId) loadReviews() }, [branchId, tab])
-
-  const loadReviews = async () => {
-    setLoading(true)
-    try {
-      const params = {}
-      if (tab === 1) params.isApproved = 'false'
-      if (tab === 2) params.isApproved = 'true'
-      const res = await api.get(`/branches/${branchId}/reviews`, { params })
-      setReviews(res.data.reviews || res.data)
-    } catch { showSnackbar('Yorumlar yüklenemedi', 'error') }
-    finally { setLoading(false) }
-  }
-
-  const handleApprove = async (reviewId) => {
-    try { await api.put(`/reviews/${reviewId}/approve`); showSnackbar('Yorum onaylandı', 'success'); loadReviews() }
-    catch { showSnackbar('Onaylama başarısız', 'error') }
-  }
-
-  const handleReply = async () => {
-    try { await api.put(`/reviews/${replyDialog.review.id}/reply`, { reply: replyDialog.text }); showSnackbar('Yanıt gönderildi', 'success'); setReplyDialog({ open: false, review: null, text: '' }); loadReviews() }
-    catch { showSnackbar('Yanıt gönderilemedi', 'error') }
-  }
-
-  const handleDelete = async () => {
-    try { await api.delete(`/reviews/${deleteDialog.review.id}`); showSnackbar('Yorum silindi', 'success'); setDeleteDialog({ open: false, review: null }); loadReviews() }
-    catch { showSnackbar('Silme başarısız', 'error') }
-  }
-
-  const pendingCount = reviews.filter(r => !r.isApproved).length
-
-  return (
-    <PageWrapper>
-      <Stack spacing={3}>
-        <Card><Tabs value={tab} onChange={(e, v) => setTab(v)} variant="scrollable"><Tab label="Tümü" /><Tab label={<Badge badgeContent={tab === 0 ? pendingCount : 0} color="warning">Bekleyen</Badge>} /><Tab label="Onaylı" /></Tabs></Card>
-
-        {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : reviews.length > 0 ? (
-          <Stack spacing={2}>
-            {reviews.map(review => (
-              <Card key={review.id}>
-                <CardContent>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>{review.customerName?.[0] || 'A'}</Avatar>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'flex-start' }} spacing={1}>
-                        <Box>
-                          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-                            <Typography variant="subtitle1" fontWeight={600}>{review.customerName}</Typography>
-                            <Rating value={review.rating} readOnly size="small" />
-                            {!review.isApproved && <Chip label="Bekliyor" size="small" color="warning" />}
-                          </Stack>
-                          {review.productName && <Typography variant="caption" color="text.secondary">📦 {review.productName}</Typography>}
-                        </Box>
-                        <Typography variant="caption" color="text.secondary">{formatRelativeTime(review.createdAt)}</Typography>
-                      </Stack>
-                      {review.comment && <Typography sx={{ mt: 1 }}>{review.comment}</Typography>}
-                      {review.contact && <Typography variant="caption" color="text.secondary" display="block" mt={1}>📞 {review.contact}</Typography>}
-                      {review.reply && (
-                        <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'action.hover' }}>
-                          <Typography variant="caption" color="primary.main" fontWeight={600}>Yanıtınız:</Typography>
-                          <Typography variant="body2">{review.reply}</Typography>
-                          <Typography variant="caption" color="text.secondary">{formatDate(review.repliedAt)}</Typography>
-                        </Paper>
-                      )}
-                    </Box>
-                  </Stack>
-                </CardContent>
-                <CardActions sx={{ flexWrap: 'wrap' }}>
-                  {!review.isApproved && <Button size="small" color="success" startIcon={<Check />} onClick={() => handleApprove(review.id)}>Onayla</Button>}
-                  <Button size="small" startIcon={<Reply />} onClick={() => setReplyDialog({ open: true, review, text: review.reply || '' })}>{review.reply ? 'Yanıtı Düzenle' : 'Yanıtla'}</Button>
-                  <Button size="small" color="error" startIcon={<Delete />} onClick={() => setDeleteDialog({ open: true, review })}>Sil</Button>
-                </CardActions>
-              </Card>
-            ))}
-          </Stack>
-        ) : <EmptyState icon={<RateReview sx={{ fontSize: 64 }} />} title={tab === 1 ? 'Bekleyen yorum yok' : tab === 2 ? 'Onaylı yorum yok' : 'Henüz yorum yok'} />}
-
-        <Dialog open={replyDialog.open} onClose={() => setReplyDialog({ open: false, review: null, text: '' })} maxWidth="sm" fullWidth>
-          <DialogTitle>Yoruma Yanıt Ver</DialogTitle>
-          <DialogContent>
-            {replyDialog.review && (
-              <Paper variant="outlined" sx={{ p: 2, mb: 3, mt: 1 }}>
-                <Stack direction="row" spacing={1} alignItems="center" mb={1}><Typography fontWeight={600}>{replyDialog.review.customerName}</Typography><Rating value={replyDialog.review.rating} readOnly size="small" /></Stack>
-                <Typography>{replyDialog.review.comment || 'Yorum yok'}</Typography>
-              </Paper>
-            )}
-            <TextField fullWidth label="Yanıtınız" value={replyDialog.text} onChange={e => setReplyDialog({ ...replyDialog, text: e.target.value })} multiline rows={3} />
-          </DialogContent>
-          <DialogActions sx={{ p: 3 }}><Button onClick={() => setReplyDialog({ open: false, review: null, text: '' })}>İptal</Button><Button onClick={handleReply} variant="contained" disabled={!replyDialog.text.trim()}>Yanıtla</Button></DialogActions>
-        </Dialog>
-
-        <ConfirmDialog open={deleteDialog.open} title="Yorum Sil" message="Bu yorumu silmek istediğinize emin misiniz?" onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, review: null })} />
-      </Stack>
-    </PageWrapper>
   )
 }
 
 // ==================== BRANCH SETTINGS PAGE ====================
 export function BranchSettingsPage() {
   const { branchId } = useParams()
-  const { refreshBranch } = useBranch()
   const showSnackbar = useSnackbar()
-  
-  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState(0)
   const [saving, setSaving] = useState(false)
   const [branch, setBranch] = useState(null)
-  const [form, setForm] = useState({ name: '', description: '', address: '', phone: '', whatsapp: '', instagram: '', workingHours: '', isActive: true })
-
-  useEffect(() => { if (branchId) loadBranch() }, [branchId])
+  const [form, setForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    phone: '',
+    address: '',
+    workingHours: '',
+    socialMedia: { instagram: '', whatsapp: '', facebook: '', website: '' },
+    settings: { requiresApproval: true, showPrices: true, allowOrders: false },
+    theme: { primaryColor: '#e53935', layout: 'grid' }
+  })
 
   const loadBranch = async () => {
+    if (!branchId) return
     try {
       const res = await api.get(`/branches/${branchId}`)
       setBranch(res.data)
-      setForm({ name: res.data.name || '', description: res.data.description || '', address: res.data.address || '', phone: res.data.phone || '', whatsapp: res.data.whatsapp || '', instagram: res.data.instagram || '', workingHours: res.data.workingHours || '', isActive: res.data.isActive !== false })
-    } catch { showSnackbar('Şube bilgileri yüklenemedi', 'error') }
-    finally { setLoading(false) }
+      setForm({
+        name: res.data.name || '',
+        slug: res.data.slug || '',
+        description: res.data.description || '',
+        phone: res.data.phone || '',
+        address: res.data.address || '',
+        workingHours: res.data.workingHours || '',
+        socialMedia: {
+          instagram: res.data.socialMedia?.instagram || '',
+          whatsapp: res.data.socialMedia?.whatsapp || '',
+          facebook: res.data.socialMedia?.facebook || '',
+          website: res.data.socialMedia?.website || ''
+        },
+        settings: {
+          requiresApproval: res.data.settings?.requiresApproval !== false,
+          showPrices: res.data.settings?.showPrices !== false,
+          allowOrders: res.data.settings?.allowOrders || false
+        },
+        theme: {
+          primaryColor: res.data.theme?.primaryColor || '#e53935',
+          layout: res.data.theme?.layout || 'grid'
+        }
+      })
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Şube bilgileri yüklenemedi', 'error')
+    }
   }
+
+  useEffect(() => {
+    loadBranch()
+  }, [branchId])
 
   const handleSave = async () => {
-    if (!form.name) { showSnackbar('Şube adı zorunludur', 'error'); return }
+    if (!form.name.trim()) {
+      showSnackbar('Şube adı gerekli', 'error')
+      return
+    }
+
     setSaving(true)
-    try { 
+    try {
       await api.put(`/branches/${branchId}`, form)
       showSnackbar('Ayarlar kaydedildi', 'success')
-      refreshBranch()
-      loadBranch() 
-    }
-    catch { showSnackbar('Kaydetme başarısız', 'error') }
-    finally { setSaving(false) }
-  }
-
-  const handleImageUpload = async (file, type) => {
-    try {
-      if (isHeicFile(file)) file = await convertHeicToJpg(file)
-      const formData = new FormData()
-      formData.append('image', file)
-      await api.post(`/branches/${branchId}/image?type=${type}`, formData)
-      showSnackbar('Görsel yüklendi', 'success')
       loadBranch()
-    } catch { showSnackbar('Yükleme başarısız', 'error') }
+    } catch (err) {
+      console.error(err)
+      showSnackbar(err.response?.data?.error || 'Kaydedilemedi', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+  const handleLogoUpload = async (file) => {
+    try {
+      let processedFile = file
+      if (isHeicFile(file)) {
+        processedFile = await convertHeicToJpg(file)
+      }
+      const formData = new FormData()
+      formData.append('image', processedFile)
+      await api.post(`/branches/${branchId}/image?type=logo`, formData)
+      showSnackbar('Logo yüklendi', 'success')
+      loadBranch()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Yüklenemedi', 'error')
+    }
+  }
+
+  const copyMenuLink = () => {
+    const link = `${window.location.origin}/${branch?.slug || 'menu'}`
+    navigator.clipboard.writeText(link)
+    showSnackbar('Menü linki kopyalandı', 'success')
+  }
+
+  const colors = ['#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab', '#1e88e5', '#039be5', '#00acc1', '#00897b', '#43a047', '#7cb342', '#f4511e']
 
   return (
     <PageWrapper>
       <Stack spacing={3}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
-            <Typography variant="h6" fontWeight={700}>Şube Ayarları</Typography>
-            <Typography variant="body2" color="text.secondary">Şube bilgilerini ve görsellerini düzenleyin</Typography>
+            <Typography variant="h5" fontWeight={700}>Şube Ayarları</Typography>
+            <Typography color="text.secondary">{branch?.name}</Typography>
           </Box>
-          <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>
-            {saving ? 'Kaydediliyor...' : 'Kaydet'}
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button startIcon={<ContentCopy />} onClick={copyMenuLink}>Linki Kopyala</Button>
+            <Button
+              variant="contained"
+              onClick={handleSave}
+              disabled={saving}
+              startIcon={saving ? <CircularProgress size={20} /> : <Check />}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Stack>
         </Stack>
 
-        {/* GÖRSELLER */}
-        <Card>
-          <CardHeader title="Görseller" subheader="Logo, şube görseli, banner ve menü üst görselini buradan yükleyin" />
-          <CardContent>
-            <Grid container spacing={3}>
-              {/* Logo */}
-              <Grid item xs={6} sm={3}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Logo</Typography>
-                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '100%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px dashed', borderColor: branch?.logo ? 'transparent' : 'divider', bgcolor: 'background.default', '&:hover .overlay': { opacity: 1 } }}>
-                  {branch?.logo ? (
-                    <>
-                      <Box component="img" src={getImageUrl(branch.logo)} alt="Logo" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
-                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
-                      </Box>
-                    </>
-                  ) : (
-                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} /><Typography variant="caption" color="text.secondary">Yükle</Typography></Stack>
-                    </Box>
-                  )}
-                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'logo')} />
-                </Box>
-              </Grid>
+        <Tabs value={tab} onChange={(e, v) => setTab(v)}>
+          <Tab label="Genel" />
+          <Tab label="İletişim" />
+          <Tab label="Sosyal Medya" />
+          <Tab label="Görünüm" />
+          <Tab label="Özellikler" />
+        </Tabs>
 
-              {/* Şube Görseli */}
-              <Grid item xs={6} sm={3}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Şube Görseli</Typography>
-                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px dashed', borderColor: branch?.image ? 'transparent' : 'divider', bgcolor: 'background.default', '&:hover .overlay': { opacity: 1 } }}>
-                  {branch?.image ? (
-                    <>
-                      <Box component="img" src={getImageUrl(branch.image)} alt="Şube" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
-                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
+        {/* TAB 0: Genel */}
+        {tab === 0 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Card>
+                <CardContent>
+                  <Typography variant="subtitle2" gutterBottom>Şube Logosu</Typography>
+                  <Box
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '100%',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: '2px dashed',
+                      borderColor: branch?.logo ? 'transparent' : 'divider',
+                      bgcolor: 'background.default',
+                      '&:hover .overlay': { opacity: 1 }
+                    }}
+                  >
+                    {branch?.logo ? (
+                      <>
+                        <Box
+                          component="img"
+                          src={getImageUrl(branch.logo)}
+                          alt="Logo"
+                          sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', p: 2 }}
+                        />
+                        <Box
+                          className="overlay"
+                          sx={{
+                            position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.6)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: 0, transition: 'opacity 0.2s'
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={0.5}>
+                            <PhotoCamera sx={{ color: 'white', fontSize: 32 }} />
+                            <Typography variant="caption" color="white">Değiştir</Typography>
+                          </Stack>
+                        </Box>
+                      </>
+                    ) : (
+                      <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Stack alignItems="center" spacing={0.5}>
+                          <CloudUpload sx={{ fontSize: 40, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary">Logo Yükle</Typography>
+                        </Stack>
                       </Box>
-                    </>
-                  ) : (
-                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} /><Typography variant="caption" color="text.secondary">Yükle</Typography></Stack>
-                    </Box>
-                  )}
-                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'image')} />
-                </Box>
-              </Grid>
-
-              {/* Banner */}
-              <Grid item xs={6} sm={3}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>Banner</Typography>
-                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '42.86%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px dashed', borderColor: branch?.banner ? 'transparent' : 'divider', bgcolor: 'background.default', '&:hover .overlay': { opacity: 1 } }}>
-                  {branch?.banner ? (
-                    <>
-                      <Box component="img" src={getImageUrl(branch.banner)} alt="Banner" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
-                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
-                      </Box>
-                    </>
-                  ) : (
-                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'text.secondary' }} /><Typography variant="caption" color="text.secondary">Yükle</Typography></Stack>
-                    </Box>
-                  )}
-                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'banner')} />
-                </Box>
-              </Grid>
-
-              {/* Menü Üst Görseli */}
-              <Grid item xs={6} sm={3}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom color="primary.main">📱 Menü Üst Görseli</Typography>
-                <Box component="label" sx={{ display: 'block', position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 2, overflow: 'hidden', cursor: 'pointer', border: '2px solid', borderColor: branch?.homepageImage ? 'success.main' : 'primary.main', bgcolor: branch?.homepageImage ? 'background.default' : alpha('#e53935', 0.05), '&:hover .overlay': { opacity: 1 } }}>
-                  {branch?.homepageImage ? (
-                    <>
-                      <Box component="img" src={getImageUrl(branch.homepageImage)} alt="Menü Üst Görseli" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <Box className="overlay" sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
-                        <Stack alignItems="center" spacing={0.5}><PhotoCamera sx={{ color: 'white', fontSize: 28 }} /><Typography variant="caption" color="white">Değiştir</Typography></Stack>
-                      </Box>
-                      <Chip label="Aktif" color="success" size="small" sx={{ position: 'absolute', top: 8, right: 8 }} />
-                    </>
-                  ) : (
-                    <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Stack alignItems="center" spacing={0.5}><CloudUpload sx={{ fontSize: 32, color: 'primary.main' }} /><Typography variant="caption" color="primary.main" fontWeight={600}>Yükle</Typography></Stack>
-                    </Box>
-                  )}
-                  <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'homepageImage')} />
-                </Box>
-              </Grid>
+                    )}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,.heic"
+                      onChange={e => e.target.files[0] && handleLogoUpload(e.target.files[0])}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
             </Grid>
-          </CardContent>
-        </Card>
 
-        {/* TEMEL BİLGİLER */}
-        <Card>
-          <CardHeader title="Temel Bilgiler" />
-          <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}><TextField fullWidth label="Şube Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></Grid>
-              <Grid item xs={12} md={6}><TextField fullWidth label="URL Slug" value={branch?.slug || ''} disabled helperText="Değiştirilemez" /></Grid>
-              <Grid item xs={12}><TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={2} /></Grid>
+            <Grid item xs={12} md={8}>
+              <Card>
+                <CardContent>
+                  <Stack spacing={2.5}>
+                    <TextField
+                      fullWidth
+                      label="Şube Adı"
+                      value={form.name}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      required
+                    />
+                    <TextField
+                      fullWidth
+                      label="URL Slug"
+                      value={form.slug}
+                      onChange={e => setForm({ ...form, slug: e.target.value })}
+                      helperText={`Menü adresi: ${window.location.origin}/${form.slug || 'slug'}`}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Açıklama"
+                      value={form.description}
+                      onChange={e => setForm({ ...form, description: e.target.value })}
+                      multiline
+                      rows={3}
+                    />
+                  </Stack>
+                </CardContent>
+              </Card>
             </Grid>
-          </CardContent>
-        </Card>
+          </Grid>
+        )}
 
-        {/* İLETİŞİM BİLGİLERİ */}
-        <Card>
-          <CardHeader title="İletişim Bilgileri" />
-          <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12}><TextField fullWidth label="Adres" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} multiline rows={2} InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Telefon" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="WhatsApp" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><WhatsApp /></InputAdornment> }} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Instagram" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} placeholder="@kullaniciadi" InputProps={{ startAdornment: <InputAdornment position="start"><Instagram /></InputAdornment> }} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Çalışma Saatleri" value={form.workingHours} onChange={e => setForm({ ...form, workingHours: e.target.value })} placeholder="09:00 - 22:00" InputProps={{ startAdornment: <InputAdornment position="start"><AccessTime /></InputAdornment> }} /></Grid>
-            </Grid>
-          </CardContent>
-        </Card>
+        {/* TAB 1: İletişim */}
+        {tab === 1 && (
+          <Card>
+            <CardContent>
+              <Stack spacing={2.5}>
+                <TextField
+                  fullWidth
+                  label="Telefon"
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }}
+                />
+                <TextField
+                  fullWidth
+                  label="Adres"
+                  value={form.address}
+                  onChange={e => setForm({ ...form, address: e.target.value })}
+                  multiline
+                  rows={2}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }}
+                />
+                <TextField
+                  fullWidth
+                  label="Çalışma Saatleri"
+                  value={form.workingHours}
+                  onChange={e => setForm({ ...form, workingHours: e.target.value })}
+                  placeholder="Pazartesi-Cuma: 09:00-22:00, Cumartesi-Pazar: 10:00-23:00"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><AccessTime /></InputAdornment> }}
+                />
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* DURUM */}
-        <Card>
-          <CardContent>
-            <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
-              label={<Box><Typography fontWeight={600}>Şube Aktif</Typography><Typography variant="caption" color="text.secondary">Pasif şubeler müşterilere görünmez</Typography></Box>} />
-          </CardContent>
-        </Card>
+        {/* TAB 2: Sosyal Medya */}
+        {tab === 2 && (
+          <Card>
+            <CardContent>
+              <Stack spacing={2.5}>
+                <TextField
+                  fullWidth
+                  label="Instagram"
+                  value={form.socialMedia.instagram}
+                  onChange={e => setForm({ ...form, socialMedia: { ...form.socialMedia, instagram: e.target.value } })}
+                  placeholder="@kullaniciadi"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><Instagram /></InputAdornment> }}
+                />
+                <TextField
+                  fullWidth
+                  label="WhatsApp"
+                  value={form.socialMedia.whatsapp}
+                  onChange={e => setForm({ ...form, socialMedia: { ...form.socialMedia, whatsapp: e.target.value } })}
+                  placeholder="+90 5XX XXX XX XX"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><WhatsApp /></InputAdornment> }}
+                />
+                <TextField
+                  fullWidth
+                  label="Facebook"
+                  value={form.socialMedia.facebook}
+                  onChange={e => setForm({ ...form, socialMedia: { ...form.socialMedia, facebook: e.target.value } })}
+                  placeholder="facebook.com/sayfaadi"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><Facebook /></InputAdornment> }}
+                />
+                <TextField
+                  fullWidth
+                  label="Web Sitesi"
+                  value={form.socialMedia.website}
+                  onChange={e => setForm({ ...form, socialMedia: { ...form.socialMedia, website: e.target.value } })}
+                  placeholder="https://www.siteniz.com"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><Language /></InputAdornment> }}
+                />
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* TAB 3: Görünüm */}
+        {tab === 3 && (
+          <Card>
+            <CardContent>
+              <Stack spacing={3}>
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>Ana Renk</Typography>
+                  <Stack direction="row" flexWrap="wrap" gap={1}>
+                    {colors.map(color => (
+                      <Button
+                        key={color}
+                        onClick={() => setForm({ ...form, theme: { ...form.theme, primaryColor: color } })}
+                        sx={{
+                          minWidth: 40,
+                          height: 40,
+                          bgcolor: color,
+                          border: form.theme.primaryColor === color ? '3px solid white' : '2px solid transparent',
+                          boxShadow: form.theme.primaryColor === color ? `0 0 0 2px ${color}` : 'none',
+                          '&:hover': { bgcolor: color, opacity: 0.8 }
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* TAB 4: Özellikler */}
+        {tab === 4 && (
+          <Card>
+            <CardContent>
+              <Stack spacing={2}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.settings.requiresApproval}
+                      onChange={e => setForm({ ...form, settings: { ...form.settings, requiresApproval: e.target.checked } })}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>Yorum Onayı Gerekli</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Müşteri yorumları yayınlanmadan önce onay bekler
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <Divider />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.settings.showPrices}
+                      onChange={e => setForm({ ...form, settings: { ...form.settings, showPrices: e.target.checked } })}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>Fiyatları Göster</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Menüde ürün fiyatlarını göster
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
       </Stack>
     </PageWrapper>
   )
@@ -3647,282 +4072,1156 @@ export function BranchSettingsPage() {
 
 // ==================== BRANCHES PAGE (SuperAdmin) ====================
 export function BranchesPage() {
+  const { restaurantId } = useParams()
   const { user } = useAuth()
   const showSnackbar = useSnackbar()
   const navigate = useNavigate()
-  const { loadBranches: reloadBranches } = useBranch()
+  const [restaurant, setRestaurant] = useState(null)
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, branch: null })
 
-  useEffect(() => { loadBranches() }, [])
+  useEffect(() => {
+    if (restaurantId) {
+      loadRestaurant()
+      loadBranches()
+    }
+  }, [restaurantId])
+
+  const loadRestaurant = async () => {
+    try {
+      const res = await api.get(`/restaurants/${restaurantId}`)
+      setRestaurant(res.data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   const loadBranches = async () => {
-    try { const res = await api.get('/branches'); setBranches(res.data) }
-    catch { showSnackbar('Şubeler yüklenemedi', 'error') }
-    finally { setLoading(false) }
+    try {
+      const res = await api.get(`/restaurants/${restaurantId}/branches`)
+      setBranches(res.data || [])
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Şubeler yüklenemedi', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDelete = async () => {
-    try { await api.delete(`/branches/${deleteDialog.branch.id}`); showSnackbar('Şube silindi', 'success'); setDeleteDialog({ open: false, branch: null }); loadBranches(); reloadBranches() }
-    catch { showSnackbar('Silme başarısız', 'error') }
-  }
-
-  const handleImageUpload = async (branchId, file, type) => {
     try {
-      if (isHeicFile(file)) file = await convertHeicToJpg(file)
-      const formData = new FormData()
-      formData.append('image', file)
-      await api.post(`/branches/${branchId}/image?type=${type}`, formData)
-      showSnackbar('Görsel yüklendi', 'success')
+      await api.delete(`/branches/${deleteDialog.branch.id}`)
+      showSnackbar('Şube silindi', 'success')
+      setDeleteDialog({ open: false, branch: null })
       loadBranches()
-    } catch { showSnackbar('Yükleme başarısız', 'error') }
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Silme başarısız', 'error')
+    }
   }
 
-  if (user?.role !== 'superadmin') return <EmptyState icon={<Lock sx={{ fontSize: 64 }} />} title="Erişim Engellendi" description="Sadece süper adminler erişebilir" />
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
   return (
     <PageWrapper>
       <Stack spacing={3}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
-          <Box><Typography variant="h5" fontWeight={700}>Şubeler</Typography><Typography color="text.secondary">{branches.length} şube</Typography></Box>
-          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>Yeni Şube</Button>
+          <Box>
+            <Button
+              startIcon={<ArrowUpward sx={{ transform: 'rotate(-90deg)' }} />}
+              onClick={() => navigate('/admin/restaurants')}
+              sx={{ mb: 1 }}
+            >
+              Restoranlar
+            </Button>
+            <Typography variant="h5" fontWeight={700}>
+              {restaurant?.name || 'Şubeler'}
+            </Typography>
+            <Typography color="text.secondary">{branches.length} şube</Typography>
+          </Box>
+          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>
+            Yeni Şube
+          </Button>
         </Stack>
 
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           {branches.map(branch => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={branch.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ position: 'relative', pt: '60%', bgcolor: 'background.default' }}>
-                  {branch.image ? <CardMedia component="img" image={getImageUrl(branch.image)} alt={branch.name} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Store sx={{ fontSize: 48, color: 'text.secondary' }} /></Box>}
-                  <Tooltip title="Görsel Yükle">
-                    <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}>
-                      <PhotoCamera sx={{ color: 'white', fontSize: 18 }} /><input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(branch.id, e.target.files[0], 'image')} />
-                    </IconButton>
-                  </Tooltip>
-                  <Chip label={branch.isActive ? 'Aktif' : 'Pasif'} size="small" color={branch.isActive ? 'success' : 'default'} sx={{ position: 'absolute', top: 8, right: 8 }} />
-                  {branch.logo && <Avatar src={getImageUrl(branch.logo)} sx={{ position: 'absolute', bottom: -20, left: 12, width: 40, height: 40, border: '2px solid', borderColor: 'background.paper' }} />}
+            <Grid item xs={12} sm={6} md={4} key={branch.id}>
+              <Card sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'all 0.2s',
+                '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+              }}>
+                <Box sx={{
+                  position: 'relative',
+                  pt: '50%',
+                  bgcolor: 'background.default'
+                }}>
+                  {branch.logo ? (
+                    <Box
+                      component="img"
+                      src={getImageUrl(branch.logo)}
+                      alt={branch.name}
+                      sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', p: 2 }}
+                    />
+                  ) : (
+                    <Box sx={{
+                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    }}>
+                      <Store sx={{ fontSize: 64, color: 'white' }} />
+                    </Box>
+                  )}
+                  <Chip
+                    label={branch.isActive ? 'Aktif' : 'Pasif'}
+                    size="small"
+                    color={branch.isActive ? 'success' : 'default'}
+                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                  />
                 </Box>
-                <CardContent sx={{ flex: 1, pt: branch.logo ? 3 : 2, p: 1.5 }}>
-                  <Typography variant="subtitle1" fontWeight={700} noWrap>{branch.name}</Typography>
+
+                <CardContent sx={{ flex: 1 }}>
+                  <Typography variant="h6" fontWeight={700} noWrap>{branch.name}</Typography>
                   <Typography variant="caption" color="text.secondary" display="block">/{branch.slug}</Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}><Chip label={`${branch.productCount || 0} ürün`} size="small" /></Stack>
+
+                  <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
+                    <Chip icon={<Restaurant fontSize="small" />} label={`${branch.productCount || 0} ürün`} size="small" variant="outlined" />
+                    <Chip icon={<RateReview fontSize="small" />} label={`${branch.reviewCount || 0} yorum`} size="small" variant="outlined" />
+                  </Stack>
                 </CardContent>
-                <CardActions sx={{ p: 1, pt: 0 }}>
-                  <Button size="small" onClick={() => navigate(`/admin/branch/${branch.id}/dashboard`)}>Panel</Button>
-                  <Button size="small" startIcon={<Edit />} onClick={() => { setEditing(branch); setModalOpen(true) }}>Düzenle</Button>
-                  <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, branch })}><Delete fontSize="small" /></IconButton>
+
+                <Divider />
+
+                <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                  <Stack direction="row" spacing={0.5}>
+                    <Button size="small" startIcon={<Settings />} onClick={() => navigate(`/admin/branch/${branch.id}/settings`)}>
+                      Ayarlar
+                    </Button>
+                    <IconButton size="small" onClick={() => { setEditing(branch); setModalOpen(true) }}>
+                      <Edit fontSize="small" />
+                    </IconButton>
+                    {user?.role === 'superadmin' && (
+                      <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, branch })}>
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Stack>
+                  <Button
+                    size="small"
+                    endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
+                    onClick={() => window.open(`/${branch.slug}`, '_blank')}
+                  >
+                    Önizle
+                  </Button>
                 </CardActions>
               </Card>
             </Grid>
           ))}
-          {branches.length === 0 && <Grid item xs={12}><EmptyState icon={<Store sx={{ fontSize: 64 }} />} title="Henüz şube yok" action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>İlk Şubeyi Ekle</Button>} /></Grid>}
+
+          {branches.length === 0 && (
+            <Grid item xs={12}>
+              <EmptyState
+                icon={<Store sx={{ fontSize: 64 }} />}
+                title="Henüz şube yok"
+                action={
+                  <Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>
+                    İlk Şubeyi Ekle
+                  </Button>
+                }
+              />
+            </Grid>
+          )}
         </Grid>
 
-        <BranchModal open={modalOpen} branch={editing} onClose={() => { setModalOpen(false); setEditing(null) }} onSave={() => { setModalOpen(false); setEditing(null); loadBranches(); reloadBranches() }} />
-        <ConfirmDialog open={deleteDialog.open} title="Şube Sil" message={<><Typography>"{deleteDialog.branch?.name}" şubesini silmek istediğinize emin misiniz?</Typography><Alert severity="error" sx={{ mt: 2 }}>Tüm ürünler, kategoriler ve yorumlar silinecek!</Alert></>}
-          onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, branch: null })} />
+        <BranchModal
+          open={modalOpen}
+          branch={editing}
+          restaurantId={restaurantId}
+          onClose={() => { setModalOpen(false); setEditing(null) }}
+          onSave={() => { setModalOpen(false); setEditing(null); loadBranches() }}
+        />
+
+        <ConfirmDialog
+          open={deleteDialog.open}
+          title="Şube Sil"
+          message={
+            <>
+              <Typography>"{deleteDialog.branch?.name}" şubesini silmek istediğinize emin misiniz?</Typography>
+              <Alert severity="error" sx={{ mt: 2 }}>Bu işlem geri alınamaz! Tüm ürünler, kategoriler ve yorumlar silinecek.</Alert>
+            </>
+          }
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialog({ open: false, branch: null })}
+        />
       </Stack>
     </PageWrapper>
   )
 }
 
 // ==================== BRANCH MODAL ====================
-function BranchModal({ open, branch, onClose, onSave }) {
+function BranchModal({ open, branch, restaurantId, onClose, onSave }) {
   const showSnackbar = useSnackbar()
   const isEditing = !!branch?.id
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', slug: '', description: '', address: '', phone: '', whatsapp: '', instagram: '', workingHours: '', isActive: true })
+  const [form, setForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    phone: '',
+    address: '',
+    isActive: true
+  })
 
   useEffect(() => {
     if (open) {
-      if (branch) setForm({ name: branch.name || '', slug: branch.slug || '', description: branch.description || '', address: branch.address || '', phone: branch.phone || '', whatsapp: branch.whatsapp || '', instagram: branch.instagram || '', workingHours: branch.workingHours || '', isActive: branch.isActive !== false })
-      else setForm({ name: '', slug: '', description: '', address: '', phone: '', whatsapp: '', instagram: '', workingHours: '', isActive: true })
+      if (branch) {
+        setForm({
+          name: branch.name || '',
+          slug: branch.slug || '',
+          description: branch.description || '',
+          phone: branch.phone || '',
+          address: branch.address || '',
+          isActive: branch.isActive !== false
+        })
+      } else {
+        setForm({ name: '', slug: '', description: '', phone: '', address: '', isActive: true })
+      }
     }
   }, [open, branch])
 
   const handleSubmit = async () => {
-    if (!form.name) { showSnackbar('Şube adı zorunludur', 'error'); return }
+    if (!form.name.trim()) {
+      showSnackbar('Şube adı gerekli', 'error')
+      return
+    }
+
     setSaving(true)
     try {
-      if (isEditing) await api.put(`/branches/${branch.id}`, form)
-      else await api.post('/branches', form)
-      showSnackbar(isEditing ? 'Şube güncellendi' : 'Şube oluşturuldu', 'success')
+      if (isEditing) {
+        await api.put(`/branches/${branch.id}`, form)
+        showSnackbar('Şube güncellendi', 'success')
+      } else {
+        await api.post(`/restaurants/${restaurantId}/branches`, form)
+        showSnackbar('Şube oluşturuldu', 'success')
+      }
       onSave()
-    } catch (err) { showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') }
-    finally { setSaving(false) }
+    } catch (err) {
+      console.error(err)
+      showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6" fontWeight={700}>{isEditing ? 'Şube Düzenle' : 'Yeni Şube'}</Typography><IconButton onClick={onClose} size="small"><Close /></IconButton></Stack></DialogTitle>
-      <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 0 }}>
-          <Grid item xs={12} md={6}><Stack spacing={2}>
-            <TextField fullWidth label="Şube Adı" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-            <TextField fullWidth label="URL Slug" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} placeholder="otomatik" helperText="Boş bırakırsanız otomatik oluşturulur" disabled={isEditing} />
-            <TextField fullWidth label="Açıklama" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} multiline rows={3} />
-            <TextField fullWidth label="Adres" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }} />
-          </Stack></Grid>
-          <Grid item xs={12} md={6}><Stack spacing={2}>
-            <TextField fullWidth label="Telefon" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }} />
-            <TextField fullWidth label="WhatsApp" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><WhatsApp /></InputAdornment> }} />
-            <TextField fullWidth label="Instagram" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><Instagram /></InputAdornment> }} placeholder="@kullaniciadi" />
-            <TextField fullWidth label="Çalışma Saatleri" value={form.workingHours} onChange={e => setForm({ ...form, workingHours: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><AccessTime /></InputAdornment> }} placeholder="09:00 - 22:00" />
-            <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
-          </Stack></Grid>
-        </Grid>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={700}>{isEditing ? 'Şube Düzenle' : 'Yeni Şube'}</Typography>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Stack>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        <Stack spacing={2.5}>
+          <TextField
+            fullWidth
+            label="Şube Adı"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            required
+            placeholder="Merkez Şube"
+          />
+          <TextField
+            fullWidth
+            label="URL Slug"
+            value={form.slug}
+            onChange={e => setForm({ ...form, slug: e.target.value })}
+            placeholder="Boş bırakılırsa otomatik oluşturulur"
+            helperText="Örn: merkez → siteniz.com/merkez"
+          />
+          <TextField
+            fullWidth
+            label="Açıklama"
+            value={form.description}
+            onChange={e => setForm({ ...form, description: e.target.value })}
+            multiline
+            rows={2}
+          />
+          <TextField
+            fullWidth
+            label="Telefon"
+            value={form.phone}
+            onChange={e => setForm({ ...form, phone: e.target.value })}
+            InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }}
+          />
+          <TextField
+            fullWidth
+            label="Adres"
+            value={form.address}
+            onChange={e => setForm({ ...form, address: e.target.value })}
+            multiline
+            rows={2}
+            InputProps={{ startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment> }}
+          />
+          <FormControlLabel
+            control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
+            label={
+              <Box>
+                <Typography variant="body2" fontWeight={600}>Aktif</Typography>
+                <Typography variant="caption" color="text.secondary">Pasif şubeler müşterilere görünmez</Typography>
+              </Box>
+            }
+          />
+        </Stack>
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}><Button onClick={onClose}>İptal</Button><Button onClick={handleSubmit} variant="contained" disabled={saving}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button></DialogActions>
+
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={saving}>İptal</Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={20} /> : <Check />}
+        >
+          {saving ? 'Kaydediliyor...' : isEditing ? 'Güncelle' : 'Oluştur'}
+        </Button>
+      </DialogActions>
     </Dialog>
   )
 }
 
-// ==================== USERS PAGE (SuperAdmin) ====================
+// ==================== USERS PAGE ====================
 export function UsersPage() {
-  const { user: currentUser } = useAuth()
+  const { restaurantId } = useParams()
+  const { user } = useAuth()
   const showSnackbar = useSnackbar()
   const [users, setUsers] = useState([])
-  const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null })
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => { loadUsers() }, [restaurantId])
 
-  const loadData = async () => {
+  const loadUsers = async () => {
     try {
-      const [usersRes, branchesRes] = await Promise.all([api.get('/users'), api.get('/branches')])
-      setUsers(usersRes.data)
-      setBranches(branchesRes.data)
-    } catch { showSnackbar('Veriler yüklenemedi', 'error') }
-    finally { setLoading(false) }
-  }
-
-  const handleToggleActive = async (user) => {
-    try { await api.put(`/users/${user.id}`, { isActive: !user.isActive }); showSnackbar(user.isActive ? 'Kullanıcı pasifleştirildi' : 'Kullanıcı aktifleştirildi', 'success'); loadData() }
-    catch { showSnackbar('İşlem başarısız', 'error') }
+      const url = restaurantId ? `/restaurants/${restaurantId}/users` : '/users'
+      const res = await api.get(url)
+      setUsers(res.data)
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Kullanıcılar yüklenemedi', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDelete = async () => {
-    try { await api.delete(`/users/${deleteDialog.user.id}`); showSnackbar('Kullanıcı silindi', 'success'); setDeleteDialog({ open: false, user: null }); loadData() }
-    catch (err) { showSnackbar(err.response?.data?.error || 'Silme başarısız', 'error') }
+    try {
+      await api.delete(`/users/${deleteDialog.user.id}`)
+      showSnackbar('Kullanıcı silindi', 'success')
+      setDeleteDialog({ open: false, user: null })
+      loadUsers()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Silme başarısız', 'error')
+    }
   }
 
-  const roleColors = { superadmin: 'error', admin: 'warning', manager: 'info', staff: 'default' }
-  const roleLabels = { superadmin: 'Süper Admin', admin: 'Admin', manager: 'Yönetici', staff: 'Personel' }
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case 'superadmin': return { label: 'Süper Admin', color: 'error' }
+      case 'admin': return { label: 'Admin', color: 'warning' }
+      case 'manager': return { label: 'Yönetici', color: 'info' }
+      case 'staff': return { label: 'Personel', color: 'default' }
+      default: return { label: role, color: 'default' }
+    }
+  }
 
-  if (currentUser?.role !== 'superadmin') return <EmptyState icon={<Lock sx={{ fontSize: 64 }} />} title="Erişim Engellendi" description="Sadece süper adminler erişebilir" />
+  if (user?.role !== 'superadmin' && user?.role !== 'admin') {
+    return <EmptyState icon={<Lock sx={{ fontSize: 64 }} />} title="Erişim Engellendi" description="Bu sayfaya erişim yetkiniz yok" />
+  }
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
   return (
     <PageWrapper>
       <Stack spacing={3}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
-          <Box><Typography variant="h5" fontWeight={700}>Kullanıcılar</Typography><Typography color="text.secondary">{users.length} kullanıcı</Typography></Box>
-          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>Yeni Kullanıcı</Button>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>Kullanıcılar</Typography>
+            <Typography color="text.secondary">{users.length} kullanıcı</Typography>
+          </Box>
+          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>
+            Yeni Kullanıcı
+          </Button>
         </Stack>
 
-        <Grid container spacing={2}>
-          {users.map(user => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={user.id}>
-              <Card sx={{ opacity: user.isActive ? 1 : 0.6 }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>{user.fullName?.[0] || user.username?.[0] || 'U'}</Avatar>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" fontWeight={600} noWrap>{user.fullName || user.username}</Typography>
-                      <Typography variant="caption" color="text.secondary" display="block" noWrap>@{user.username}</Typography>
-                    </Box>
-                  </Stack>
-                  <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
-                    <Chip label={roleLabels[user.role]} size="small" color={roleColors[user.role]} />
-                    {!user.isActive && <Chip label="Pasif" size="small" />}
-                  </Stack>
-                </CardContent>
-                <CardActions sx={{ p: 1, pt: 0 }}>
-                  <Button size="small" onClick={() => handleToggleActive(user)} disabled={user.id === currentUser.id}>{user.isActive ? 'Pasif' : 'Aktif'}</Button>
-                  <Button size="small" startIcon={<Edit />} onClick={() => { setEditing(user); setModalOpen(true) }}>Düzenle</Button>
-                  <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, user })} disabled={user.id === currentUser.id}><Delete fontSize="small" /></IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Kullanıcı</TableCell>
+                  <TableCell>E-posta</TableCell>
+                  <TableCell>Rol</TableCell>
+                  <TableCell>Şube</TableCell>
+                  <TableCell>Durum</TableCell>
+                  <TableCell align="right">İşlemler</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map(u => {
+                  const roleInfo = getRoleLabel(u.role)
+                  return (
+                    <TableRow key={u.id} hover>
+                      <TableCell>
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                          <Avatar
+                            src={u.avatar ? getImageUrl(u.avatar) : undefined}
+                            sx={{ bgcolor: u.role === 'superadmin' ? 'error.main' : u.role === 'admin' ? 'warning.main' : 'primary.main' }}
+                          >
+                            {!u.avatar && (u.fullName?.charAt(0)?.toUpperCase() || u.username?.charAt(0)?.toUpperCase() || <Person />)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight={600}>{u.fullName || u.username || 'İsimsiz'}</Typography>
+                            {u.fullName && <Typography variant="caption" color="text.secondary">@{u.username}</Typography>}
+                          </Box>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">{u.email}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={roleInfo.label} size="small" color={roleInfo.color} />
+                      </TableCell>
+                      <TableCell>
+                        {u.branches && u.branches.length > 0 ? (
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+                            {u.branches.length <= 2 ? (
+                              u.branches.map(b => (
+                                <Chip key={b._id || b.id} icon={<Store fontSize="small" />} label={b.name} size="small" variant="outlined" />
+                              ))
+                            ) : (
+                              <>
+                                <Chip icon={<Store fontSize="small" />} label={u.branches[0].name} size="small" variant="outlined" />
+                                <Chip label={`+${u.branches.length - 1} şube`} size="small" variant="outlined" />
+                              </>
+                            )}
+                          </Stack>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">Tüm şubeler</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={u.isActive ? 'Aktif' : 'Pasif'}
+                          size="small"
+                          color={u.isActive ? 'success' : 'default'}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          <Tooltip title="Düzenle">
+                            <IconButton size="small" onClick={() => { setEditing(u); setModalOpen(true) }}>
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          {user?.id !== u.id && user?.role === 'superadmin' && (
+                            <Tooltip title="Sil">
+                              <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, user: u })}>
+                                <Delete fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {users.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                      <EmptyState
+                        icon={<People sx={{ fontSize: 48 }} />}
+                        title="Henüz kullanıcı yok"
+                        action={
+                          <Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>
+                            İlk Kullanıcıyı Ekle
+                          </Button>
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
 
-        <UserModal open={modalOpen} user={editing} branches={branches} onClose={() => { setModalOpen(false); setEditing(null) }} onSave={() => { setModalOpen(false); setEditing(null); loadData() }} />
-        <ConfirmDialog open={deleteDialog.open} title="Kullanıcı Sil" message={`"${deleteDialog.user?.username}" kullanıcısını silmek istediğinize emin misiniz?`}
-          onConfirm={handleDelete} onCancel={() => setDeleteDialog({ open: false, user: null })} />
+        <UserModal
+          open={modalOpen}
+          user={editing}
+          restaurantId={restaurantId}
+          onClose={() => { setModalOpen(false); setEditing(null) }}
+          onSave={() => { setModalOpen(false); setEditing(null); loadUsers() }}
+        />
+
+        <ConfirmDialog
+          open={deleteDialog.open}
+          title="Kullanıcı Sil"
+          message={`"${deleteDialog.user?.name || deleteDialog.user?.email}" kullanıcısını silmek istediğinize emin misiniz?`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialog({ open: false, user: null })}
+        />
       </Stack>
     </PageWrapper>
   )
 }
 
 // ==================== USER MODAL ====================
-function UserModal({ open, user, branches, onClose, onSave }) {
+function UserModal({ open, user: editingUser, restaurantId, onClose, onSave }) {
+  const { user: currentUser } = useAuth()
   const showSnackbar = useSnackbar()
-  const isEditing = !!user?.id
+  const isEditing = !!editingUser?.id
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ username: '', email: '', password: '', fullName: '', role: 'staff', branches: [], isActive: true })
-
-  const roles = [{ value: 'superadmin', label: 'Süper Admin' }, { value: 'admin', label: 'Admin' }, { value: 'manager', label: 'Yönetici' }, { value: 'staff', label: 'Personel' }]
+  const [branches, setBranches] = useState([])
+  const [avatarPreview, setAvatarPreview] = useState(null)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [form, setForm] = useState({
+    name: '',
+    username: '',
+    email: '',
+    password: '',
+    role: 'staff',
+    selectedBranches: [],
+    allBranches: false,
+    isActive: true
+  })
 
   useEffect(() => {
     if (open) {
-      if (user) setForm({ username: user.username || '', email: user.email || '', password: '', fullName: user.fullName || '', role: user.role || 'staff', branches: user.branches?.map(b => b._id || b.id) || [], isActive: user.isActive !== false })
-      else setForm({ username: '', email: '', password: '', fullName: '', role: 'staff', branches: [], isActive: true })
+      loadBranches()
+      if (editingUser) {
+        const userBranchIds = editingUser.branches?.map(b => b.id || b._id || b) || []
+        setForm({
+          name: editingUser.name || editingUser.fullName || '',
+          username: editingUser.username || '',
+          email: editingUser.email || '',
+          password: '',
+          role: editingUser.role || 'staff',
+          selectedBranches: userBranchIds,
+          allBranches: false,
+          isActive: editingUser.isActive !== false
+        })
+        setAvatarPreview(editingUser.avatar ? getImageUrl(editingUser.avatar) : null)
+        setAvatarFile(null)
+      } else {
+        setForm({ name: '', username: '', email: '', password: '', role: 'staff', selectedBranches: [], allBranches: false, isActive: true })
+        setAvatarPreview(null)
+        setAvatarFile(null)
+      }
     }
-  }, [open, user])
+  }, [open, editingUser])
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    let processedFile = file
+    if (isHeicFile(file)) {
+      processedFile = await convertHeicToJpg(file)
+    }
+
+    setAvatarFile(processedFile)
+    setAvatarPreview(URL.createObjectURL(processedFile))
+  }
+
+  useEffect(() => {
+    // Tüm şubeler seçiliyse allBranches'ı güncelle
+    if (branches.length > 0 && form.selectedBranches.length === branches.length) {
+      setForm(f => ({ ...f, allBranches: true }))
+    }
+  }, [branches, form.selectedBranches])
+
+  const loadBranches = async () => {
+    try {
+      const url = restaurantId ? `/restaurants/${restaurantId}/branches` : '/branches'
+      const res = await api.get(url)
+      setBranches(res.data || [])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleBranchChange = (event) => {
+    const value = event.target.value
+    if (value.includes('all')) {
+      // Tüm şubeleri seç/kaldır
+      if (form.allBranches) {
+        setForm({ ...form, selectedBranches: [], allBranches: false })
+      } else {
+        setForm({ ...form, selectedBranches: branches.map(b => b.id || b._id), allBranches: true })
+      }
+    } else {
+      setForm({ ...form, selectedBranches: value, allBranches: value.length === branches.length })
+    }
+  }
 
   const handleSubmit = async () => {
-    if (!form.username || !form.email) { showSnackbar('Kullanıcı adı ve email zorunludur', 'error'); return }
-    if (!isEditing && !form.password) { showSnackbar('Yeni kullanıcı için şifre zorunludur', 'error'); return }
+    if (!form.username.trim()) {
+      showSnackbar('Kullanıcı adı gerekli', 'error')
+      return
+    }
+    if (!form.email.trim()) {
+      showSnackbar('E-posta gerekli', 'error')
+      return
+    }
+    if (!isEditing && !form.password) {
+      showSnackbar('Şifre gerekli', 'error')
+      return
+    }
 
     setSaving(true)
     try {
-      const data = { ...form }
-      if (!data.password) delete data.password
-      if (isEditing) await api.put(`/users/${user.id}`, data)
-      else await api.post('/users', data)
-      showSnackbar(isEditing ? 'Kullanıcı güncellendi' : 'Kullanıcı oluşturuldu', 'success')
+      const data = {
+        name: form.name,
+        fullName: form.name,
+        username: form.username,
+        email: form.email,
+        role: form.role,
+        branches: form.selectedBranches,
+        isActive: form.isActive
+      }
+      if (form.password) data.password = form.password
+
+      let userId = editingUser?.id
+      if (isEditing) {
+        await api.put(`/users/${editingUser.id}`, data)
+        showSnackbar('Kullanıcı güncellendi', 'success')
+      } else {
+        const url = restaurantId ? `/restaurants/${restaurantId}/users` : '/users'
+        const res = await api.post(url, data)
+        userId = res.data.id
+        showSnackbar('Kullanıcı oluşturuldu', 'success')
+      }
+
+      // Avatar yükle
+      if (avatarFile && userId) {
+        const formData = new FormData()
+        formData.append('image', avatarFile)
+        await api.post(`/users/${userId}/avatar`, formData)
+      }
+
       onSave()
-    } catch (err) { showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error') }
-    finally { setSaving(false) }
+    } catch (err) {
+      console.error(err)
+      showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const roles = [
+    { value: 'staff', label: 'Personel', description: 'Sadece görüntüleme' },
+    { value: 'manager', label: 'Yönetici', description: 'Ürün ve kategori yönetimi' },
+    { value: 'admin', label: 'Admin', description: 'Tüm yönetim yetkileri' }
+  ]
+
+  if (currentUser?.role === 'superadmin') {
+    roles.push({ value: 'superadmin', label: 'Süper Admin', description: 'Sistem yönetimi' })
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6" fontWeight={700}>{isEditing ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı'}</Typography><IconButton onClick={onClose} size="small"><Close /></IconButton></Stack></DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField fullWidth label="Kullanıcı Adı" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} required />
-          <TextField fullWidth label="E-posta" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-          <TextField fullWidth label="Ad Soyad" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
-          <TextField fullWidth label={isEditing ? 'Şifre (değiştirmek için)' : 'Şifre'} type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required={!isEditing} />
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={700}>{isEditing ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı'}</Typography>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Stack>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        <Stack spacing={2.5}>
+          {/* Avatar Upload */}
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Box
+              component="label"
+              sx={{
+                position: 'relative',
+                cursor: 'pointer',
+                '&:hover .avatar-overlay': { opacity: 1 }
+              }}
+            >
+              <Avatar
+                src={avatarPreview}
+                sx={{ width: 100, height: 100, fontSize: 40, bgcolor: 'primary.main' }}
+              >
+                {!avatarPreview && (form.name?.charAt(0)?.toUpperCase() || form.username?.charAt(0)?.toUpperCase() || <Person sx={{ fontSize: 48 }} />)}
+              </Avatar>
+              <Box
+                className="avatar-overlay"
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.2s'
+                }}
+              >
+                <PhotoCamera sx={{ color: 'white' }} />
+              </Box>
+              <input type="file" hidden accept="image/*,.heic" onChange={handleAvatarChange} />
+            </Box>
+          </Box>
+
+          <TextField
+            fullWidth
+            label="Ad Soyad"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Ahmet Yılmaz"
+          />
+          <TextField
+            fullWidth
+            label="Kullanıcı Adı"
+            value={form.username}
+            onChange={e => setForm({ ...form, username: e.target.value })}
+            required
+            placeholder="ahmet.yilmaz"
+            InputProps={{ startAdornment: <InputAdornment position="start"><Person /></InputAdornment> }}
+          />
+          <TextField
+            fullWidth
+            label="E-posta"
+            type="email"
+            value={form.email}
+            onChange={e => setForm({ ...form, email: e.target.value })}
+            required
+            InputProps={{ startAdornment: <InputAdornment position="start"><Email /></InputAdornment> }}
+          />
+          <TextField
+            fullWidth
+            label={isEditing ? 'Yeni Şifre (opsiyonel)' : 'Şifre'}
+            type="password"
+            value={form.password}
+            onChange={e => setForm({ ...form, password: e.target.value })}
+            required={!isEditing}
+            helperText={isEditing ? 'Değiştirmek istemiyorsanız boş bırakın' : 'En az 6 karakter'}
+            InputProps={{ startAdornment: <InputAdornment position="start"><Lock /></InputAdornment> }}
+          />
+
           <FormControl fullWidth>
             <InputLabel>Rol</InputLabel>
             <Select value={form.role} label="Rol" onChange={e => setForm({ ...form, role: e.target.value })}>
-              {roles.map(role => <MenuItem key={role.value} value={role.value}>{role.label}</MenuItem>)}
+              {roles.map(role => (
+                <MenuItem key={role.value} value={role.value}>
+                  <Stack>
+                    <Typography variant="body2" fontWeight={600}>{role.label}</Typography>
+                    <Typography variant="caption" color="text.secondary">{role.description}</Typography>
+                  </Stack>
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
-          {form.role !== 'superadmin' && (
+
+          {branches.length > 0 && form.role !== 'superadmin' && (
             <FormControl fullWidth>
               <InputLabel>Şubeler</InputLabel>
-              <Select multiple value={form.branches} label="Şubeler" onChange={e => setForm({ ...form, branches: e.target.value })}
-                renderValue={(selected) => <Stack direction="row" spacing={0.5} flexWrap="wrap">{selected.map(id => { const branch = branches.find(b => b.id === id); return <Chip key={id} label={branch?.name || id} size="small" /> })}</Stack>}>
-                {branches.map(branch => <MenuItem key={branch.id} value={branch.id}>{branch.name}</MenuItem>)}
+              <Select
+                multiple
+                value={form.selectedBranches}
+                label="Şubeler"
+                onChange={handleBranchChange}
+                renderValue={(selected) => {
+                  if (selected.length === 0) return 'Şube seçin'
+                  if (selected.length === branches.length) return 'Tüm Şubeler'
+                  return branches.filter(b => selected.includes(b.id || b._id)).map(b => b.name).join(', ')
+                }}
+              >
+                <MenuItem value="all">
+                  <FormControlLabel
+                    control={<Switch checked={form.allBranches} size="small" />}
+                    label={<Typography fontWeight={600}>Tüm Şubeler</Typography>}
+                  />
+                </MenuItem>
+                <Divider />
+                {branches.map(branch => (
+                  <MenuItem key={branch.id || branch._id} value={branch.id || branch._id}>
+                    <FormControlLabel
+                      control={<Switch checked={form.selectedBranches.includes(branch.id || branch._id)} size="small" />}
+                      label={branch.name}
+                    />
+                  </MenuItem>
+                ))}
               </Select>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                {form.selectedBranches.length === 0
+                  ? 'Hiç şube seçilmedi - kullanıcı hiçbir şubeye erişemez'
+                  : `${form.selectedBranches.length} şube seçildi`}
+              </Typography>
             </FormControl>
           )}
-          <FormControlLabel control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />} label="Aktif" />
+
+          <FormControlLabel
+            control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
+            label={
+              <Box>
+                <Typography variant="body2" fontWeight={600}>Aktif</Typography>
+                <Typography variant="caption" color="text.secondary">Pasif kullanıcılar giriş yapamaz</Typography>
+              </Box>
+            }
+          />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}><Button onClick={onClose}>İptal</Button><Button onClick={handleSubmit} variant="contained" disabled={saving}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button></DialogActions>
+
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={saving}>İptal</Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={20} /> : <Check />}
+        >
+          {saving ? 'Kaydediliyor...' : isEditing ? 'Güncelle' : 'Oluştur'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+// ==================== RESTAURANTS PAGE ====================
+export function RestaurantsPage() {
+  const { user } = useAuth()
+  const showSnackbar = useSnackbar()
+  const navigate = useNavigate()
+  const [restaurants, setRestaurants] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, restaurant: null })
+
+  const loadRestaurants = async () => {
+    try {
+      const res = await api.get('/restaurants')
+      setRestaurants(res.data || [])
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Restoranlar yüklenemedi', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user?.role === 'superadmin') loadRestaurants()
+  }, [user])
+
+  // Sadece superadmin erişebilir
+  if (user?.role !== 'superadmin') {
+    return (
+      <PageWrapper>
+        <EmptyState
+          icon={<Lock sx={{ fontSize: 64 }} />}
+          title="Erişim Engellendi"
+          description="Bu sayfaya sadece süper admin erişebilir"
+        />
+      </PageWrapper>
+    )
+  }
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/restaurants/${deleteDialog.restaurant.id || deleteDialog.restaurant._id}`)
+      showSnackbar('Restoran silindi', 'success')
+      setDeleteDialog({ open: false, restaurant: null })
+      loadRestaurants()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Silme başarısız', 'error')
+    }
+  }
+
+  const handleLogoUpload = async (restaurantId, file) => {
+    try {
+      if (isHeicFile(file)) file = await convertHeicToJpg(file)
+      const formData = new FormData()
+      formData.append('image', file)
+      await api.post(`/restaurants/${restaurantId}/logo`, formData)
+      showSnackbar('Logo yüklendi', 'success')
+      loadRestaurants()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Logo yüklenemedi', 'error')
+    }
+  }
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+
+  return (
+    <PageWrapper>
+      <Stack spacing={3}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>Restoranlar</Typography>
+            <Typography color="text.secondary">{restaurants.length} restoran</Typography>
+          </Box>
+          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true) }}>
+            Yeni Restoran
+          </Button>
+        </Stack>
+
+        <Grid container spacing={3}>
+          {restaurants.map(restaurant => (
+            <Grid item xs={12} sm={6} md={4} key={restaurant.id || restaurant._id}>
+              <Card sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'all 0.2s',
+                '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+              }}>
+                <Box sx={{
+                  position: 'relative',
+                  pt: '50%',
+                  bgcolor: 'background.default'
+                }}>
+                  {restaurant.logo ? (
+                    <Box
+                      component="img"
+                      src={getImageUrl(restaurant.logo)}
+                      alt={restaurant.name}
+                      sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', p: 2 }}
+                    />
+                  ) : (
+                    <Box sx={{
+                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    }}>
+                      <Restaurant sx={{ fontSize: 64, color: 'white' }} />
+                    </Box>
+                  )}
+                  <Tooltip title="Logo Yükle">
+                    <IconButton
+                      component="label"
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        bottom: 8,
+                        right: 8,
+                        bgcolor: 'rgba(0,0,0,0.6)',
+                        color: 'white',
+                        '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' }
+                      }}
+                    >
+                      <PhotoCamera fontSize="small" />
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*,.heic"
+                        onChange={e => e.target.files[0] && handleLogoUpload(restaurant.id || restaurant._id, e.target.files[0])}
+                      />
+                    </IconButton>
+                  </Tooltip>
+                  <Chip
+                    label={restaurant.isActive !== false ? 'Aktif' : 'Pasif'}
+                    size="small"
+                    color={restaurant.isActive !== false ? 'success' : 'default'}
+                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                  />
+                </Box>
+
+                <CardContent sx={{ flex: 1 }}>
+                  <Typography variant="h6" fontWeight={700} noWrap>{restaurant.name}</Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">/{restaurant.slug}</Typography>
+
+                  <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
+                    <Chip icon={<Store fontSize="small" />} label={`${restaurant.branchCount || 0} şube`} size="small" variant="outlined" />
+                  </Stack>
+                </CardContent>
+
+                <Divider />
+
+                <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                  <Stack direction="row" spacing={0.5}>
+                    <Button size="small" startIcon={<Store />} onClick={() => navigate(`/admin/restaurant/${restaurant.id || restaurant._id}/branches`)}>
+                      Şubeler
+                    </Button>
+                    <Button size="small" startIcon={<People />} onClick={() => navigate(`/admin/restaurant/${restaurant.id || restaurant._id}/users`)}>
+                      Kullanıcılar
+                    </Button>
+                    <IconButton size="small" onClick={() => { setEditing(restaurant); setModalOpen(true) }}>
+                      <Edit fontSize="small" />
+                    </IconButton>
+                    {user?.role === 'superadmin' && (
+                      <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, restaurant })}>
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Stack>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+
+          {restaurants.length === 0 && (
+            <Grid item xs={12}>
+              <EmptyState
+                icon={<Restaurant sx={{ fontSize: 64 }} />}
+                title="Henüz restoran yok"
+                description="İlk restoranınızı ekleyerek başlayın"
+                action={
+                  <Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>
+                    İlk Restoranı Ekle
+                  </Button>
+                }
+              />
+            </Grid>
+          )}
+        </Grid>
+
+        <RestaurantFormModal
+          open={modalOpen}
+          restaurant={editing}
+          onClose={() => { setModalOpen(false); setEditing(null) }}
+          onSave={() => { setModalOpen(false); setEditing(null); loadRestaurants() }}
+        />
+
+        <ConfirmDialog
+          open={deleteDialog.open}
+          title="Restoran Sil"
+          message={
+            <>
+              <strong>{deleteDialog.restaurant?.name}</strong> restoranını silmek istediğinize emin misiniz?
+              <Alert severity="warning" sx={{ mt: 2 }}>Bu işlem restorana ait tüm şubeleri de silecektir!</Alert>
+            </>
+          }
+          confirmText="Sil"
+          confirmColor="error"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialog({ open: false, restaurant: null })}
+        />
+      </Stack>
+    </PageWrapper>
+  )
+}
+
+function RestaurantFormModal({ open, restaurant, onClose, onSave }) {
+  const showSnackbar = useSnackbar()
+  const isEditing = !!(restaurant?.id || restaurant?._id)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    isActive: true
+  })
+
+  useEffect(() => {
+    if (open) {
+      if (restaurant) {
+        setForm({
+          name: restaurant.name || '',
+          slug: restaurant.slug || '',
+          description: restaurant.description || '',
+          isActive: restaurant.isActive !== false
+        })
+      } else {
+        setForm({ name: '', slug: '', description: '', isActive: true })
+      }
+    }
+  }, [open, restaurant])
+
+  const handleSubmit = async () => {
+    if (!form.name.trim()) {
+      showSnackbar('Restoran adı gerekli', 'error')
+      return
+    }
+
+    setSaving(true)
+    try {
+      if (isEditing) {
+        await api.put(`/restaurants/${restaurant.id || restaurant._id}`, form)
+        showSnackbar('Restoran güncellendi', 'success')
+      } else {
+        await api.post('/restaurants', form)
+        showSnackbar('Restoran oluşturuldu', 'success')
+      }
+      onSave()
+    } catch (err) {
+      console.error(err)
+      showSnackbar(err.response?.data?.error || 'Hata oluştu', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={700}>{isEditing ? 'Restoran Düzenle' : 'Yeni Restoran'}</Typography>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Stack>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        <Stack spacing={2.5}>
+          <TextField
+            fullWidth
+            label="Restoran Adı"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            required
+            placeholder="Lezzet Köşesi"
+          />
+          <TextField
+            fullWidth
+            label="URL Slug"
+            value={form.slug}
+            onChange={e => setForm({ ...form, slug: e.target.value })}
+            placeholder="Boş bırakılırsa otomatik oluşturulur"
+            helperText="Örn: lezzet-kosesi"
+          />
+          <TextField
+            fullWidth
+            label="Açıklama"
+            value={form.description}
+            onChange={e => setForm({ ...form, description: e.target.value })}
+            multiline
+            rows={3}
+            placeholder="Restoran hakkında kısa bir açıklama..."
+          />
+          <FormControlLabel
+            control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />}
+            label="Aktif"
+          />
+        </Stack>
+      </DialogContent>
+
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={saving}>İptal</Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={20} /> : <Check />}
+        >
+          {saving ? 'Kaydediliyor...' : isEditing ? 'Güncelle' : 'Oluştur'}
+        </Button>
+      </DialogActions>
     </Dialog>
   )
 }

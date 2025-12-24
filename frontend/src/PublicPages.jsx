@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import {
@@ -456,7 +456,75 @@ export function MenuPage() {
     loadMenuData(section.slug)
   }
 
-  const handleTagSelect = async (tag) => {
+  const handleBackToSections = () => {
+    setSelectedSection(null)
+    setSearchParams({})
+    setCategories([])
+    setProducts([])
+    setLayouts([])
+    setAnnouncements([])
+  }
+
+  // History API - Telefon geri butonu desteği
+  useEffect(() => {
+    const handlePopState = (e) => {
+      const state = e.state || {}
+
+      // Ürün detayı açıksa kapat
+      if (selectedProduct && !state.product) {
+        setSelectedProduct(null)
+        return
+      }
+
+      // Kategori seçiliyse ve state'de kategori yoksa kategoriden çık
+      if (selectedCategory && !state.category) {
+        setSelectedCategory(null)
+        return
+      }
+
+      // Tag seçiliyse kapat
+      if (selectedTag && !state.tag) {
+        setSelectedTag(null)
+        setTagProducts([])
+        return
+      }
+
+      // 3D Carousel açıksa kapat
+      if (showCarousel && !state.carousel) {
+        setShowCarousel(false)
+        return
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [selectedProduct, selectedCategory, selectedTag, showCarousel])
+
+  // Kategori seçildiğinde history'e ekle
+  const handleCategorySelect = (categoryId) => {
+    window.history.pushState({ category: categoryId }, '')
+    setSelectedCategory(categoryId)
+  }
+
+  // Ürün seçildiğinde history'e ekle
+  const handleProductSelect = (product) => {
+    window.history.pushState({ product: product.id }, '')
+    setSelectedProduct(product)
+  }
+
+  // Geri tuşu için kategori kapatma
+  const handleCategoryBack = () => {
+    window.history.back()
+  }
+
+  // Geri tuşu için ürün kapatma
+  const handleProductBack = () => {
+    window.history.back()
+  }
+
+  // Tag seçildiğinde history'e ekle
+  const handleTagSelectWithHistory = async (tag) => {
+    window.history.pushState({ tag: tag.slug }, '')
     setSelectedCategory(null)
     setSelectedTag(tag)
     setLoadingTagProducts(true)
@@ -471,13 +539,14 @@ export function MenuPage() {
     }
   }
 
-  const handleBackToSections = () => {
-    setSelectedSection(null)
-    setSearchParams({})
-    setCategories([])
-    setProducts([])
-    setLayouts([])
-    setAnnouncements([])
+  // 3D Carousel açıldığında history'e ekle
+  const handleOpenCarousel = () => {
+    window.history.pushState({ carousel: true }, '')
+    setShowCarousel(true)
+  }
+
+  const handleCloseCarousel = () => {
+    window.history.back()
   }
 
   const handleSubmitReview = async () => {
@@ -505,23 +574,71 @@ export function MenuPage() {
     [products]
   )
 
-  // Kategori bazlı ürün sayısı hesaplama
+  // Ana kategoriler (parent olmayan)
+  const mainCategories = useMemo(() => {
+    return categories.filter(c => !c.parent)
+  }, [categories])
+
+  // Bir kategorinin tüm alt kategorilerini bul (recursive)
+  const getChildCategories = useCallback((parentId, allCats = categories) => {
+    const children = allCats.filter(c => {
+      const pId = c.parent?._id || c.parent
+      return pId === parentId || String(pId) === String(parentId)
+    })
+    let result = [...children]
+    children.forEach(child => {
+      result = [...result, ...getChildCategories(child.id || child._id, allCats)]
+    })
+    return result
+  }, [categories])
+
+  // Kategori bazlı ürün sayısı hesaplama (alt kategoriler dahil)
   const getCategoryProductCount = (categoryId) => {
     if (!categoryId) return 0
+    // Bu kategori + tüm alt kategorilerin ürünlerini say
+    const childCats = getChildCategories(categoryId)
+    const allCatIds = [categoryId, ...childCats.map(c => c.id || c._id)]
+
     return products.filter(p => {
       const pCatId = p.categoryId || p.category?._id || p.category?.id || p.category
-      return pCatId === categoryId || String(pCatId) === String(categoryId)
+      return allCatIds.some(catId => pCatId === catId || String(pCatId) === String(catId))
     }).length
   }
 
-  // Seçili kategorinin ürünleri
-  const categoryProducts = useMemo(() => {
+  // Seçili kategorinin ürünleri (alt kategoriler dahil, gruplu)
+  const categoryProductsGrouped = useMemo(() => {
     if (!selectedCategory) return []
-    return products.filter(p => {
-      const pCatId = p.categoryId || p.category?._id || p.category?.id || p.category
-      return pCatId === selectedCategory || String(pCatId) === String(selectedCategory)
+
+    // Alt kategorileri bul
+    const childCats = getChildCategories(selectedCategory)
+    const allCats = [
+      categories.find(c => c.id === selectedCategory || String(c.id) === String(selectedCategory)),
+      ...childCats
+    ].filter(Boolean)
+
+    // Her kategori için ürünleri grupla
+    const groups = []
+    allCats.forEach(cat => {
+      const catId = cat.id || cat._id
+      const catProducts = products.filter(p => {
+        const pCatId = p.categoryId || p.category?._id || p.category?.id || p.category
+        return pCatId === catId || String(pCatId) === String(catId)
+      })
+      if (catProducts.length > 0) {
+        groups.push({
+          category: cat,
+          products: catProducts,
+          isSubCategory: catId !== selectedCategory && String(catId) !== String(selectedCategory)
+        })
+      }
     })
-  }, [products, selectedCategory])
+    return groups
+  }, [products, selectedCategory, categories, getChildCategories])
+
+  // Seçili kategorinin tüm ürünleri (düz liste)
+  const categoryProducts = useMemo(() => {
+    return categoryProductsGrouped.flatMap(g => g.products)
+  }, [categoryProductsGrouped])
 
   // Seçili kategori bilgisi
   const selectedCategoryInfo = useMemo(() => {
@@ -743,7 +860,7 @@ export function MenuPage() {
             borderColor: 'divider'
           }}>
             <Stack direction="row" alignItems="center" spacing={2} sx={{ p: 2, maxWidth: 800, mx: 'auto' }}>
-              <IconButton onClick={() => setSelectedCategory(null)}>
+              <IconButton onClick={handleCategoryBack}>
                 <ArrowBack />
               </IconButton>
               <Box sx={{ flex: 1 }}>
@@ -758,107 +875,159 @@ export function MenuPage() {
             </Stack>
           </Box>
 
-          {/* Ürün Listesi */}
+          {/* Ürün Listesi - Alt kategorilere göre gruplu */}
           <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-            {categoryProducts.length > 0 ? (
-              <Stack divider={<Divider />}>
-                {categoryProducts.map(product => (
-                  <Box 
-                    key={product.id}
-                    onClick={() => setSelectedProduct(product)}
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      p: 2,
-                      cursor: 'pointer',
-                      transition: 'background 0.2s',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-                      '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
-                    }}
-                  >
-                    {product.thumbnail && (
-                      <Box 
-                        sx={{ 
-                          width: 64, 
-                          height: 64, 
-                          borderRadius: 1.5,
-                          overflow: 'hidden',
-                          flexShrink: 0,
-                          bgcolor: 'background.paper'
-                        }}
-                      >
-                        <Box 
-                          component="img" 
-                          src={getImageUrl(product.thumbnail)} 
-                          alt={t(product, 'name')}
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                        />
+            {categoryProductsGrouped.length > 0 ? (
+              <Stack spacing={0}>
+                {categoryProductsGrouped.map((group, groupIndex) => (
+                  <Box key={group.category.id || groupIndex}>
+                    {/* Alt kategori başlığı */}
+                    {group.isSubCategory && (
+                      <Box sx={{
+                        py: 1.5,
+                        px: 2,
+                        mt: groupIndex > 0 ? 3 : 1,
+                        bgcolor: 'rgba(255,255,255,0.03)',
+                        borderLeft: '3px solid',
+                        borderColor: 'primary.main'
+                      }}>
+                        <Typography variant="subtitle1" fontWeight={600} color="primary.main">
+                          {group.category.icon} {t(group.category, 'name')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {group.products.length} {language === 'tr' ? 'ürün' : 'products'}
+                        </Typography>
                       </Box>
                     )}
 
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography fontWeight={600} noWrap>
-                        {t(product, 'name')}
-                      </Typography>
-                      {t(product, 'description') && (
-                        <Typography 
-                          variant="caption" 
-                          color="text.secondary" 
-                          sx={{ 
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            lineHeight: 1.4
+                    {/* Ürünler */}
+                    <Stack divider={<Divider />}>
+                      {group.products.map(product => (
+                        <Box
+                          key={product.id}
+                          onClick={() => handleProductSelect(product)}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            p: 2,
+                            cursor: 'pointer',
+                            transition: 'background 0.2s',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                            '&:active': { bgcolor: 'rgba(255,255,255,0.05)' },
+                            ...(product.isFeatured && {
+                              bgcolor: 'rgba(255,215,0,0.05)',
+                              borderLeft: '3px solid #FFD700'
+                            })
                           }}
                         >
-                          {t(product, 'description')}
-                        </Typography>
-                      )}
-                      {product.tags?.length > 0 && (
-                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-                          {product.tags.slice(0, 3).map((tag, i) => (
-                            <Chip 
-                              key={tag.id || tag.slug || i} 
-                              label={typeof tag === 'string' ? tag : t(tag, 'name')} 
-                              size="small" 
-                              sx={{ 
-                                height: 20, 
-                                fontSize: '0.65rem',
-                                bgcolor: 'rgba(255,255,255,0.1)'
-                              }} 
-                            />
-                          ))}
-                        </Stack>
-                      )}
-                    </Box>
+                          {product.thumbnail && (
+                            <Box
+                              sx={{
+                                width: 64,
+                                height: 64,
+                                borderRadius: 1.5,
+                                overflow: 'hidden',
+                                flexShrink: 0,
+                                bgcolor: 'background.paper',
+                                position: 'relative'
+                              }}
+                            >
+                              <Box
+                                component="img"
+                                src={getImageUrl(product.thumbnail)}
+                                alt={t(product, 'name')}
+                                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                              {product.isFeatured && (
+                                <Box sx={{
+                                  position: 'absolute',
+                                  top: -4,
+                                  right: -4,
+                                  bgcolor: '#FFD700',
+                                  borderRadius: '50%',
+                                  width: 20,
+                                  height: 20,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  <Star sx={{ fontSize: 12, color: '#000' }} />
+                                </Box>
+                              )}
+                            </Box>
+                          )}
 
-                    <Box sx={{ 
-                      flex: '0 0 auto',
-                      borderBottom: '1px dotted',
-                      borderColor: 'divider',
-                      width: 40,
-                      alignSelf: 'center',
-                      mx: 1
-                    }} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                              <Typography fontWeight={600} noWrap>
+                                {t(product, 'name')}
+                              </Typography>
+                              {product.isFeatured && !product.thumbnail && (
+                                <Star sx={{ fontSize: 16, color: '#FFD700' }} />
+                              )}
+                            </Stack>
+                            {t(product, 'description') && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  lineHeight: 1.4
+                                }}
+                              >
+                                {t(product, 'description')}
+                              </Typography>
+                            )}
+                            {product.tags?.length > 0 && (
+                              <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
+                                {product.tags.slice(0, 3).map((tag, i) => (
+                                  <Chip
+                                    key={tag.id || tag.slug || i}
+                                    label={typeof tag === 'string' ? tag : t(tag, 'name')}
+                                    size="small"
+                                    sx={{
+                                      height: 20,
+                                      fontSize: '0.65rem',
+                                      bgcolor: 'rgba(255,255,255,0.1)'
+                                    }}
+                                  />
+                                ))}
+                              </Stack>
+                            )}
+                          </Box>
 
-                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                      {product.isCampaign && product.campaignPrice ? (
-                        <>
-                          <Typography fontWeight={700} color="error.main">
-                            {formatPrice(product.campaignPrice)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            {formatPrice(product.price)}
-                          </Typography>
-                        </>
-                      ) : (
-                        <Typography fontWeight={700} color="primary.main">
-                          {formatPrice(product.price)}
-                        </Typography>
-                      )}
-                    </Box>
+                          <Box sx={{
+                            flex: '0 0 auto',
+                            borderBottom: '1px dotted',
+                            borderColor: 'divider',
+                            width: 40,
+                            alignSelf: 'center',
+                            mx: 1
+                          }} />
+
+                          <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                            {product.isCampaign && product.campaignPrice ? (
+                              <>
+                                <Typography fontWeight={700} color="error.main">
+                                  {formatPrice(product.campaignPrice)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                                  {formatPrice(product.price)}
+                                </Typography>
+                              </>
+                            ) : (
+                              <Typography fontWeight={700} color="primary.main">
+                                {formatPrice(product.price)}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Stack>
                   </Box>
                 ))}
               </Stack>
@@ -874,8 +1043,8 @@ export function MenuPage() {
 
           <ProductDetailModal 
             product={selectedProduct} 
-            onClose={() => setSelectedProduct(null)} 
-            onTagClick={handleTagSelect}
+            onClose={handleProductBack}
+            onTagClick={handleTagSelectWithHistory}
             language={language}
             t={t}
             tArray={tArray}
@@ -925,10 +1094,10 @@ export function MenuPage() {
             ) : tagProducts.length > 0 ? (
               <Stack divider={<Divider />}>
                 {tagProducts.map(product => (
-                  <Box 
+                  <Box
                     key={product.id}
-                    onClick={() => setSelectedProduct(product)}
-                    sx={{ 
+                    onClick={() => handleProductSelect(product)}
+                    sx={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 2,
@@ -1026,8 +1195,8 @@ export function MenuPage() {
 
           <ProductDetailModal 
             product={selectedProduct} 
-            onClose={() => setSelectedProduct(null)} 
-            onTagClick={handleTagSelect}
+            onClose={handleProductBack}
+            onTagClick={handleTagSelectWithHistory}
             language={language}
             t={t}
             tArray={tArray}
@@ -1367,9 +1536,9 @@ export function MenuPage() {
                       const aspectRatio = size === 'full' ? '16 / 9' : '1 / 1'
                       
                       return (
-                        <Box 
+                        <Box
                           key={categoryId || `cat-${catIndex}`}
-                          onClick={() => setSelectedCategory(categoryId)}
+                          onClick={() => handleCategorySelect(categoryId)}
                           sx={{ 
                             gridColumn: `span ${gridSpan}`,
                             aspectRatio,
@@ -1429,19 +1598,19 @@ export function MenuPage() {
                 )
               })}
             </Stack>
-          ) : categories.length > 0 ? (
+          ) : mainCategories.length > 0 ? (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-              {categories.map(cat => {
+              {mainCategories.map(cat => {
                 const productCount = getCategoryProductCount(cat.id)
                 
                 return (
-                  <Box 
+                  <Box
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    sx={{ 
+                    onClick={() => handleCategorySelect(cat.id)}
+                    sx={{
                       aspectRatio: '1 / 1',
-                      cursor: 'pointer', 
-                      position: 'relative', 
+                      cursor: 'pointer',
+                      position: 'relative',
                       overflow: 'hidden',
                       borderRadius: 2,
                       transition: 'transform 0.2s',
@@ -1614,8 +1783,8 @@ export function MenuPage() {
                 <Grid container spacing={2}>
                   {searchResults.map(product => (
                     <Grid item xs={6} sm={4} key={product.id}>
-                      <Box 
-                        onClick={() => { setSelectedProduct(product); setShowSearch(false); setSearchQuery(''); }}
+                      <Box
+                        onClick={() => { handleProductSelect(product); setShowSearch(false); setSearchQuery(''); }}
                         sx={{ 
                           cursor: 'pointer', 
                           borderRadius: 2,
@@ -1667,10 +1836,10 @@ export function MenuPage() {
         </Dialog>
 
         {/* ========== ÜRÜN DETAY MODAL ========== */}
-        <ProductDetailModal 
-          product={selectedProduct} 
-          onClose={() => setSelectedProduct(null)} 
-          onTagClick={handleTagSelect}
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={handleProductBack}
+          onTagClick={handleTagSelectWithHistory}
           language={language}
           t={t}
           tArray={tArray}
@@ -1749,8 +1918,8 @@ export function MenuPage() {
         </Dialog>
 
         {/* ========== 3D FLOATING BUTTON ========== */}
-        <Floating3DButton 
-          onClick={() => setShowCarousel(true)} 
+        <Floating3DButton
+          onClick={handleOpenCarousel}
           productCount={products3D.length}
           language={language}
         />
@@ -1758,13 +1927,13 @@ export function MenuPage() {
         {/* ========== 3D CAROUSEL MODAL ========== */}
         <Carousel3DModal
           open={showCarousel}
-          onClose={() => setShowCarousel(false)}
+          onClose={handleCloseCarousel}
           products={products3D}
           language={language}
           t={t}
           onProductSelect={(product) => {
-            setShowCarousel(false)
-            setSelectedProduct(product)
+            handleCloseCarousel()
+            setTimeout(() => handleProductSelect(product), 100)
           }}
         />
 

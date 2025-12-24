@@ -11,10 +11,10 @@ require('dotenv').config()
 const app = express()
 
 // ==================== CONFIG ====================
-const PORT = 3001;
-const MONGODB_URI =  'mongodb://localhost:27017/ar-menu-remi';
-const JWT_SECRET =  'ar-menu-secret-key-change-in-production';
-const API_KEY = "test123";
+const PORT = process.env.PORT || 3001;
+const MONGODB_URI = 'mongodb://localhost:27017/ar-menu-qr1';
+const JWT_SECRET = process.env.JWT_SECRET || 'ar-menu-secret-key-change-in-production';
+const API_KEY = process.env.API_KEY || "test123";
 
 // ==================== MIDDLEWARE ====================
 app.use(cors())
@@ -31,10 +31,44 @@ dirs.forEach(dir => {
 
 // ==================== SCHEMAS ====================
 
-// Branch (Şube)
-const branchSchema = new mongoose.Schema({
+// Restaurant (Ana Restoran - Multi-tenant için)
+const restaurantSchema = new mongoose.Schema({
   name: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
+  description: { type: String, default: '' },
+  logo: { type: String, default: null },
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  contactEmail: { type: String, default: '' },
+  contactPhone: { type: String, default: '' },
+  address: { type: String, default: '' },
+  isActive: { type: Boolean, default: true },
+  subscription: {
+    plan: { type: String, enum: ['free', 'basic', 'premium', 'enterprise'], default: 'basic' },
+    expiresAt: { type: Date, default: null },
+    maxBranches: { type: Number, default: 5 },
+    maxProducts: { type: Number, default: 100 },
+    features: {
+      glbSupport: { type: Boolean, default: true },
+      multiLanguage: { type: Boolean, default: true },
+      customDomain: { type: Boolean, default: false },
+      analytics: { type: Boolean, default: false }
+    }
+  },
+  settings: {
+    currency: { type: String, default: 'TRY' },
+    currencySymbol: { type: String, default: '₺' },
+    defaultLanguage: { type: String, default: 'tr' },
+    languages: [{ type: String, default: ['tr'] }],
+    timezone: { type: String, default: 'Europe/Istanbul' }
+  },
+  customDomain: { type: String, default: null }
+}, { timestamps: true })
+
+// Branch (Şube) - Restaurant'a bağlı
+const branchSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
+  name: { type: String, required: true },
+  slug: { type: String, required: true },
   description: { type: String, default: '' },
   image: { type: String, default: null },
   logo: { type: String, default: null },
@@ -53,8 +87,12 @@ const branchSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
+// Compound index for unique slug within restaurant
+branchSchema.index({ restaurant: 1, slug: 1 }, { unique: true })
+
 // Section (Bölüm) - Restoran içi alanlar (Bahçe, Teras, VIP vb.)
 const sectionSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   name: { type: String, required: true },
   slug: { type: String, required: true },
@@ -69,6 +107,7 @@ const sectionSchema = new mongoose.Schema({
 
 // Tag (Etiket)
 const tagSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   name: { type: String, required: true },
   slug: { type: String },
@@ -79,22 +118,26 @@ const tagSchema = new mongoose.Schema({
   order: { type: Number, default: 0 }
 }, { timestamps: true })
 
-// Category - nameEN eklendi
+// Category
 const categorySchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
+  parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   name: { type: String, required: true },
-  nameEN: { type: String, default: '' },  // İngilizce isim
+  nameEN: { type: String, default: '' },
   icon: { type: String, default: '' },
   image: { type: String, default: null },
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   description: { type: String, default: '' },
-  layoutSize: { type: String, enum: ['full', 'half', 'third'], default: 'half' }
+  layoutSize: { type: String, enum: ['full', 'half', 'third'], default: 'half' },
+  categoryType: { type: String, enum: ['category_title', 'product_main_title', 'product_title', 'product_subtitle'], default: 'product_title' }
 }, { timestamps: true })
 
 // CategoryLayout
 const categoryLayoutSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   rowOrder: { type: Number, default: 0 },
@@ -104,12 +147,13 @@ const categoryLayoutSchema = new mongoose.Schema({
   }]
 }, { timestamps: true })
 
-// Product - tags artık ObjectId array
+// Product
 const productSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   name: { type: String, required: true },
-  nameEN: { type: String, default: '' },           // YENİ
+  nameEN: { type: String, default: '' },
   price: { type: Number, required: true },
   description: { type: String, default: '' },
   descriptionEN: { type: String, default: '' },
@@ -124,7 +168,7 @@ const productSchema = new mongoose.Schema({
   calories: { type: Number, default: null },
   preparationTime: { type: Number, default: null },
   allergens: [{ type: String }],
-  allergensEN: [{ type: String }],                 // YENİ
+  allergensEN: [{ type: String }],
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
   viewCount: { type: Number, default: 0 },
   sectionPrices: [{
@@ -137,6 +181,7 @@ const productSchema = new mongoose.Schema({
 
 // Announcement
 const announcementSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   title: { type: String, required: true },
@@ -149,6 +194,7 @@ const announcementSchema = new mongoose.Schema({
 
 // Review
 const reviewSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', default: null },
   rating: { type: Number, required: true, min: 1, max: 5 },
@@ -163,12 +209,16 @@ const reviewSchema = new mongoose.Schema({
 
 // GlbFile
 const glbFileSchema = new mongoose.Schema({
+  restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
-  filename: { type: String, required: true, unique: true },
+  filename: { type: String, required: true },
   originalName: { type: String },
   size: { type: Number },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }
 }, { timestamps: true })
+
+// Compound index for unique filename within restaurant
+glbFileSchema.index({ restaurant: 1, filename: 1 }, { unique: true })
 
 // User
 const userSchema = new mongoose.Schema({
@@ -176,14 +226,21 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['superadmin', 'admin', 'manager', 'staff'], default: 'staff' },
-  branches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Branch' }],
+  // superadmin: Tüm sistem yöneticisi
+  // admin: Restoran sahibi/yöneticisi (kendi restoranlarını yönetir)
+  // manager: Şube müdürü (belirli şubeleri yönetir)
+  // staff: Personel (sadece görüntüleme ve sınırlı düzenleme)
+  restaurants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant' }], // Erişebildiği restoranlar
+  branches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Branch' }], // Erişebildiği şubeler
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date, default: null },
   avatar: { type: String, default: null },
-  fullName: { type: String, default: '' }
+  fullName: { type: String, default: '' },
+  phone: { type: String, default: '' }
 }, { timestamps: true })
 
 // Models
+const Restaurant = mongoose.model('Restaurant', restaurantSchema)
 const Branch = mongoose.model('Branch', branchSchema)
 const Section = mongoose.model('Section', sectionSchema)
 const Tag = mongoose.model('Tag', tagSchema)
@@ -214,7 +271,9 @@ const authMiddleware = async (req, res, next) => {
     const token = req.headers.authorization?.replace('Bearer ', '')
     if (!token) return res.status(401).json({ error: 'No token' })
     const decoded = jwt.verify(token, JWT_SECRET)
-    const user = await User.findById(decoded.userId).populate('branches')
+    const user = await User.findById(decoded.userId)
+      .populate('restaurants')
+      .populate('branches')
     if (!user || !user.isActive) return res.status(401).json({ error: 'Invalid token' })
     req.user = user
     next()
@@ -228,10 +287,54 @@ const apiKeyMiddleware = (req, res, next) => {
   next()
 }
 
-const checkBranchAccess = (user, branchId) => {
+// Restoran erişim kontrolü
+const checkRestaurantAccess = (user, restaurantId) => {
+  if (user.role === 'superadmin') return true
+  if (!restaurantId) return false
+  return user.restaurants.some(r => r._id.toString() === restaurantId.toString())
+}
+
+// Şube erişim kontrolü
+const checkBranchAccess = async (user, branchId) => {
   if (user.role === 'superadmin') return true
   if (!branchId) return false
-  return user.branches.some(b => b._id.toString() === branchId.toString())
+
+  // Önce branch'i bul
+  const branch = await Branch.findById(branchId)
+  if (!branch) return false
+
+  // Kullanıcının belirli şubeleri varsa, sadece o şubelere erişim
+  if (user.branches && user.branches.length > 0) {
+    return user.branches.some(b => b._id.toString() === branchId.toString())
+  }
+
+  // Şube kısıtlaması yoksa, restoran erişimi kontrol et
+  if (user.restaurants.some(r => r._id.toString() === branch.restaurant.toString())) {
+    return true
+  }
+
+  return false
+}
+
+// Backward compat için senkron versiyon (branch objesi varsa)
+const checkBranchAccessSync = (user, branch) => {
+  if (user.role === 'superadmin') return true
+  if (!branch) return false
+
+  const branchId = branch._id
+  const restaurantId = branch.restaurant?._id || branch.restaurant
+
+  // Kullanıcının belirli şubeleri varsa, sadece o şubelere erişim
+  if (user.branches && user.branches.length > 0) {
+    return user.branches.some(b => b._id.toString() === branchId.toString())
+  }
+
+  // Şube kısıtlaması yoksa, restoran erişimi kontrol et
+  if (user.restaurants.some(r => r._id.toString() === restaurantId.toString())) {
+    return true
+  }
+
+  return false
 }
 
 const formatBytes = (bytes) => {
@@ -248,6 +351,12 @@ const createSlug = (text) => {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+// Restaurant'tan Branch'e veri taşıma yardımcısı
+const getRestaurantFromBranch = async (branchId) => {
+  const branch = await Branch.findById(branchId)
+  return branch?.restaurant
+}
+
 // ==================== TRANSLATE API ====================
 app.post('/api/translate', authMiddleware, async (req, res) => {
   try {
@@ -257,7 +366,6 @@ app.post('/api/translate', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Text is required' })
     }
 
-    // MyMemory Translation API (Ücretsiz, günlük 5000 kelime)
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`
     
     const response = await fetch(url)
@@ -283,7 +391,6 @@ app.post('/api/translate', authMiddleware, async (req, res) => {
   }
 })
 
-// Toplu çeviri endpoint'i
 app.post('/api/translate/bulk', authMiddleware, async (req, res) => {
   try {
     const { texts, targetLang = 'en', sourceLang = 'tr' } = req.body
@@ -320,13 +427,63 @@ app.post('/api/translate/bulk', authMiddleware, async (req, res) => {
 
 // ==================== PUBLIC ROUTES ====================
 
-// Get all branches for selection screen
+// Get all restaurants for main selection
+app.get('/api/public/restaurants', async (req, res) => {
+  try {
+    const restaurants = await Restaurant.find({ isActive: true }).sort({ name: 1 })
+    res.json(restaurants.map(r => ({
+      id: r._id, name: r.name, slug: r.slug, description: r.description,
+      logo: r.logo, address: r.address, contactPhone: r.contactPhone
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Get restaurant with branches
+app.get('/api/public/restaurants/:slug', async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOne({ slug: req.params.slug, isActive: true })
+    if (!restaurant) return res.status(404).json({ error: 'Restaurant not found' })
+    
+    const branches = await Branch.find({ restaurant: restaurant._id, isActive: true }).sort({ order: 1 })
+    
+    res.json({
+      id: restaurant._id,
+      name: restaurant.name,
+      slug: restaurant.slug,
+      description: restaurant.description,
+      logo: restaurant.logo,
+      settings: restaurant.settings,
+      branches: branches.map(b => ({
+        id: b._id, name: b.name, slug: b.slug, description: b.description,
+        image: b.image, logo: b.logo, address: b.address, phone: b.phone
+      }))
+    })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Get all branches for selection screen (backward compat)
 app.get('/api/public/branches', async (req, res) => {
   try {
-    const branches = await Branch.find({ isActive: true }).sort({ order: 1, name: 1 })
+    const { restaurant: restaurantSlug } = req.query
+    
+    let filter = { isActive: true }
+    
+    if (restaurantSlug) {
+      const restaurant = await Restaurant.findOne({ slug: restaurantSlug, isActive: true })
+      if (!restaurant) return res.status(404).json({ error: 'Restaurant not found' })
+      filter.restaurant = restaurant._id
+    }
+    
+    const branches = await Branch.find(filter)
+      .populate('restaurant', 'name slug logo settings')
+      .sort({ order: 1, name: 1 })
+    
     res.json(branches.map(b => ({
       id: b._id, name: b.name, slug: b.slug, description: b.description,
-      image: b.image, logo: b.logo, address: b.address, phone: b.phone
+      image: b.image, logo: b.logo || b.restaurant?.logo, address: b.address, phone: b.phone,
+      restaurantId: b.restaurant?._id,
+      restaurantName: b.restaurant?.name,
+      restaurantSlug: b.restaurant?.slug
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -334,7 +491,17 @@ app.get('/api/public/branches', async (req, res) => {
 // Get branch details with sections
 app.get('/api/public/branches/:slug', async (req, res) => {
   try {
-    const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
+    const { restaurant: restaurantSlug } = req.query
+    
+    let branchQuery = { slug: req.params.slug, isActive: true }
+    
+    if (restaurantSlug) {
+      const restaurant = await Restaurant.findOne({ slug: restaurantSlug, isActive: true })
+      if (!restaurant) return res.status(404).json({ error: 'Restaurant not found' })
+      branchQuery.restaurant = restaurant._id
+    }
+    
+    const branch = await Branch.findOne(branchQuery).populate('restaurant', 'name slug logo settings')
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
     
     const sections = await Section.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
@@ -345,7 +512,7 @@ app.get('/api/public/branches/:slug', async (req, res) => {
       slug: branch.slug,
       description: branch.description,
       image: branch.image,
-      logo: branch.logo,
+      logo: branch.logo || branch.restaurant?.logo,
       banner: branch.banner,
       homepageImage: branch.homepageImage,
       address: branch.address,
@@ -354,6 +521,10 @@ app.get('/api/public/branches/:slug', async (req, res) => {
       instagram: branch.instagram,
       workingHours: branch.workingHours,
       theme: branch.theme,
+      restaurantId: branch.restaurant?._id,
+      restaurantName: branch.restaurant?.name,
+      restaurantSlug: branch.restaurant?.slug,
+      settings: branch.restaurant?.settings,
       sections: sections.map(s => ({
         id: s._id, name: s.name, slug: s.slug, description: s.description,
         icon: s.icon, image: s.image, homepageImage: s.homepageImage, color: s.color
@@ -386,7 +557,6 @@ app.get('/api/public/branches/:slug/tags', async (req, res) => {
     
     const tags = await Tag.find({ branch: branch._id, isActive: true }).sort({ order: 1, name: 1 })
     
-    // Her etiket için aktif ürün sayısını hesapla
     const tagsWithCount = await Promise.all(tags.map(async (tag) => {
       const productCount = await Product.countDocuments({ 
         branch: branch._id,
@@ -404,7 +574,6 @@ app.get('/api/public/branches/:slug/tags', async (req, res) => {
       }
     }))
     
-    // Ürünü olan etiketleri döndür
     res.json(tagsWithCount.filter(t => t.productCount > 0))
   } catch (err) { 
     console.error('Get public tags error:', err)
@@ -474,7 +643,7 @@ app.get('/api/public/branches/:slug/products/by-tag/:tagSlug', async (req, res) 
   }
 })
 
-// Get categories with layout info - nameEN eklendi
+// Get categories with layout info
 app.get('/api/public/branches/:slug/categories', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
@@ -492,7 +661,7 @@ app.get('/api/public/branches/:slug/categories', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get category layouts (PUBLIC) - nameEN eklendi
+// Get category layouts (PUBLIC)
 app.get('/api/public/branches/:slug/category-layouts', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
@@ -577,11 +746,12 @@ app.get('/api/public/branches/:slug/products', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// Get menu with section filter - nameEN eklendi
+// Get menu with section filter
 app.get('/api/public/branches/:slug/menu', async (req, res) => {
   try {
     const { section: sectionSlug } = req.query
     const branch = await Branch.findOne({ slug: req.params.slug, isActive: true })
+      .populate('restaurant', 'settings')
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
 
     let selectedSection = null
@@ -619,7 +789,6 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
       .populate('categories.category', 'name nameEN icon image')
       .sort({ rowOrder: 1 })
 
-    // Etiketleri de getir
     const tags = await Tag.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
 
     const processedProducts = products.map(p => {
@@ -661,11 +830,12 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
 
     res.json({
       branch: {
-        id: branch._id, name: branch.name, logo: branch.logo,
+        id: branch._id, name: branch.name, logo: branch.logo || branch.restaurant?.logo,
         banner: branch.banner, homepageImage: homepageImage,
         phone: branch.phone, whatsapp: branch.whatsapp,
         instagram: branch.instagram, address: branch.address,
-        workingHours: branch.workingHours, theme: branch.theme
+        workingHours: branch.workingHours, theme: branch.theme,
+        settings: branch.restaurant?.settings
       },
       categories: categories.map(c => ({ 
         id: c._id, 
@@ -734,7 +904,11 @@ app.post('/api/public/branches/:slug/reviews', async (req, res) => {
   try {
     const branch = await Branch.findOne({ slug: req.params.slug })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
-    const review = await Review.create({ ...req.body, branch: branch._id })
+    const review = await Review.create({ 
+      ...req.body, 
+      branch: branch._id,
+      restaurant: branch.restaurant
+    })
     res.status(201).json({ id: review._id, message: 'Review submitted' })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -743,7 +917,9 @@ app.post('/api/public/branches/:slug/reviews', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body
-    const user = await User.findOne({ $or: [{ username }, { email: username }] }).populate('branches')
+    const user = await User.findOne({ $or: [{ username }, { email: username }] })
+      .populate('restaurants')
+      .populate('branches')
     if (!user || !user.isActive) return res.status(401).json({ error: 'Invalid credentials' })
     if (!await bcrypt.compare(password, user.password)) return res.status(401).json({ error: 'Invalid credentials' })
     user.lastLogin = new Date()
@@ -753,7 +929,8 @@ app.post('/api/auth/login', async (req, res) => {
       token,
       user: {
         id: user._id, username: user.username, email: user.email, role: user.role,
-        fullName: user.fullName, avatar: user.avatar,
+        fullName: user.fullName, avatar: user.avatar, phone: user.phone,
+        restaurants: user.restaurants.map(r => ({ id: r._id, name: r.name, slug: r.slug, logo: r.logo })),
         branches: user.branches.map(b => ({ id: b._id, name: b.name, slug: b.slug }))
       }
     })
@@ -761,10 +938,13 @@ app.post('/api/auth/login', async (req, res) => {
 })
 
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
-  const user = await User.findById(req.user._id).populate('branches')
+  const user = await User.findById(req.user._id)
+    .populate('restaurants')
+    .populate('branches')
   res.json({
     id: user._id, username: user.username, email: user.email, role: user.role,
-    fullName: user.fullName, avatar: user.avatar,
+    fullName: user.fullName, avatar: user.avatar, phone: user.phone,
+    restaurants: user.restaurants.map(r => ({ id: r._id, name: r.name, slug: r.slug, logo: r.logo })),
     branches: user.branches.map(b => ({ id: b._id, name: b.name, slug: b.slug }))
   })
 })
@@ -777,7 +957,7 @@ app.post('/api/auth/setup', async (req, res) => {
       username, email, password: await bcrypt.hash(password, 10), fullName, role: 'superadmin'
     })
     const token = jwt.sign({ userId: admin._id }, JWT_SECRET, { expiresIn: '7d' })
-    res.json({ token, user: { id: admin._id, username, email, role: 'superadmin', fullName, branches: [] } })
+    res.json({ token, user: { id: admin._id, username, email, role: 'superadmin', fullName, restaurants: [], branches: [] } })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
@@ -785,12 +965,168 @@ app.get('/api/auth/check-setup', async (req, res) => {
   res.json({ needsSetup: !await User.exists({ role: 'superadmin' }) })
 })
 
+// Change password
+app.put('/api/auth/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body
+    const user = await User.findById(req.user._id)
+    
+    if (!await bcrypt.compare(currentPassword, user.password)) {
+      return res.status(400).json({ error: 'Current password is incorrect' })
+    }
+    
+    user.password = await bcrypt.hash(newPassword, 10)
+    await user.save()
+    
+    res.json({ success: true, message: 'Password changed successfully' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== RESTAURANTS (Admin Only) ====================
+app.get('/api/restaurants', authMiddleware, async (req, res) => {
+  try {
+    let restaurants
+    if (req.user.role === 'superadmin') {
+      restaurants = await Restaurant.find().sort({ name: 1 })
+    } else {
+      restaurants = await Restaurant.find({ _id: { $in: req.user.restaurants } }).sort({ name: 1 })
+    }
+    
+    // Her restoran için istatistikler
+    const restaurantsWithStats = await Promise.all(restaurants.map(async (r) => {
+      const [branchCount, productCount, userCount] = await Promise.all([
+        Branch.countDocuments({ restaurant: r._id }),
+        Product.countDocuments({ restaurant: r._id }),
+        User.countDocuments({ restaurants: r._id })
+      ])
+      return {
+        ...r.toObject(),
+        id: r._id,
+        branchCount,
+        productCount,
+        userCount
+      }
+    }))
+    
+    res.json(restaurantsWithStats)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.get('/api/restaurants/:id', authMiddleware, async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id)
+    if (!restaurant) return res.status(404).json({ error: 'Not found' })
+    if (!checkRestaurantAccess(req.user, restaurant._id)) return res.status(403).json({ error: 'Access denied' })
+    
+    res.json({ ...restaurant.toObject(), id: restaurant._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/restaurants', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    
+    let slug = req.body.slug || createSlug(req.body.name)
+    if (await Restaurant.findOne({ slug })) slug = slug + '-' + Date.now()
+    
+    const restaurant = await Restaurant.create({ ...req.body, slug })
+    res.status(201).json({ ...restaurant.toObject(), id: restaurant._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.put('/api/restaurants/:id', authMiddleware, async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id)
+    if (!restaurant) return res.status(404).json({ error: 'Not found' })
+    if (!checkRestaurantAccess(req.user, restaurant._id)) return res.status(403).json({ error: 'Access denied' })
+    
+    Object.assign(restaurant, req.body)
+    await restaurant.save()
+    res.json({ ...restaurant.toObject(), id: restaurant._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/restaurants/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    
+    const restaurant = await Restaurant.findById(req.params.id)
+    if (!restaurant) return res.status(404).json({ error: 'Not found' })
+    
+    // Tüm ilişkili verileri sil
+    const branches = await Branch.find({ restaurant: restaurant._id })
+    const branchIds = branches.map(b => b._id)
+    
+    await Promise.all([
+      Branch.deleteMany({ restaurant: restaurant._id }),
+      Section.deleteMany({ restaurant: restaurant._id }),
+      Tag.deleteMany({ restaurant: restaurant._id }),
+      Category.deleteMany({ restaurant: restaurant._id }),
+      CategoryLayout.deleteMany({ restaurant: restaurant._id }),
+      Product.deleteMany({ restaurant: restaurant._id }),
+      Announcement.deleteMany({ restaurant: restaurant._id }),
+      Review.deleteMany({ restaurant: restaurant._id }),
+      GlbFile.deleteMany({ restaurant: restaurant._id }),
+      User.updateMany(
+        { restaurants: restaurant._id },
+        { $pull: { restaurants: restaurant._id, branches: { $in: branchIds } } }
+      )
+    ])
+    
+    await restaurant.deleteOne()
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/restaurants/:id/logo', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id)
+    if (!restaurant) return res.status(404).json({ error: 'Not found' })
+    if (!checkRestaurantAccess(req.user, restaurant._id)) return res.status(403).json({ error: 'Access denied' })
+    
+    restaurant.logo = req.file.filename
+    await restaurant.save()
+    res.json({ ...restaurant.toObject(), id: restaurant._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
 // ==================== BRANCHES ====================
 app.get('/api/branches', authMiddleware, async (req, res) => {
   try {
-    let branches = req.user.role === 'superadmin' 
-      ? await Branch.find().sort({ order: 1 })
-      : await Branch.find({ _id: { $in: req.user.branches } }).sort({ order: 1 })
+    const { restaurant: restaurantId } = req.query
+    let filter = {}
+
+    if (req.user.role === 'superadmin') {
+      if (restaurantId) filter.restaurant = restaurantId
+    } else {
+      const branchIds = req.user.branches?.map(b => b._id) || []
+      const restaurantIds = req.user.restaurants?.map(r => r._id) || []
+
+      // Kullanıcının belirli şubeleri varsa, sadece o şubeleri göster
+      if (branchIds.length > 0) {
+        filter._id = { $in: branchIds }
+        if (restaurantId) {
+          filter.restaurant = restaurantId
+        }
+      } else if (restaurantIds.length > 0) {
+        // Şube kısıtlaması yoksa, restoran erişimi kontrol et
+        if (restaurantId) {
+          if (!restaurantIds.some(id => id.toString() === restaurantId)) {
+            return res.status(403).json({ error: 'Access denied' })
+          }
+          filter.restaurant = restaurantId
+        } else {
+          filter.restaurant = { $in: restaurantIds }
+        }
+      } else {
+        // Hiç erişim yok
+        return res.json([])
+      }
+    }
+    
+    const branches = await Branch.find(filter)
+      .populate('restaurant', 'name slug logo')
+      .sort({ order: 1 })
     
     const counts = await Product.aggregate([{ $group: { _id: '$branch', count: { $sum: 1 } } }])
     const countMap = {}
@@ -803,15 +1139,42 @@ app.get('/api/branches', authMiddleware, async (req, res) => {
     res.json(branches.map(b => ({ 
       ...b.toObject(), id: b._id, 
       productCount: countMap[b._id.toString()] || 0,
-      sectionCount: sectionCountMap[b._id.toString()] || 0
+      sectionCount: sectionCountMap[b._id.toString()] || 0,
+      restaurantId: b.restaurant?._id,
+      restaurantName: b.restaurant?.name,
+      restaurantSlug: b.restaurant?.slug
+    })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Belirli bir restoran için şubeler (backward compat)
+app.get('/api/restaurants/:restaurantId/branches', authMiddleware, async (req, res) => {
+  try {
+    if (!checkRestaurantAccess(req.user, req.params.restaurantId)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    
+    const branches = await Branch.find({ restaurant: req.params.restaurantId }).sort({ order: 1 })
+    
+    const counts = await Product.aggregate([
+      { $match: { restaurant: new mongoose.Types.ObjectId(req.params.restaurantId) } },
+      { $group: { _id: '$branch', count: { $sum: 1 } } }
+    ])
+    const countMap = {}
+    counts.forEach(c => { if (c._id) countMap[c._id.toString()] = c.count })
+    
+    res.json(branches.map(b => ({ 
+      ...b.toObject(), id: b._id, 
+      productCount: countMap[b._id.toString()] || 0
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.get('/api/branches/:id', authMiddleware, async (req, res) => {
   try {
-    const branch = await Branch.findById(req.params.id)
+    const branch = await Branch.findById(req.params.id).populate('restaurant', 'name slug logo settings')
     if (!branch) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
     res.json({
       id: branch._id,
@@ -831,6 +1194,10 @@ app.get('/api/branches/:id', authMiddleware, async (req, res) => {
       isActive: branch.isActive,
       order: branch.order,
       theme: branch.theme,
+      restaurantId: branch.restaurant?._id,
+      restaurantName: branch.restaurant?.name,
+      restaurantSlug: branch.restaurant?.slug,
+      settings: branch.restaurant?.settings,
       createdAt: branch.createdAt,
       updatedAt: branch.updatedAt
     })
@@ -841,10 +1208,41 @@ app.get('/api/branches/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/branches', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    const { restaurantId } = req.body
+    if (!restaurantId) return res.status(400).json({ error: 'Restaurant ID required' })
+    if (!checkRestaurantAccess(req.user, restaurantId)) return res.status(403).json({ error: 'Access denied' })
+    
     let slug = req.body.slug || createSlug(req.body.name)
-    if (await Branch.findOne({ slug })) slug = slug + '-' + Date.now()
-    const branch = await Branch.create({ ...req.body, slug })
+    
+    // Aynı restoranda aynı slug var mı kontrol et
+    const existingBranch = await Branch.findOne({ restaurant: restaurantId, slug })
+    if (existingBranch) slug = slug + '-' + Date.now()
+    
+    const branch = await Branch.create({ 
+      ...req.body, 
+      slug, 
+      restaurant: restaurantId 
+    })
+    res.status(201).json({ ...branch.toObject(), id: branch._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Backward compat - restoran altında şube oluştur
+app.post('/api/restaurants/:restaurantId/branches', authMiddleware, async (req, res) => {
+  try {
+    if (!checkRestaurantAccess(req.user, req.params.restaurantId)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    
+    let slug = req.body.slug || createSlug(req.body.name)
+    const existingBranch = await Branch.findOne({ restaurant: req.params.restaurantId, slug })
+    if (existingBranch) slug = slug + '-' + Date.now()
+    
+    const branch = await Branch.create({ 
+      ...req.body, 
+      slug, 
+      restaurant: req.params.restaurantId 
+    })
     res.status(201).json({ ...branch.toObject(), id: branch._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -853,7 +1251,8 @@ app.put('/api/branches/:id', authMiddleware, async (req, res) => {
   try {
     const branch = await Branch.findById(req.params.id)
     if (!branch) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     Object.assign(branch, req.body)
     await branch.save()
     res.json({ ...branch.toObject(), id: branch._id })
@@ -862,9 +1261,10 @@ app.put('/api/branches/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
     const branch = await Branch.findById(req.params.id)
     if (!branch) return res.status(404).json({ error: 'Not found' })
+    if (!checkRestaurantAccess(req.user, branch.restaurant)) return res.status(403).json({ error: 'Access denied' })
+    
     await Promise.all([
       Section.deleteMany({ branch: branch._id }),
       Tag.deleteMany({ branch: branch._id }),
@@ -872,7 +1272,8 @@ app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
       CategoryLayout.deleteMany({ branch: branch._id }),
       Product.deleteMany({ branch: branch._id }),
       Announcement.deleteMany({ branch: branch._id }),
-      Review.deleteMany({ branch: branch._id })
+      Review.deleteMany({ branch: branch._id }),
+      User.updateMany({ branches: branch._id }, { $pull: { branches: branch._id } })
     ])
     await branch.deleteOne()
     res.json({ success: true })
@@ -881,6 +1282,10 @@ app.delete('/api/branches/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
   try {
+    const branch = await Branch.findById(req.params.id)
+    if (!branch) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const field = req.query.type || 'image'
     const allowedFields = ['image', 'logo', 'banner', 'homepageImage']
     
@@ -888,20 +1293,10 @@ app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), asyn
       return res.status(400).json({ error: 'Invalid image type' })
     }
     
-    const branch = await Branch.findByIdAndUpdate(
-      req.params.id, 
-      { [field]: req.file.filename }, 
-      { new: true }
-    )
+    branch[field] = req.file.filename
+    await branch.save()
     
-    if (!branch) {
-      return res.status(404).json({ error: 'Branch not found' })
-    }
-    
-    res.json({ 
-      ...branch.toObject(), 
-      id: branch._id 
-    })
+    res.json({ ...branch.toObject(), id: branch._id })
   } catch (err) { 
     res.status(500).json({ error: err.message }) 
   }
@@ -910,6 +1305,10 @@ app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), asyn
 // ==================== SECTIONS ====================
 app.get('/api/branches/:branchId/sections', authMiddleware, async (req, res) => {
   try {
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const sections = await Section.find({ branch: req.params.branchId }).sort({ order: 1 })
     
     const sectionsWithCounts = await Promise.all(sections.map(async s => {
@@ -930,13 +1329,19 @@ app.get('/api/branches/:branchId/sections', authMiddleware, async (req, res) => 
 
 app.post('/api/branches/:branchId/sections', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
     const slug = req.body.slug || createSlug(req.body.name)
     const order = await Section.countDocuments({ branch: req.params.branchId })
     
     const section = await Section.create({ 
-      ...req.body, slug, order, branch: req.params.branchId 
+      ...req.body, 
+      slug, 
+      order, 
+      branch: req.params.branchId,
+      restaurant: branch.restaurant
     })
     res.status(201).json({ ...section.toObject(), id: section._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -946,7 +1351,7 @@ app.put('/api/sections/:id', authMiddleware, async (req, res) => {
   try {
     const section = await Section.findById(req.params.id)
     if (!section) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
     
     if (req.body.name && !req.body.slug) req.body.slug = createSlug(req.body.name)
     
@@ -960,7 +1365,7 @@ app.delete('/api/sections/:id', authMiddleware, async (req, res) => {
   try {
     const section = await Section.findById(req.params.id)
     if (!section) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
     
     await Product.updateMany({ section: section._id }, { section: null })
     await Category.updateMany({ section: section._id }, { section: null })
@@ -974,15 +1379,20 @@ app.delete('/api/sections/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/sections/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
   try {
+    const section = await Section.findById(req.params.id)
+    if (!section) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, section.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     const type = req.query.type || 'image'
-    const section = await Section.findByIdAndUpdate(req.params.id, { [type]: req.file.filename }, { new: true })
+    section[type] = req.file.filename
+    await section.save()
     res.json({ ...section.toObject(), id: section._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.put('/api/branches/:branchId/sections/reorder', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
     const { sectionIds } = req.body
     await Promise.all(sectionIds.map((id, index) => Section.findByIdAndUpdate(id, { order: index })))
     res.json({ success: true })
@@ -992,6 +1402,10 @@ app.put('/api/branches/:branchId/sections/reorder', authMiddleware, async (req, 
 // ==================== TAGS ====================
 app.get('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
   try {
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const tags = await Tag.find({ branch: req.params.branchId }).sort({ order: 1, name: 1 })
     
     const tagsWithCount = await Promise.all(tags.map(async (tag) => {
@@ -1015,7 +1429,9 @@ app.get('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
 
 app.post('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
     const { name, icon, color, description, isActive } = req.body
     
@@ -1023,7 +1439,6 @@ app.post('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Etiket adı gerekli' })
     }
     
-    // Aynı isimde etiket var mı kontrol et
     const existing = await Tag.findOne({ 
       branch: req.params.branchId, 
       name: { $regex: new RegExp(`^${name}$`, 'i') }
@@ -1033,16 +1448,15 @@ app.post('/api/branches/:branchId/tags', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Bu isimde bir etiket zaten var' })
     }
     
-    // Slug oluştur
     const slug = createSlug(name)
     
-    // Sıra numarası
     const maxOrder = await Tag.findOne({ branch: req.params.branchId })
       .sort({ order: -1 })
       .select('order')
     
     const tag = new Tag({
       branch: req.params.branchId,
+      restaurant: branch.restaurant,
       name,
       slug,
       icon: icon || '🏷️',
@@ -1073,9 +1487,8 @@ app.put('/api/tags/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Etiket bulunamadı' })
     }
     
-    if (!checkBranchAccess(req.user, tag.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, tag.branch)) return res.status(403).json({ error: 'Access denied' })
     
-    // İsim değiştiyse, aynı isimde başka etiket var mı kontrol et
     if (name && name !== tag.name) {
       const existing = await Tag.findOne({ 
         branch: tag.branch, 
@@ -1116,9 +1529,8 @@ app.delete('/api/tags/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Etiket bulunamadı' })
     }
     
-    if (!checkBranchAccess(req.user, tag.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, tag.branch)) return res.status(403).json({ error: 'Access denied' })
     
-    // Bu etiketi kullanan ürünlerden kaldır
     await Product.updateMany(
       { tags: tag._id },
       { $pull: { tags: tag._id } }
@@ -1135,7 +1547,7 @@ app.delete('/api/tags/:id', authMiddleware, async (req, res) => {
 
 app.put('/api/branches/:branchId/tags/reorder', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
     
     const { tagIds } = req.body
     
@@ -1160,7 +1572,9 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
     const { branchId } = req.params
     const { section } = req.query
     
-    if (!checkBranchAccess(req.user, branchId)) return res.status(403).json({ error: 'Access denied' })
+    const branch = await Branch.findById(branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branchId)) return res.status(403).json({ error: 'Access denied' })
     
     const sectionFilter = section ? { section: section } : {}
     const branchFilter = { branch: branchId, ...sectionFilter }
@@ -1212,35 +1626,85 @@ app.get('/api/branches/:branchId/dashboard', authMiddleware, async (req, res) =>
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
+app.get('/api/restaurants/:restaurantId/dashboard', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
-    const [branchCount, productCount, categoryCount, sectionCount, tagCount, reviewCount, userCount] = await Promise.all([
-      Branch.countDocuments(), Product.countDocuments(), Category.countDocuments(), 
-      Section.countDocuments(), Tag.countDocuments(), Review.countDocuments(), User.countDocuments()
+    const { restaurantId } = req.params
+    
+    if (!checkRestaurantAccess(req.user, restaurantId)) return res.status(403).json({ error: 'Access denied' })
+    
+    const [branchCount, productCount, categoryCount, reviewCount, userCount] = await Promise.all([
+      Branch.countDocuments({ restaurant: restaurantId }),
+      Product.countDocuments({ restaurant: restaurantId }),
+      Category.countDocuments({ restaurant: restaurantId }),
+      Review.countDocuments({ restaurant: restaurantId }),
+      User.countDocuments({ restaurants: restaurantId })
     ])
+    
     const branchStats = await Product.aggregate([
+      { $match: { restaurant: new mongoose.Types.ObjectId(restaurantId) } },
       { $group: { _id: '$branch', count: { $sum: 1 } } },
       { $lookup: { from: 'branches', localField: '_id', foreignField: '_id', as: 'branch' } },
-      { $unwind: '$branch' },
+      { $unwind: { path: '$branch', preserveNullAndEmptyArrays: true } },
       { $project: { name: '$branch.name', count: 1 } }
     ])
-    res.json({ 
-      counts: { branches: branchCount, products: productCount, categories: categoryCount, sections: sectionCount, tags: tagCount, reviews: reviewCount, users: userCount }, 
-      branchStats 
+    
+    const recentReviews = await Review.find({ restaurant: restaurantId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('product', 'name')
+      .populate('branch', 'name')
+    
+    res.json({
+      counts: { branches: branchCount, products: productCount, categories: categoryCount, reviews: reviewCount, users: userCount },
+      branchStats,
+      recentReviews
     })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ==================== CATEGORIES ==================== (nameEN eklendi)
+app.get('/api/dashboard/global', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    
+    const [restaurantCount, branchCount, productCount, categoryCount, reviewCount, userCount] = await Promise.all([
+      Restaurant.countDocuments(),
+      Branch.countDocuments(), 
+      Product.countDocuments(), 
+      Category.countDocuments(), 
+      Review.countDocuments(), 
+      User.countDocuments()
+    ])
+    
+    const restaurantStats = await Product.aggregate([
+      { $group: { _id: '$restaurant', count: { $sum: 1 } } },
+      { $lookup: { from: 'restaurants', localField: '_id', foreignField: '_id', as: 'restaurant' } },
+      { $unwind: { path: '$restaurant', preserveNullAndEmptyArrays: true } },
+      { $project: { name: '$restaurant.name', count: 1 } }
+    ])
+    
+    const recentRestaurants = await Restaurant.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('name slug logo createdAt')
+    
+    res.json({ 
+      counts: { restaurants: restaurantCount, branches: branchCount, products: productCount, categories: categoryCount, reviews: reviewCount, users: userCount }, 
+      restaurantStats,
+      recentRestaurants
+    })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== CATEGORIES ====================
 app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) => {
   try {
     const { section } = req.query
-    const filter = { branch: req.params.branchId }
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
-    if (section) {
-      filter.section = section
-    }
+    const filter = { branch: req.params.branchId }
+    if (section) filter.section = section
     
     const categories = await Category.find(filter).populate('section', 'name').sort({ order: 1 })
     const counts = await Product.aggregate([
@@ -1261,9 +1725,17 @@ app.get('/api/branches/:branchId/categories', authMiddleware, async (req, res) =
 
 app.post('/api/branches/:branchId/categories', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const order = await Category.countDocuments({ branch: req.params.branchId })
-    const category = await Category.create({ ...req.body, order, branch: req.params.branchId })
+    const category = await Category.create({ 
+      ...req.body, 
+      order, 
+      branch: req.params.branchId,
+      restaurant: branch.restaurant
+    })
     res.status(201).json({ ...category.toObject(), id: category._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -1272,7 +1744,8 @@ app.put('/api/categories/:id', authMiddleware, async (req, res) => {
   try {
     const category = await Category.findById(req.params.id)
     if (!category) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     Object.assign(category, req.body)
     await category.save()
     res.json({ ...category.toObject(), id: category._id })
@@ -1283,7 +1756,8 @@ app.delete('/api/categories/:id', authMiddleware, async (req, res) => {
   try {
     const category = await Category.findById(req.params.id)
     if (!category) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     await Product.updateMany({ category: category._id }, { category: null })
     await category.deleteOne()
     res.json({ success: true })
@@ -1292,20 +1766,26 @@ app.delete('/api/categories/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/categories/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const category = await Category.findByIdAndUpdate(req.params.id, { image: req.file.filename }, { new: true })
+    const category = await Category.findById(req.params.id)
+    if (!category) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    category.image = req.file.filename
+    await category.save()
     res.json({ ...category.toObject(), id: category._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ==================== CATEGORY LAYOUTS ==================== (nameEN populate eklendi)
+// ==================== CATEGORY LAYOUTS ====================
 app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, res) => {
   try {
     const { section } = req.query
-    const filter = { branch: req.params.branchId }
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
-    if (section) {
-      filter.section = section
-    }
+    const filter = { branch: req.params.branchId }
+    if (section) filter.section = section
     
     const layouts = await CategoryLayout.find(filter)
       .populate('categories.category', 'name nameEN icon image')
@@ -1316,21 +1796,37 @@ app.get('/api/branches/:branchId/category-layouts', authMiddleware, async (req, 
 
 app.post('/api/branches/:branchId/category-layouts', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
-    const layout = await CategoryLayout.create({ ...req.body, branch: req.params.branchId })
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
+    const layout = await CategoryLayout.create({ 
+      ...req.body, 
+      branch: req.params.branchId,
+      restaurant: branch.restaurant
+    })
     res.status(201).json({ ...layout.toObject(), id: layout._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.put('/api/category-layouts/:id', authMiddleware, async (req, res) => {
   try {
-    const layout = await CategoryLayout.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    const layout = await CategoryLayout.findById(req.params.id)
+    if (!layout) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, layout.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    Object.assign(layout, req.body)
+    await layout.save()
     res.json({ ...layout.toObject(), id: layout._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.delete('/api/category-layouts/:id', authMiddleware, async (req, res) => {
   try {
+    const layout = await CategoryLayout.findById(req.params.id)
+    if (!layout) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, layout.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     await CategoryLayout.findByIdAndDelete(req.params.id)
     res.json({ success: true })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -1338,9 +1834,9 @@ app.delete('/api/category-layouts/:id', authMiddleware, async (req, res) => {
 
 app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
     const { layouts, section } = req.body
     
@@ -1351,6 +1847,7 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
     if (layouts && layouts.length > 0) {
       const layoutsToInsert = layouts.map((l, index) => ({
         branch: req.params.branchId,
+        restaurant: branch.restaurant,
         section: section || null,
         rowOrder: l.rowOrder !== undefined ? l.rowOrder : index,
         categories: l.categories.map(c => ({
@@ -1380,6 +1877,10 @@ app.put('/api/branches/:branchId/category-layouts/bulk', authMiddleware, async (
 app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => {
   try {
     const { category, section, search, isActive, isFeatured, isCampaign, hasGlb, page = 1, limit = 50 } = req.query
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const filter = { branch: req.params.branchId }
     
     if (category) filter.category = category
@@ -1429,11 +1930,14 @@ app.get('/api/branches/:branchId/products', authMiddleware, async (req, res) => 
 
 app.post('/api/branches/:branchId/products', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
-    const data = { ...req.body, branch: req.params.branchId }
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
+    const data = { ...req.body, branch: req.params.branchId, restaurant: branch.restaurant }
     if (data.categoryId) { data.category = data.categoryId; delete data.categoryId }
     if (data.sectionId) { data.section = data.sectionId; delete data.sectionId }
-    // tags zaten ObjectId array olarak geliyor
+    
     const product = await Product.create(data)
     res.status(201).json({ ...product.toObject(), id: product._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -1443,11 +1947,12 @@ app.put('/api/products/:id', authMiddleware, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
     if (!product) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     const data = { ...req.body }
     if (data.categoryId !== undefined) { data.category = data.categoryId || null; delete data.categoryId }
     if (data.sectionId !== undefined) { data.section = data.sectionId || null; delete data.sectionId }
-    // tags zaten ObjectId array olarak geliyor
+    
     Object.assign(product, data)
     await product.save()
     res.json({ ...product.toObject(), id: product._id })
@@ -1458,7 +1963,8 @@ app.delete('/api/products/:id', authMiddleware, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
     if (!product) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     if (product.glbFile) await GlbFile.findOneAndUpdate({ filename: product.glbFile }, { assignedTo: null })
     await product.deleteOne()
     res.json({ success: true })
@@ -1467,7 +1973,12 @@ app.delete('/api/products/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/products/:id/thumbnail', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, { thumbnail: req.file.filename }, { new: true })
+    const product = await Product.findById(req.params.id)
+    if (!product) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    product.thumbnail = req.file.filename
+    await product.save()
     res.json({ ...product.toObject(), id: product._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -1477,11 +1988,16 @@ app.put('/api/products/:id/assign-glb', authMiddleware, async (req, res) => {
     const { glbFile } = req.body
     const product = await Product.findById(req.params.id)
     if (!product) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     if (product.glbFile && product.glbFile !== glbFile) {
       await GlbFile.findOneAndUpdate({ filename: product.glbFile }, { assignedTo: null })
     }
     if (glbFile) {
-      await GlbFile.findOneAndUpdate({ filename: glbFile }, { assignedTo: product._id, branch: product.branch })
+      await GlbFile.findOneAndUpdate(
+        { filename: glbFile }, 
+        { assignedTo: product._id, branch: product.branch, restaurant: product.restaurant }
+      )
     }
     product.glbFile = glbFile || null
     await product.save()
@@ -1493,7 +2009,8 @@ app.put('/api/products/:id/section-prices', authMiddleware, async (req, res) => 
   try {
     const product = await Product.findById(req.params.id)
     if (!product) return res.status(404).json({ error: 'Not found' })
-    if (!checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    if (!await checkBranchAccess(req.user, product.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     product.sectionPrices = req.body.sectionPrices || []
     await product.save()
     res.json({ ...product.toObject(), id: product._id })
@@ -1502,7 +2019,10 @@ app.put('/api/products/:id/section-prices', authMiddleware, async (req, res) => 
 
 app.post('/api/branches/:branchId/products/bulk', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const { action, ids, data } = req.body
     if (action === 'delete') await Product.deleteMany({ _id: { $in: ids }, branch: req.params.branchId })
     else if (action === 'update') await Product.updateMany({ _id: { $in: ids }, branch: req.params.branchId }, data)
@@ -1513,6 +2033,10 @@ app.post('/api/branches/:branchId/products/bulk', authMiddleware, async (req, re
 // ==================== GLB FILES ====================
 app.get('/api/branches/:branchId/glb', authMiddleware, async (req, res) => {
   try {
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const outputsDir = path.join(__dirname, 'outputs')
     
     if (!fs.existsSync(outputsDir)) {
@@ -1600,9 +2124,21 @@ app.post('/api/glb/upload', apiKeyMiddleware, upload.single('file'), async (req,
     const filename = req.body.name || req.file.filename
     const finalPath = path.join(__dirname, 'outputs', filename)
     if (req.body.name && req.body.name !== req.file.filename) fs.renameSync(req.file.path, finalPath)
+    
     let glbFile = await GlbFile.findOne({ filename })
-    if (glbFile) { glbFile.size = req.file.size; await glbFile.save() }
-    else glbFile = await GlbFile.create({ filename, originalName: req.file.originalname, size: req.file.size })
+    if (glbFile) { 
+      glbFile.size = req.file.size
+      await glbFile.save() 
+    } else {
+      // Restaurant ID header'dan veya body'den alınabilir
+      const restaurantId = req.body.restaurantId || req.headers['x-restaurant-id']
+      glbFile = await GlbFile.create({ 
+        filename, 
+        originalName: req.file.originalname, 
+        size: req.file.size,
+        restaurant: restaurantId || null
+      })
+    }
     res.json({ success: true, filename, size: req.file.size })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -1625,11 +2161,12 @@ app.delete('/api/glb/:filename', apiKeyMiddleware, async (req, res) => {
 app.get('/api/branches/:branchId/announcements', authMiddleware, async (req, res) => {
   try {
     const { section } = req.query
-    const filter = { branch: req.params.branchId }
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
-    if (section) {
-      filter.section = section
-    }
+    const filter = { branch: req.params.branchId }
+    if (section) filter.section = section
     
     const announcements = await Announcement.find(filter)
       .populate('section', 'name icon')
@@ -1644,21 +2181,37 @@ app.get('/api/branches/:branchId/announcements', authMiddleware, async (req, res
 
 app.post('/api/branches/:branchId/announcements', authMiddleware, async (req, res) => {
   try {
-    if (!checkBranchAccess(req.user, req.params.branchId)) return res.status(403).json({ error: 'Access denied' })
-    const announcement = await Announcement.create({ ...req.body, branch: req.params.branchId })
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
+    const announcement = await Announcement.create({ 
+      ...req.body, 
+      branch: req.params.branchId,
+      restaurant: branch.restaurant
+    })
     res.status(201).json({ ...announcement.toObject(), id: announcement._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.put('/api/announcements/:id', authMiddleware, async (req, res) => {
   try {
-    const announcement = await Announcement.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    const announcement = await Announcement.findById(req.params.id)
+    if (!announcement) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, announcement.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    Object.assign(announcement, req.body)
+    await announcement.save()
     res.json({ ...announcement.toObject(), id: announcement._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.delete('/api/announcements/:id', authMiddleware, async (req, res) => {
   try {
+    const announcement = await Announcement.findById(req.params.id)
+    if (!announcement) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, announcement.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     await Announcement.findByIdAndDelete(req.params.id)
     res.json({ success: true })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -1668,6 +2221,10 @@ app.delete('/api/announcements/:id', authMiddleware, async (req, res) => {
 app.get('/api/branches/:branchId/reviews', authMiddleware, async (req, res) => {
   try {
     const { isApproved, page = 1, limit = 50 } = req.query
+    const branch = await Branch.findById(req.params.branchId)
+    if (!branch) return res.status(404).json({ error: 'Branch not found' })
+    if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
+    
     const filter = { branch: req.params.branchId }
     if (isApproved !== undefined) filter.isApproved = isApproved === 'true'
     const skip = (parseInt(page) - 1) * parseInt(limit)
@@ -1684,20 +2241,35 @@ app.get('/api/branches/:branchId/reviews', authMiddleware, async (req, res) => {
 
 app.put('/api/reviews/:id/approve', authMiddleware, async (req, res) => {
   try {
-    const review = await Review.findByIdAndUpdate(req.params.id, { isApproved: true }, { new: true })
+    const review = await Review.findById(req.params.id)
+    if (!review) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, review.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    review.isApproved = true
+    await review.save()
     res.json({ ...review.toObject(), id: review._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.put('/api/reviews/:id/reply', authMiddleware, async (req, res) => {
   try {
-    const review = await Review.findByIdAndUpdate(req.params.id, { reply: req.body.reply, repliedAt: new Date() }, { new: true })
+    const review = await Review.findById(req.params.id)
+    if (!review) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, review.branch)) return res.status(403).json({ error: 'Access denied' })
+    
+    review.reply = req.body.reply
+    review.repliedAt = new Date()
+    await review.save()
     res.json({ ...review.toObject(), id: review._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.delete('/api/reviews/:id', authMiddleware, async (req, res) => {
   try {
+    const review = await Review.findById(req.params.id)
+    if (!review) return res.status(404).json({ error: 'Not found' })
+    if (!await checkBranchAccess(req.user, review.branch)) return res.status(403).json({ error: 'Access denied' })
+    
     await Review.findByIdAndDelete(req.params.id)
     res.json({ success: true })
   } catch (err) { res.status(500).json({ error: err.message }) }
@@ -1706,38 +2278,309 @@ app.delete('/api/reviews/:id', authMiddleware, async (req, res) => {
 // ==================== USERS ====================
 app.get('/api/users', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
-    const users = await User.find().select('-password').populate('branches', 'name slug').sort({ createdAt: -1 })
+    const { restaurant: restaurantId } = req.query
+    
+    let filter = {}
+    if (req.user.role === 'superadmin') {
+      if (restaurantId) {
+        filter.restaurants = restaurantId
+      }
+    } else {
+      // Admin sadece kendi restoranlarındaki kullanıcıları görebilir
+      const userRestaurantIds = req.user.restaurants.map(r => r._id)
+      filter.restaurants = { $in: userRestaurantIds }
+    }
+    
+    const users = await User.find(filter)
+      .select('-password')
+      .populate('restaurants', 'name slug')
+      .populate('branches', 'name slug')
+      .sort({ createdAt: -1 })
+    res.json(users.map(u => ({ ...u.toObject(), id: u._id })))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Restoran için kullanıcılar
+app.get('/api/restaurants/:restaurantId/users', authMiddleware, async (req, res) => {
+  try {
+    if (!checkRestaurantAccess(req.user, req.params.restaurantId)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    
+    const users = await User.find({ restaurants: req.params.restaurantId })
+      .select('-password')
+      .populate('restaurants', 'name slug')
+      .populate('branches', 'name slug')
+      .sort({ createdAt: -1 })
+    
     res.json(users.map(u => ({ ...u.toObject(), id: u._id })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.post('/api/users', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
-    const { username, email, password, role, fullName, branches } = req.body
-    const user = await User.create({ username, email, password: await bcrypt.hash(password, 10), role, fullName, branches })
-    res.status(201).json({ id: user._id, username, email, role })
+    const { username, email, password, role, fullName, phone, restaurants, branches } = req.body
+    
+    // Sadece superadmin her yerde kullanıcı oluşturabilir
+    // Admin sadece kendi restoranlarına kullanıcı ekleyebilir
+    if (req.user.role !== 'superadmin') {
+      if (role === 'superadmin') {
+        return res.status(403).json({ error: 'Cannot create superadmin' })
+      }
+      
+      // Gelen restaurant ID'lerin hepsine erişimi var mı kontrol et
+      const userRestaurantIds = req.user.restaurants.map(r => r._id.toString())
+      const hasAccess = restaurants?.every(rId => userRestaurantIds.includes(rId.toString()))
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied to some restaurants' })
+      }
+    }
+    
+    const user = await User.create({ 
+      username, 
+      email, 
+      password: await bcrypt.hash(password, 10), 
+      role: role || 'staff', 
+      fullName,
+      phone,
+      restaurants: restaurants || [],
+      branches: branches || []
+    })
+    res.status(201).json({ id: user._id, username, email, role: user.role })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Restoran için kullanıcı oluştur
+app.post('/api/restaurants/:restaurantId/users', authMiddleware, async (req, res) => {
+  try {
+    if (!checkRestaurantAccess(req.user, req.params.restaurantId)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+    
+    const { username, email, password, role, fullName, phone, branches } = req.body
+    
+    if (role === 'superadmin') {
+      return res.status(403).json({ error: 'Cannot create superadmin' })
+    }
+    
+    const user = await User.create({ 
+      username, 
+      email, 
+      password: await bcrypt.hash(password, 10), 
+      role: role || 'staff', 
+      fullName,
+      phone,
+      restaurants: [req.params.restaurantId],
+      branches: branches || []
+    })
+    
+    res.status(201).json({ id: user._id, username, email, role: user.role })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.put('/api/users/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin' && req.user._id.toString() !== req.params.id) return res.status(403).json({ error: 'Access denied' })
+    const targetUser = await User.findById(req.params.id)
+    if (!targetUser) return res.status(404).json({ error: 'User not found' })
+    
+    // Kendi profilini düzenleyebilir
+    const isOwnProfile = req.user._id.toString() === req.params.id
+    
+    if (!isOwnProfile) {
+      // Başkasını düzenlemek için yetki kontrolü
+      if (req.user.role !== 'superadmin') {
+        // Admin sadece kendi restoranlarındaki kullanıcıları düzenleyebilir
+        const userRestaurantIds = req.user.restaurants.map(r => r._id.toString())
+        const targetRestaurantIds = targetUser.restaurants.map(r => r.toString())
+        const hasAccess = targetRestaurantIds.some(id => userRestaurantIds.includes(id))
+        if (!hasAccess) {
+          return res.status(403).json({ error: 'Access denied' })
+        }
+      }
+    }
+    
     const data = { ...req.body }
-    if (data.password) data.password = await bcrypt.hash(data.password, 10)
-    else delete data.password
-    const user = await User.findByIdAndUpdate(req.params.id, data, { new: true }).select('-password')
+    
+    // Şifre değişikliği
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10)
+    } else {
+      delete data.password
+    }
+    
+    // Superadmin olmayan biri superadmin yapamaz
+    if (req.user.role !== 'superadmin' && data.role === 'superadmin') {
+      delete data.role
+    }
+    
+    const user = await User.findByIdAndUpdate(req.params.id, data, { new: true })
+      .select('-password')
+      .populate('restaurants', 'name slug')
+      .populate('branches', 'name slug')
+    
     res.json({ ...user.toObject(), id: user._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Kullanıcı şifresini sıfırla (Admin için)
+app.put('/api/users/:id/reset-password', authMiddleware, async (req, res) => {
+  try {
+    const targetUser = await User.findById(req.params.id)
+    if (!targetUser) return res.status(404).json({ error: 'User not found' })
+    
+    // Yetki kontrolü
+    if (req.user.role !== 'superadmin') {
+      const userRestaurantIds = req.user.restaurants.map(r => r._id.toString())
+      const targetRestaurantIds = targetUser.restaurants.map(r => r.toString())
+      const hasAccess = targetRestaurantIds.some(id => userRestaurantIds.includes(id))
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+    }
+    
+    const { newPassword } = req.body
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' })
+    }
+    
+    targetUser.password = await bcrypt.hash(newPassword, 10)
+    await targetUser.save()
+    
+    res.json({ success: true, message: 'Password reset successfully' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Kullanıcı avatar yükle
+app.post('/api/users/:id/avatar', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const targetUser = await User.findById(req.params.id)
+    if (!targetUser) return res.status(404).json({ error: 'User not found' })
+
+    // Yetki kontrolü - sadece superadmin veya aynı restoran admini
+    if (req.user.role !== 'superadmin' && req.user._id.toString() !== req.params.id) {
+      const userRestaurantIds = req.user.restaurants.map(r => r._id.toString())
+      const targetRestaurantIds = targetUser.restaurants.map(r => r.toString())
+      const hasAccess = targetRestaurantIds.some(id => userRestaurantIds.includes(id))
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+    }
+
+    targetUser.avatar = req.file.filename
+    await targetUser.save()
+
+    res.json({ ...targetUser.toObject(), id: targetUser._id })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.delete('/api/users/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
-    if (req.user._id.toString() === req.params.id) return res.status(400).json({ error: 'Cannot delete yourself' })
+    const targetUser = await User.findById(req.params.id)
+    if (!targetUser) return res.status(404).json({ error: 'User not found' })
+    
+    // Kendini silemez
+    if (req.user._id.toString() === req.params.id) {
+      return res.status(400).json({ error: 'Cannot delete yourself' })
+    }
+    
+    // Superadmin'i sadece superadmin silebilir
+    if (targetUser.role === 'superadmin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Cannot delete superadmin' })
+    }
+    
+    // Admin sadece kendi restoranlarındaki kullanıcıları silebilir
+    if (req.user.role !== 'superadmin') {
+      const userRestaurantIds = req.user.restaurants.map(r => r._id.toString())
+      const targetRestaurantIds = targetUser.restaurants.map(r => r.toString())
+      const hasAccess = targetRestaurantIds.some(id => userRestaurantIds.includes(id))
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+    }
+    
     await User.findByIdAndDelete(req.params.id)
     res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ==================== MIGRATION HELPER ====================
+// Mevcut verileri yeni yapıya taşımak için (bir kez çalıştırılır)
+app.post('/api/admin/migrate-to-multi-tenant', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Access denied' })
+    
+    // Mevcut branch'leri kontrol et
+    const branchesWithoutRestaurant = await Branch.find({ restaurant: { $exists: false } })
+    
+    if (branchesWithoutRestaurant.length === 0) {
+      return res.json({ message: 'Migration not needed or already completed' })
+    }
+    
+    const results = {
+      restaurantsCreated: 0,
+      branchesUpdated: 0,
+      productsUpdated: 0,
+      categoriesUpdated: 0,
+      errors: []
+    }
+    
+    // Her branch için bir restaurant oluştur (veya mevcut olanı kullan)
+    for (const branch of branchesWithoutRestaurant) {
+      try {
+        // Aynı isimde restaurant var mı?
+        let restaurant = await Restaurant.findOne({ slug: branch.slug })
+        
+        if (!restaurant) {
+          restaurant = await Restaurant.create({
+            name: branch.name,
+            slug: branch.slug,
+            description: branch.description,
+            logo: branch.logo,
+            contactPhone: branch.phone,
+            address: branch.address
+          })
+          results.restaurantsCreated++
+        }
+        
+        // Branch'i güncelle
+        branch.restaurant = restaurant._id
+        await branch.save()
+        results.branchesUpdated++
+        
+        // İlişkili verileri güncelle
+        await Promise.all([
+          Product.updateMany({ branch: branch._id }, { restaurant: restaurant._id }),
+          Category.updateMany({ branch: branch._id }, { restaurant: restaurant._id }),
+          Section.updateMany({ branch: branch._id }, { restaurant: restaurant._id }),
+          Tag.updateMany({ branch: branch._id }, { restaurant: restaurant._id }),
+          CategoryLayout.updateMany({ branch: branch._id }, { restaurant: restaurant._id }),
+          Announcement.updateMany({ branch: branch._id }, { restaurant: restaurant._id }),
+          Review.updateMany({ branch: branch._id }, { restaurant: restaurant._id }),
+          GlbFile.updateMany({ branch: branch._id }, { restaurant: restaurant._id })
+        ])
+        
+        results.productsUpdated += await Product.countDocuments({ branch: branch._id })
+        results.categoriesUpdated += await Category.countDocuments({ branch: branch._id })
+        
+      } catch (err) {
+        results.errors.push({ branch: branch.name, error: err.message })
+      }
+    }
+    
+    // Kullanıcıları güncelle - branches -> restaurants
+    const usersWithBranches = await User.find({ 
+      branches: { $exists: true, $ne: [] },
+      restaurants: { $exists: false }
+    })
+    
+    for (const user of usersWithBranches) {
+      const branches = await Branch.find({ _id: { $in: user.branches } })
+      const restaurantIds = [...new Set(branches.map(b => b.restaurant).filter(Boolean))]
+      user.restaurants = restaurantIds
+      await user.save()
+    }
+    
+    res.json({ success: true, results })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
@@ -1747,6 +2590,7 @@ mongoose.connect(MONGODB_URI)
     console.log('✅ MongoDB connected')
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server: http://localhost:${PORT}`)
+      console.log('📱 Multi-tenant AR Menu Backend Ready')
     })
   })
   .catch(err => { console.error('❌ MongoDB error:', err); process.exit(1) })

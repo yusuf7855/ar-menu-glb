@@ -15,8 +15,8 @@ import {
 } from '@mui/icons-material'
 
 // ==================== CONFIG ====================
-export const API_URL = 'https://api.armenuqr.com/api'
-export const FILES_URL ='https://api.armenuqr.com'
+export const API_URL = 'http://localhost:3001/api'
+export const FILES_URL = 'http://localhost:3001'
 
 // ==================== AXIOS ====================
 export const api = axios.create({ baseURL: API_URL })
@@ -310,8 +310,7 @@ const branchSettingsItems = [
 ]
 
 const superAdminItems = [
-  { path: '/admin/branches', icon: <Store />, label: 'Şubeler' },
-  { path: '/admin/users', icon: <People />, label: 'Kullanıcılar' },
+  { path: '/admin/restaurants', icon: <Restaurant />, label: 'Restoranlar' },
 ]
 
 function Sidebar({ open, onClose, isMobile }) {
@@ -922,9 +921,26 @@ function SectionSelectionPage() {
 import {
   DashboardPage, ProductsPage, CategoriesPage, CategoryLayoutPage,
   GlbFilesPage, AnnouncementsPage, ReviewsPage, BranchSettingsPage,
-  BranchesPage, UsersPage, SectionsPage, TagsPage
+  BranchesPage, UsersPage, SectionsPage, TagsPage, RestaurantsPage
 } from './AdminPages'
 import { LoginPage, BranchSelectionPage, MenuPage } from './PublicPages'
+
+// ==================== ADMIN HOME REDIRECT ====================
+function AdminHomeRedirect() {
+  const { user } = useAuth()
+  const { branches } = useBranch()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user?.role === 'superadmin') {
+      navigate('/admin/restaurants', { replace: true })
+    } else if (branches.length > 0) {
+      navigate(`/admin/branch/${branches[0].id}/select-section`, { replace: true })
+    }
+  }, [user, branches, navigate])
+
+  return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+}
 
 // ==================== APP ====================
 function App() {
@@ -942,16 +958,28 @@ function App() {
               {/* ===== ADMIN ROUTES ===== */}
               <Route path="/admin" element={
                 <ProtectedRoute>
-                  <AdminLayout><Navigate to="/admin/branches" replace /></AdminLayout>
+                  <AdminLayout><AdminHomeRedirect /></AdminLayout>
                 </ProtectedRoute>
               } />
-              
-              <Route path="/admin/branches" element={
+
+              <Route path="/admin/restaurants" element={
+                <ProtectedRoute>
+                  <AdminLayout><RestaurantsPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/admin/restaurant/:restaurantId/branches" element={
                 <ProtectedRoute>
                   <AdminLayout><BranchesPage /></AdminLayout>
                 </ProtectedRoute>
               } />
-              
+
+              <Route path="/admin/restaurant/:restaurantId/users" element={
+                <ProtectedRoute>
+                  <AdminLayout><UsersPage /></AdminLayout>
+                </ProtectedRoute>
+              } />
+
               <Route path="/admin/users" element={
                 <ProtectedRoute>
                   <AdminLayout><UsersPage /></AdminLayout>
