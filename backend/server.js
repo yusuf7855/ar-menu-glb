@@ -74,6 +74,7 @@ const branchSchema = new mongoose.Schema({
   logo: { type: String, default: null },
   banner: { type: String, default: null },
   homepageImage: { type: String, default: null },
+  heroImage: { type: String, default: null },
   address: { type: String, default: '' },
   phone: { type: String, default: '' },
   whatsapp: { type: String, default: '' },
@@ -100,6 +101,7 @@ const sectionSchema = new mongoose.Schema({
   icon: { type: String, default: '📍' },
   image: { type: String, default: null },
   homepageImage: { type: String, default: null },
+  heroImage: { type: String, default: null },
   isActive: { type: Boolean, default: true },
   order: { type: Number, default: 0 },
   color: { type: String, default: '#e53935' }
@@ -171,6 +173,7 @@ const productSchema = new mongoose.Schema({
   allergensEN: [{ type: String }],
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
   viewCount: { type: Number, default: 0 },
+  order: { type: Number, default: 0 },
   sectionPrices: [{
     section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section' },
     price: { type: Number, required: true },
@@ -514,7 +517,7 @@ app.get('/api/public/branches/:slug', async (req, res) => {
       image: branch.image,
       logo: branch.logo || branch.restaurant?.logo,
       banner: branch.banner,
-      homepageImage: branch.homepageImage,
+      heroImage: branch.heroImage,
       address: branch.address,
       phone: branch.phone,
       whatsapp: branch.whatsapp,
@@ -527,7 +530,7 @@ app.get('/api/public/branches/:slug', async (req, res) => {
       settings: branch.restaurant?.settings,
       sections: sections.map(s => ({
         id: s._id, name: s.name, slug: s.slug, description: s.description,
-        icon: s.icon, image: s.image, homepageImage: s.homepageImage, color: s.color
+        image: s.image, heroImage: s.heroImage, color: s.color
       }))
     })
   } catch (err) { 
@@ -544,7 +547,7 @@ app.get('/api/public/branches/:slug/sections', async (req, res) => {
     const sections = await Section.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
     res.json(sections.map(s => ({
       id: s._id, name: s.name, slug: s.slug, description: s.description,
-      icon: s.icon, image: s.image, homepageImage: s.homepageImage, color: s.color
+      image: s.image, heroImage: s.heroImage, color: s.color
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -649,14 +652,16 @@ app.get('/api/public/branches/:slug/categories', async (req, res) => {
     const branch = await Branch.findOne({ slug: req.params.slug })
     if (!branch) return res.status(404).json({ error: 'Branch not found' })
     const categories = await Category.find({ branch: branch._id, isActive: true }).sort({ order: 1 })
-    res.json(categories.map(c => ({ 
-      id: c._id, 
-      name: c.name, 
+    res.json(categories.map(c => ({
+      id: c._id,
+      name: c.name,
       nameEN: c.nameEN || '',
-      icon: c.icon, 
-      image: c.image, 
-      description: c.description, 
-      layoutSize: c.layoutSize
+      icon: c.icon,
+      image: c.image,
+      description: c.description,
+      layoutSize: c.layoutSize,
+      parent: c.parent || null,
+      categoryType: c.categoryType || 'product_title'
     })))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -837,13 +842,15 @@ app.get('/api/public/branches/:slug/menu', async (req, res) => {
         workingHours: branch.workingHours, theme: branch.theme,
         settings: branch.restaurant?.settings
       },
-      categories: categories.map(c => ({ 
-        id: c._id, 
-        name: c.name, 
+      categories: categories.map(c => ({
+        id: c._id,
+        name: c.name,
         nameEN: c.nameEN || '',
-        icon: c.icon, 
-        image: c.image, 
-        description: c.description
+        icon: c.icon,
+        image: c.image,
+        description: c.description,
+        parent: c.parent || null,
+        categoryType: c.categoryType || 'product_title'
       })),
       products: processedProducts,
       announcements: announcements.map(a => ({
@@ -1286,8 +1293,8 @@ app.post('/api/branches/:id/image', authMiddleware, upload.single('image'), asyn
     if (!branch) return res.status(404).json({ error: 'Not found' })
     if (!await checkBranchAccess(req.user, branch._id)) return res.status(403).json({ error: 'Access denied' })
     
-    const field = req.query.type || 'image'
-    const allowedFields = ['image', 'logo', 'banner', 'homepageImage']
+    const field = req.query.type === 'hero' ? 'heroImage' : (req.query.type || 'image')
+    const allowedFields = ['image', 'logo', 'banner', 'homepageImage', 'heroImage']
     
     if (!allowedFields.includes(field)) {
       return res.status(400).json({ error: 'Invalid image type' })
@@ -1740,12 +1747,28 @@ app.post('/api/branches/:branchId/categories', authMiddleware, async (req, res) 
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
+// Kategori sıralama - :id route'undan ÖNCE olmalı
+app.put('/api/categories/reorder', authMiddleware, async (req, res) => {
+  try {
+    const { orders } = req.body
+    if (!orders || !Array.isArray(orders)) {
+      return res.status(400).json({ error: 'Orders array required' })
+    }
+
+    for (const item of orders) {
+      await Category.findByIdAndUpdate(item.id, { order: item.order })
+    }
+
+    res.json({ success: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
 app.put('/api/categories/:id', authMiddleware, async (req, res) => {
   try {
     const category = await Category.findById(req.params.id)
     if (!category) return res.status(404).json({ error: 'Not found' })
     if (!await checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
-    
+
     Object.assign(category, req.body)
     await category.save()
     res.json({ ...category.toObject(), id: category._id })
@@ -1757,7 +1780,7 @@ app.delete('/api/categories/:id', authMiddleware, async (req, res) => {
     const category = await Category.findById(req.params.id)
     if (!category) return res.status(404).json({ error: 'Not found' })
     if (!await checkBranchAccess(req.user, category.branch)) return res.status(403).json({ error: 'Access denied' })
-    
+
     await Product.updateMany({ category: category._id }, { category: null })
     await category.deleteOne()
     res.json({ success: true })
@@ -1940,6 +1963,22 @@ app.post('/api/branches/:branchId/products', authMiddleware, async (req, res) =>
     
     const product = await Product.create(data)
     res.status(201).json({ ...product.toObject(), id: product._id })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Ürün sıralama - :id route'undan ÖNCE olmalı
+app.put('/api/products/reorder', authMiddleware, async (req, res) => {
+  try {
+    const { orders } = req.body
+    if (!orders || !Array.isArray(orders)) {
+      return res.status(400).json({ error: 'Orders array required' })
+    }
+
+    for (const item of orders) {
+      await Product.findByIdAndUpdate(item.id, { order: item.order })
+    }
+
+    res.json({ success: true })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 

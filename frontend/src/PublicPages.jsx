@@ -574,9 +574,9 @@ export function MenuPage() {
     [products]
   )
 
-  // Ana kategoriler (parent olmayan)
+  // Ana kategoriler (parent olmayan ve resimli olanlar)
   const mainCategories = useMemo(() => {
-    return categories.filter(c => !c.parent)
+    return categories.filter(c => !c.parent && c.image)
   }, [categories])
 
   // Bir kategorinin tüm alt kategorilerini bul (recursive)
@@ -605,6 +605,15 @@ export function MenuPage() {
     }).length
   }
 
+  // Kategori seviyesini hesapla (recursive)
+  const getCategoryLevel = useCallback((catId, baseLevel = 0) => {
+    const cat = categories.find(c => (c.id || c._id) === catId || String(c.id || c._id) === String(catId))
+    if (!cat || !cat.parent) return baseLevel
+    const parentId = cat.parent?._id || cat.parent
+    if (parentId === selectedCategory || String(parentId) === String(selectedCategory)) return baseLevel + 1
+    return getCategoryLevel(parentId, baseLevel + 1)
+  }, [categories, selectedCategory])
+
   // Seçili kategorinin ürünleri (alt kategoriler dahil, gruplu)
   const categoryProductsGrouped = useMemo(() => {
     if (!selectedCategory) return []
@@ -624,16 +633,16 @@ export function MenuPage() {
         const pCatId = p.categoryId || p.category?._id || p.category?.id || p.category
         return pCatId === catId || String(pCatId) === String(catId)
       })
-      if (catProducts.length > 0) {
-        groups.push({
-          category: cat,
-          products: catProducts,
-          isSubCategory: catId !== selectedCategory && String(catId) !== String(selectedCategory)
-        })
-      }
+      const level = getCategoryLevel(catId)
+      groups.push({
+        category: cat,
+        products: catProducts,
+        isSubCategory: catId !== selectedCategory && String(catId) !== String(selectedCategory),
+        level: level
+      })
     })
     return groups
-  }, [products, selectedCategory, categories, getChildCategories])
+  }, [products, selectedCategory, categories, getChildCategories, getCategoryLevel])
 
   // Seçili kategorinin tüm ürünleri (düz liste)
   const categoryProducts = useMemo(() => {
@@ -755,10 +764,10 @@ export function MenuPage() {
                       '&:active': { transform: 'scale(0.98)' }
                     }}
                   >
-                    {section.image || section.homepageImage ? (
+                    {section.image || section.heroImage ? (
                       <Box
                         component="img"
-                        src={getImageUrl(section.homepageImage || section.image)}
+                        src={getImageUrl(section.heroImage || section.image)}
                         alt={t(section, 'name')}
                         sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
@@ -851,183 +860,192 @@ export function MenuPage() {
         <CssBaseline />
         <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
           {/* Header */}
-          <Box sx={{ 
-            position: 'sticky', 
-            top: 0, 
+          <Box sx={{
+            position: 'sticky',
+            top: 0,
             zIndex: 10,
             bgcolor: 'background.paper',
             borderBottom: 1,
             borderColor: 'divider'
           }}>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ p: 2, maxWidth: 800, mx: 'auto' }}>
-              <IconButton onClick={handleCategoryBack}>
-                <ArrowBack />
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ p: 1.5, maxWidth: 800, mx: 'auto' }}>
+              <IconButton onClick={handleCategoryBack} size="small">
+                <ArrowBack fontSize="small" />
               </IconButton>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" fontWeight={700}>
-                  {t(selectedCategoryInfo, 'name')}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {categoryProducts.length} {language === 'tr' ? 'ürün' : 'products'}
-                </Typography>
-              </Box>
+              <Typography variant="body1" fontWeight={600}>
+                {t(selectedCategoryInfo, 'name')}
+              </Typography>
+              <Box sx={{ flex: 1 }} />
               <LanguageButton />
             </Stack>
           </Box>
 
           {/* Ürün Listesi - Alt kategorilere göre gruplu */}
-          <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          <Box sx={{ maxWidth: 800, mx: 'auto', px: 2, py: 1 }}>
             {categoryProductsGrouped.length > 0 ? (
               <Stack spacing={0}>
                 {categoryProductsGrouped.map((group, groupIndex) => (
                   <Box key={group.category.id || groupIndex}>
-                    {/* Alt kategori başlığı */}
-                    {group.isSubCategory && (
-                      <Box sx={{
-                        py: 1.5,
-                        px: 2,
-                        mt: groupIndex > 0 ? 3 : 1,
-                        bgcolor: 'rgba(255,255,255,0.03)',
-                        borderLeft: '3px solid',
-                        borderColor: 'primary.main'
-                      }}>
-                        <Typography variant="subtitle1" fontWeight={600} color="primary.main">
+                    {/* Alt kategori başlığı - ana kategori gösterilmez */}
+                    {group.level > 0 && (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          pl: (group.level - 1) * 2,
+                          py: 0.75,
+                          mt: 1.5
+                        }}
+                      >
+                        <Box sx={{
+                          width: 3,
+                          height: 16,
+                          borderRadius: 1,
+                          background: group.level === 1
+                            ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)'
+                            : 'rgba(255,255,255,0.3)'
+                        }} />
+                        <Typography
+                          sx={{
+                            fontSize: group.level === 1 ? '0.9rem' : '0.85rem',
+                            fontWeight: 600,
+                            color: group.level === 1 ? '#FFD700' : 'grey.400',
+                            textTransform: group.level === 1 ? 'uppercase' : 'none',
+                            letterSpacing: group.level === 1 ? '0.5px' : 'normal'
+                          }}
+                        >
                           {group.category.icon} {t(group.category, 'name')}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {group.products.length} {language === 'tr' ? 'ürün' : 'products'}
                         </Typography>
                       </Box>
                     )}
 
-                    {/* Ürünler */}
-                    <Stack divider={<Divider />}>
-                      {group.products.map(product => (
-                        <Box
-                          key={product.id}
-                          onClick={() => handleProductSelect(product)}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2,
-                            p: 2,
-                            cursor: 'pointer',
-                            transition: 'background 0.2s',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-                            '&:active': { bgcolor: 'rgba(255,255,255,0.05)' },
-                            ...(product.isFeatured && {
-                              bgcolor: 'rgba(255,215,0,0.05)',
-                              borderLeft: '3px solid #FFD700'
-                            })
-                          }}
-                        >
-                          {product.thumbnail && (
-                            <Box
-                              sx={{
-                                width: 64,
-                                height: 64,
-                                borderRadius: 1.5,
-                                overflow: 'hidden',
-                                flexShrink: 0,
-                                bgcolor: 'background.paper',
-                                position: 'relative'
-                              }}
-                            >
+                    {/* Ürünler - modern görünüm */}
+                    {group.products.length > 0 && (
+                      <Stack spacing={0} sx={{ pl: group.level > 0 ? (group.level - 1) * 2 : 0 }}>
+                        {group.products.map((product, pIndex) => (
+                          <Box
+                            key={product.id}
+                            onClick={() => handleProductSelect(product)}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.5,
+                              py: 1,
+                              px: 0.5,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              borderRadius: 1,
+                              '&:hover': {
+                                bgcolor: 'rgba(255,255,255,0.04)',
+                              },
+                              '&:active': {
+                                transform: 'scale(0.99)'
+                              },
+                              ...(product.isFeatured && {
+                                bgcolor: 'rgba(255,215,0,0.04)',
+                                borderLeft: '2px solid #FFD700',
+                                ml: -0.5,
+                                pl: 1
+                              })
+                            }}
+                          >
+                            {/* Ürün Resmi */}
+                            {product.thumbnail ? (
                               <Box
-                                component="img"
-                                src={getImageUrl(product.thumbnail)}
-                                alt={t(product, 'name')}
-                                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              />
-                              {product.isFeatured && (
-                                <Box sx={{
-                                  position: 'absolute',
-                                  top: -4,
-                                  right: -4,
-                                  bgcolor: '#FFD700',
-                                  borderRadius: '50%',
-                                  width: 20,
-                                  height: 20,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}>
-                                  <Star sx={{ fontSize: 12, color: '#000' }} />
-                                </Box>
-                              )}
-                            </Box>
-                          )}
-
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                              <Typography fontWeight={600} noWrap>
-                                {t(product, 'name')}
-                              </Typography>
-                              {product.isFeatured && !product.thumbnail && (
-                                <Star sx={{ fontSize: 16, color: '#FFD700' }} />
-                              )}
-                            </Stack>
-                            {t(product, 'description') && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
                                 sx={{
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 1,
                                   overflow: 'hidden',
-                                  lineHeight: 1.4
+                                  flexShrink: 0,
+                                  position: 'relative',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                                 }}
                               >
-                                {t(product, 'description')}
-                              </Typography>
-                            )}
-                            {product.tags?.length > 0 && (
-                              <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-                                {product.tags.slice(0, 3).map((tag, i) => (
-                                  <Chip
-                                    key={tag.id || tag.slug || i}
-                                    label={typeof tag === 'string' ? tag : t(tag, 'name')}
-                                    size="small"
-                                    sx={{
-                                      height: 20,
-                                      fontSize: '0.65rem',
-                                      bgcolor: 'rgba(255,255,255,0.1)'
-                                    }}
-                                  />
-                                ))}
-                              </Stack>
-                            )}
-                          </Box>
+                                <Box
+                                  component="img"
+                                  src={getImageUrl(product.thumbnail)}
+                                  alt={t(product, 'name')}
+                                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                                {product.isFeatured && (
+                                  <Star sx={{
+                                    position: 'absolute',
+                                    top: -3,
+                                    right: -3,
+                                    fontSize: 14,
+                                    color: '#FFD700',
+                                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))'
+                                  }} />
+                                )}
+                              </Box>
+                            ) : null}
 
-                          <Box sx={{
-                            flex: '0 0 auto',
-                            borderBottom: '1px dotted',
-                            borderColor: 'divider',
-                            width: 40,
-                            alignSelf: 'center',
-                            mx: 1
-                          }} />
-
-                          <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                            {product.isCampaign && product.campaignPrice ? (
-                              <>
-                                <Typography fontWeight={700} color="error.main">
-                                  {formatPrice(product.campaignPrice)}
+                            {/* Ürün Bilgisi */}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <Typography
+                                  sx={{
+                                    fontSize: '0.9rem',
+                                    fontWeight: 500,
+                                    color: 'white',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {t(product, 'name')}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                                {product.isFeatured && !product.thumbnail && (
+                                  <Star sx={{ fontSize: 14, color: '#FFD700' }} />
+                                )}
+                              </Stack>
+                              {t(product, 'description') && (
+                                <Typography
+                                  sx={{
+                                    fontSize: '0.75rem',
+                                    color: 'grey.500',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {t(product, 'description')}
+                                </Typography>
+                              )}
+                            </Box>
+
+                            {/* Noktalı çizgi */}
+                            <Box sx={{
+                              flex: '0 0 auto',
+                              borderBottom: '1px dotted',
+                              borderColor: 'grey.700',
+                              width: 30,
+                              mx: 0.5
+                            }} />
+
+                            {/* Fiyat */}
+                            <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                              {product.isCampaign && product.campaignPrice ? (
+                                <Stack alignItems="flex-end">
+                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: 'error.main' }}>
+                                    {formatPrice(product.campaignPrice)}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.7rem', color: 'grey.600', textDecoration: 'line-through' }}>
+                                    {formatPrice(product.price)}
+                                  </Typography>
+                                </Stack>
+                              ) : (
+                                <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: 'primary.main' }}>
                                   {formatPrice(product.price)}
                                 </Typography>
-                              </>
-                            ) : (
-                              <Typography fontWeight={700} color="primary.main">
-                                {formatPrice(product.price)}
-                              </Typography>
-                            )}
+                              )}
+                            </Box>
                           </Box>
-                        </Box>
-                      ))}
-                    </Stack>
+                        ))}
+                      </Stack>
+                    )}
                   </Box>
                 ))}
               </Stack>
@@ -1258,13 +1276,13 @@ export function MenuPage() {
           </Stack>
         </Box>
 
-        {/* ========== 1. HOMEPAGE IMAGE ========== */}
+        {/* ========== 1. HERO IMAGE ========== */}
         <Box sx={{ position: 'relative', width: '100%', height: isMobile ? 220 : 320, overflow: 'hidden' }}>
-          {selectedSection?.homepageImage ? (
-            <Box component="img" src={getImageUrl(selectedSection.homepageImage)} alt={t(selectedSection, 'name')}
+          {selectedSection?.heroImage ? (
+            <Box component="img" src={getImageUrl(selectedSection.heroImage)} alt={t(selectedSection, 'name')}
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : branch?.homepageImage ? (
-            <Box component="img" src={getImageUrl(branch.homepageImage)} alt={branch.name}
+          ) : branch?.heroImage ? (
+            <Box component="img" src={getImageUrl(branch.heroImage)} alt={branch.name}
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : branch?.banner ? (
             <Box component="img" src={getImageUrl(branch.banner)} alt={branch.name}

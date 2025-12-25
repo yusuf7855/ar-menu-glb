@@ -23,9 +23,9 @@ import {
   Business, Settings, Dashboard as DashboardIcon, Storefront,
   Email, Person, AdminPanelSettings, QrCode, Palette, Share,
   Link as LinkIcon, NotificationsActive, Schedule,
-  ExpandMore, KeyboardArrowRight
+  ExpandMore, KeyboardArrowRight, TrendingUp
 } from '@mui/icons-material'
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { useDropzone } from 'react-dropzone'
 import {
   api, useAuth, useSnackbar, useBranch,
@@ -451,7 +451,7 @@ export function RestaurantDashboardPage() {
 // ==================== DASHBOARD PAGE ====================
 export function DashboardPage() {
   const { branchId, sectionId } = useParams()
-  const { currentSection } = useBranch()
+  const { currentSection, currentBranch } = useBranch()
   const showSnackbar = useSnackbar()
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
@@ -469,154 +469,562 @@ export function DashboardPage() {
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
-  const COLORS = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1']
+  const COLORS = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#5c6bc0', '#26a69a']
+  const totalProducts = stats?.counts?.products || 0
+  const totalCategories = stats?.counts?.categories || 0
+  const campaignCount = stats?.counts?.campaigns || 0
+  const avgRating = stats?.averageRating || 0
 
   return (
     <PageWrapper>
       <Stack spacing={3}>
+        {/* Ana İstatistik Kartları - 5 Sütun */}
         <Grid container spacing={2}>
-          <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="Toplam Ürün" value={stats?.counts?.products || 0} icon={<Restaurant />} color="primary" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products`)} />
-          </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="Kategoriler" value={stats?.counts?.categories || 0} icon={<Category />} color="secondary" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/categories`)} />
-          </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="Etiketler" value={stats?.counts?.tags || 0} icon={<LocalOffer />} color="info" onClick={() => navigate(`/admin/branch/${branchId}/tags`)} />
-          </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <StatCard title="3D Modeller" value={stats?.counts?.glbFiles || 0} icon={<ViewInAr />} color="success" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/glb`)} />
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard title="Yorumlar" value={stats?.counts?.reviews || 0} icon={<RateReview />} color="warning" subtitle={`${stats?.counts?.pendingReviews || 0} bekleyen`} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/reviews`)} />
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography color="text.secondary" variant="body2">Ortalama Puan</Typography>
-                  <Rating value={stats?.averageRating || 0} precision={0.1} readOnly size="small" />
+          <Grid item xs={6} sm={4} md={2.4}>
+            <Card sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'scale(1.02)' }
+            }} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products`)}>
+              <CardContent sx={{ py: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Box>
+                    <Typography variant="overline" sx={{ opacity: 0.9 }}>Ürünler</Typography>
+                    <Typography variant="h4" fontWeight={700}>{totalProducts}</Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+                    <Restaurant />
+                  </Avatar>
                 </Stack>
-                <Typography variant="h3" fontWeight={700} color="warning.main" sx={{ mt: 1 }}>{(stats?.averageRating || 0).toFixed(1)}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>
+                  {campaignCount > 0 ? `${campaignCount} kampanyalı` : 'Menüdeki tüm ürünler'}
+                </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={12} md={4}>
+          <Grid item xs={6} sm={4} md={2.4}>
+            <Card sx={{
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'scale(1.02)' }
+            }} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/categories`)}>
+              <CardContent sx={{ py: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Box>
+                    <Typography variant="overline" sx={{ opacity: 0.9 }}>Kategoriler</Typography>
+                    <Typography variant="h4" fontWeight={700}>{totalCategories}</Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+                    <Category />
+                  </Avatar>
+                </Stack>
+                <Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>
+                  Menü kategorileri
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2.4}>
+            <Card sx={{
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'scale(1.02)' }
+            }} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/reviews`)}>
+              <CardContent sx={{ py: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Box>
+                    <Typography variant="overline" sx={{ opacity: 0.9 }}>Yorumlar</Typography>
+                    <Typography variant="h4" fontWeight={700}>{stats?.counts?.reviews || 0}</Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+                    <RateReview />
+                  </Avatar>
+                </Stack>
+                <Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>
+                  {stats?.counts?.pendingReviews > 0 ? `${stats.counts.pendingReviews} bekleyen` : 'Tüm yorumlar onaylı'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2.4}>
+            <Card sx={{
+              background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'scale(1.02)' }
+            }} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/glb`)}>
+              <CardContent sx={{ py: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Box>
+                    <Typography variant="overline" sx={{ opacity: 0.9 }}>3D Modeller</Typography>
+                    <Typography variant="h4" fontWeight={700}>{stats?.counts?.glbFiles || 0}</Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+                    <ViewInAr />
+                  </Avatar>
+                </Stack>
+                <Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>
+                  AR için hazır modeller
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2.4}>
+            <Card sx={{
+              background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'scale(1.02)' }
+            }} onClick={() => navigate(`/admin/branch/${branchId}/tags`)}>
+              <CardContent sx={{ py: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Box>
+                    <Typography variant="overline" sx={{ opacity: 0.9 }}>Etiketler</Typography>
+                    <Typography variant="h4" fontWeight={700}>{stats?.counts?.tags || 0}</Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+                    <LocalOffer />
+                  </Avatar>
+                </Stack>
+                <Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>
+                  Ürün etiketleri
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Ortalama Puan ve Hızlı İşlemler */}
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            <Card sx={{ height: '100%', borderTop: 4, borderColor: 'warning.main' }}>
+              <CardContent>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                  <Typography variant="h6" fontWeight={600}>Müşteri Memnuniyeti</Typography>
+                  <Star sx={{ color: 'warning.main', fontSize: 28 }} />
+                </Stack>
+                <Stack direction="row" alignItems="baseline" spacing={1}>
+                  <Typography variant="h2" fontWeight={700} color="warning.main">{avgRating.toFixed(1)}</Typography>
+                  <Typography variant="h6" color="text.secondary">/ 5</Typography>
+                </Stack>
+                <Rating value={avgRating} precision={0.1} readOnly size="large" sx={{ mt: 1 }} />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  {stats?.counts?.reviews > 0
+                    ? `${stats.counts.reviews} değerlendirme üzerinden`
+                    : 'Henüz değerlendirme yok'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
-                <Typography color="text.secondary" variant="body2" gutterBottom>Hızlı İşlemler</Typography>
-                <Stack spacing={1} sx={{ mt: 2 }}>
-                  <Button variant="outlined" fullWidth startIcon={<Add />} onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products?action=new`)}>Yeni Ürün</Button>
-                  <Button variant="outlined" fullWidth startIcon={<Place />} onClick={() => navigate(`/admin/branch/${branchId}/sections`)}>Bölümler</Button>
+                <Typography variant="h6" fontWeight={600} gutterBottom>Hızlı İşlemler</Typography>
+                <Grid container spacing={1} sx={{ mt: 1 }}>
+                  <Grid item xs={6}>
+                    <Button variant="contained" fullWidth startIcon={<Add />} size="large"
+                      onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products?action=new`)}
+                      sx={{ py: 1.5 }}>
+                      Yeni Ürün
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button variant="outlined" fullWidth startIcon={<Category />} size="large"
+                      onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/categories`)}
+                      sx={{ py: 1.5 }}>
+                      Kategoriler
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button variant="outlined" fullWidth startIcon={<Place />} size="large"
+                      onClick={() => navigate(`/admin/branch/${branchId}/sections`)}
+                      sx={{ py: 1.5 }}>
+                      Bölümler
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button variant="outlined" fullWidth startIcon={<Settings />} size="large"
+                      onClick={() => navigate(`/admin/branch/${branchId}/settings`)}
+                      sx={{ py: 1.5 }}>
+                      Ayarlar
+                    </Button>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card sx={{ height: '100%', borderTop: 4, borderColor: 'success.main' }}>
+              <CardContent>
+                <Typography variant="h6" fontWeight={600} gutterBottom>Menü Özeti</Typography>
+                <Stack spacing={2} sx={{ mt: 2 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Restaurant sx={{ color: 'primary.main' }} />
+                      <Typography color="text.primary">Toplam Ürün</Typography>
+                    </Stack>
+                    <Typography fontWeight={700} color="text.primary">{totalProducts}</Typography>
+                  </Stack>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Category sx={{ color: 'secondary.main' }} />
+                      <Typography color="text.primary">Kategori</Typography>
+                    </Stack>
+                    <Typography fontWeight={700} color="text.primary">{totalCategories}</Typography>
+                  </Stack>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <LocalOffer sx={{ color: 'error.main' }} />
+                      <Typography color="text.primary">Kampanyalı</Typography>
+                    </Stack>
+                    <Typography fontWeight={700} color="error.main">{campaignCount}</Typography>
+                  </Stack>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Place sx={{ color: 'info.main' }} />
+                      <Typography color="text.primary">Bölüm</Typography>
+                    </Stack>
+                    <Typography fontWeight={700} color="text.primary">{stats?.counts?.sections || 0}</Typography>
+                  </Stack>
                 </Stack>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
 
+        {/* Grafikler ve Listeler */}
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: 400 }}>
-              <CardHeader title="Kategori Dağılımı" />
-              <CardContent>
+          {/* Kategori Dağılımı - Daha Geniş */}
+          <Grid item xs={12} lg={5}>
+            <Card sx={{ height: 420 }}>
+              <CardHeader
+                title="Kategori Dağılımı"
+                titleTypographyProps={{ fontWeight: 600 }}
+                action={
+                  <Chip
+                    label={`${stats?.categoryStats?.length || 0} kategori`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                }
+              />
+              <CardContent sx={{ pt: 0 }}>
                 {stats?.categoryStats?.length > 0 ? (
-                  <Box sx={{ height: 280 }}>
+                  <Box sx={{ height: 300 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={stats.categoryStats} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="count" nameKey="name"
-                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
-                          {stats.categoryStats.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
+                        <Pie
+                          data={stats.categoryStats}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={70}
+                          outerRadius={110}
+                          paddingAngle={3}
+                          dataKey="count"
+                          nameKey="name"
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          labelLine={{ stroke: '#666', strokeWidth: 1 }}
+                        >
+                          {stats.categoryStats.map((_, index) => (
+                            <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                          ))}
                         </Pie>
+                        <RechartsTooltip formatter={(value) => [`${value} ürün`, 'Ürün Sayısı']} />
                       </PieChart>
                     </ResponsiveContainer>
                   </Box>
-                ) : <EmptyState icon={<Category sx={{ fontSize: 48 }} />} title="Henüz veri yok" />}
+                ) : (
+                  <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Stack alignItems="center" spacing={2}>
+                      <Category sx={{ fontSize: 64, color: 'action.disabled' }} />
+                      <Typography color="text.secondary">Kategori ekleyin ve ürünler oluşturun</Typography>
+                      <Button variant="outlined" startIcon={<Add />}
+                        onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/categories`)}>
+                        Kategori Ekle
+                      </Button>
+                    </Stack>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: 400 }}>
-              <CardHeader title="Puan Dağılımı" />
+          {/* Puan Dağılımı */}
+          <Grid item xs={12} sm={6} lg={3.5}>
+            <Card sx={{ height: 420 }}>
+              <CardHeader
+                title="Puan Dağılımı"
+                titleTypographyProps={{ fontWeight: 600 }}
+              />
               <CardContent>
-                {stats?.ratingStats?.length > 0 ? (
-                  <Stack spacing={2} sx={{ mt: 2 }}>
+                {stats?.counts?.reviews > 0 ? (
+                  <Stack spacing={2.5}>
                     {[5, 4, 3, 2, 1].map(rating => {
                       const count = stats?.ratingStats?.find(r => r._id === rating)?.count || 0
                       const total = stats?.counts?.reviews || 1
                       const percent = (count / total) * 100
                       return (
                         <Stack key={rating} direction="row" alignItems="center" spacing={2}>
-                          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ width: 50 }}>
+                          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ width: 45 }}>
                             <Typography variant="body2" fontWeight={600}>{rating}</Typography>
                             <Star sx={{ fontSize: 18, color: 'warning.main' }} />
                           </Stack>
                           <Box sx={{ flex: 1 }}>
-                            <LinearProgress variant="determinate" value={percent}
-                              sx={{ height: 12, borderRadius: 1, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: rating >= 4 ? 'success.main' : rating >= 3 ? 'warning.main' : 'error.main' } }} />
+                            <LinearProgress
+                              variant="determinate"
+                              value={percent}
+                              sx={{
+                                height: 16,
+                                borderRadius: 2,
+                                bgcolor: 'grey.100',
+                                '& .MuiLinearProgress-bar': {
+                                  borderRadius: 2,
+                                  bgcolor: rating >= 4 ? 'success.main' : rating >= 3 ? 'warning.main' : 'error.main'
+                                }
+                              }}
+                            />
                           </Box>
-                          <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{count}</Typography>
+                          <Typography variant="body2" fontWeight={600} sx={{ width: 35, textAlign: 'right' }}>
+                            {count}
+                          </Typography>
                         </Stack>
                       )
                     })}
                   </Stack>
-                ) : <EmptyState icon={<Star sx={{ fontSize: 48 }} />} title="Henüz yorum yok" />}
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardHeader title="Kampanyalı Ürünler" action={<Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products?filter=campaign`)}>Tümü</Button>} />
-              <CardContent>
-                {stats?.campaignProducts?.length > 0 ? (
-                  <Stack spacing={2}>
-                    {stats.campaignProducts.slice(0, 5).map(product => (
-                      <Stack key={product._id} direction="row" alignItems="center" spacing={2}>
-                        <Avatar src={product.thumbnail ? getImageUrl(product.thumbnail) : undefined} variant="rounded" sx={{ width: 48, height: 48 }}><Restaurant /></Avatar>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="subtitle2" fontWeight={600} noWrap>{product.name}</Typography>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography variant="body2" color="error.main" fontWeight={700}>{formatPrice(product.campaignPrice)}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>{formatPrice(product.price)}</Typography>
-                          </Stack>
-                        </Box>
-                        <Chip label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`} size="small" color="error" />
-                      </Stack>
-                    ))}
-                  </Stack>
-                ) : <EmptyState icon={<LocalOffer sx={{ fontSize: 48 }} />} title="Kampanya yok" />}
+                ) : (
+                  <Box sx={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Stack alignItems="center" spacing={2}>
+                      <Star sx={{ fontSize: 64, color: 'action.disabled' }} />
+                      <Typography color="text.secondary" textAlign="center">
+                        Müşterileriniz yorum bıraktığında<br />puanlar burada görünecek
+                      </Typography>
+                    </Stack>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardHeader title="Son Yorumlar" action={<Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/reviews`)}>Tümü</Button>} />
-              <CardContent>
-                {stats?.recentReviews?.length > 0 ? (
-                  <Stack spacing={2}>
-                    {stats.recentReviews.map(review => (
-                      <Paper key={review._id} variant="outlined" sx={{ p: 2 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="start">
+          {/* En Çok Görüntülenen Ürünler */}
+          <Grid item xs={12} sm={6} lg={3.5}>
+            <Card sx={{ height: 420 }}>
+              <CardHeader
+                title="Popüler Ürünler"
+                titleTypographyProps={{ fontWeight: 600 }}
+                action={
+                  <Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products`)}>
+                    Tümü
+                  </Button>
+                }
+              />
+              <CardContent sx={{ pt: 0 }}>
+                {stats?.topProducts?.length > 0 ? (
+                  <Stack spacing={1.5}>
+                    {stats.topProducts.map((product, index) => (
+                      <Paper
+                        key={product._id}
+                        variant="outlined"
+                        sx={{
+                          p: 1.5,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.main' }
+                        }}
+                        onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products`)}
+                      >
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                          <Avatar
+                            sx={{
+                              bgcolor: COLORS[index % COLORS.length],
+                              width: 36,
+                              height: 36,
+                              fontSize: 14,
+                              fontWeight: 700
+                            }}
+                          >
+                            {index + 1}
+                          </Avatar>
                           <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <Rating value={review.rating} readOnly size="small" />
-                              {!review.isApproved && <Chip label="Bekliyor" size="small" color="warning" />}
-                            </Stack>
-                            <Typography variant="body2" sx={{ mt: 0.5 }} noWrap>{review.comment || 'Yorum yazılmamış'}</Typography>
-                            <Typography variant="caption" color="text.secondary">{review.customerName} • {formatRelativeTime(review.createdAt)}</Typography>
+                            <Typography variant="body2" fontWeight={600} noWrap>
+                              {product.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {product.viewCount || 0} görüntülenme
+                            </Typography>
                           </Box>
                         </Stack>
                       </Paper>
                     ))}
                   </Stack>
-                ) : <EmptyState icon={<RateReview sx={{ fontSize: 48 }} />} title="Henüz yorum yok" />}
+                ) : (
+                  <Box sx={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Stack alignItems="center" spacing={2}>
+                      <TrendingUp sx={{ fontSize: 64, color: 'action.disabled' }} />
+                      <Typography color="text.secondary" textAlign="center">
+                        Ürün ekleyin ve<br />popülerliklerini takip edin
+                      </Typography>
+                    </Stack>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Alt Kısım - Kampanyalar ve Yorumlar */}
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: 380 }}>
+              <CardHeader
+                title="Kampanyalı Ürünler"
+                titleTypographyProps={{ fontWeight: 600 }}
+                avatar={<LocalOffer color="error" />}
+                action={
+                  stats?.campaignProducts?.length > 0 && (
+                    <Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products?filter=campaign`)}>
+                      Tümü
+                    </Button>
+                  )
+                }
+              />
+              <CardContent sx={{ pt: 0, height: 290, overflow: 'auto' }}>
+                {stats?.campaignProducts?.length > 0 ? (
+                  <Stack spacing={2}>
+                    {stats.campaignProducts.map(product => (
+                      <Paper
+                        key={product._id}
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          '&:hover': { bgcolor: 'action.hover', borderColor: 'error.main' }
+                        }}
+                      >
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                          <Avatar
+                            src={product.thumbnail ? getImageUrl(product.thumbnail) : undefined}
+                            variant="rounded"
+                            sx={{ width: 56, height: 56 }}
+                          >
+                            <Restaurant />
+                          </Avatar>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" fontWeight={600} noWrap>
+                              {product.name}
+                            </Typography>
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                              <Typography variant="body1" color="error.main" fontWeight={700}>
+                                {formatPrice(product.campaignPrice)}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                                {formatPrice(product.price)}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                          <Chip
+                            label={`-${Math.round((1 - product.campaignPrice / product.price) * 100)}%`}
+                            size="medium"
+                            color="error"
+                            sx={{ fontWeight: 700 }}
+                          />
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Stack alignItems="center" spacing={2}>
+                      <LocalOffer sx={{ fontSize: 64, color: 'action.disabled' }} />
+                      <Typography color="text.secondary" textAlign="center">
+                        Henüz kampanyalı ürün yok
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<Add />}
+                        onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/products`)}
+                      >
+                        Kampanya Ekle
+                      </Button>
+                    </Stack>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: 380 }}>
+              <CardHeader
+                title="Son Yorumlar"
+                titleTypographyProps={{ fontWeight: 600 }}
+                avatar={<RateReview color="primary" />}
+                action={
+                  stats?.recentReviews?.length > 0 && (
+                    <Button size="small" onClick={() => navigate(`/admin/branch/${branchId}/section/${sectionId}/reviews`)}>
+                      Tümü
+                    </Button>
+                  )
+                }
+              />
+              <CardContent sx={{ pt: 0, height: 290, overflow: 'auto' }}>
+                {stats?.recentReviews?.length > 0 ? (
+                  <Stack spacing={2}>
+                    {stats.recentReviews.map(review => (
+                      <Paper
+                        key={review._id}
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          borderLeft: 4,
+                          borderLeftColor: review.isApproved ? 'success.main' : 'warning.main'
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="start" spacing={2}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                              <Rating value={review.rating} readOnly size="small" />
+                              {!review.isApproved && <Chip label="Bekliyor" size="small" color="warning" />}
+                            </Stack>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              {review.comment || 'Yorum yazılmamış'}
+                            </Typography>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
+                                {review.customerName?.charAt(0)?.toUpperCase() || '?'}
+                              </Avatar>
+                              <Typography variant="caption" color="text.secondary">
+                                {review.customerName} • {formatRelativeTime(review.createdAt)}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Stack alignItems="center" spacing={2}>
+                      <RateReview sx={{ fontSize: 64, color: 'action.disabled' }} />
+                      <Typography color="text.secondary" textAlign="center">
+                        Müşteri yorumları burada görünecek
+                      </Typography>
+                    </Stack>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -745,20 +1153,20 @@ export function SectionsPage() {
                       sx={{ objectFit: 'cover' }} 
                     />
                   ) : (
-                    <Box sx={{ 
-                      height: 180, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      bgcolor: section.color || 'primary.main', 
+                    <Box sx={{
+                      height: 180,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: section.color || 'primary.main',
                       color: 'white',
                       position: 'relative'
                     }}>
-                      <Typography variant="h1" sx={{ fontSize: 80 }}>{section.icon}</Typography>
-                      <Box sx={{ 
-                        position: 'absolute', 
-                        inset: 0, 
-                        background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5) 100%)' 
+                      <Typography variant="h4" fontWeight={700}>{section.name}</Typography>
+                      <Box sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5) 100%)'
                       }} />
                     </Box>
                   )}
@@ -796,11 +1204,9 @@ export function SectionsPage() {
                   
                   <CardContent>
                     <Stack spacing={1.5}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="h6" fontWeight={700}>
-                          {section.icon} {section.name}
-                        </Typography>
-                      </Stack>
+                      <Typography variant="h6" fontWeight={700}>
+                        {section.name}
+                      </Typography>
                       
                       {section.description && (
                         <Typography 
@@ -909,12 +1315,13 @@ export function SectionsPage() {
         )}
       </Stack>
 
-      <SectionModal 
-        open={modalOpen} 
-        onClose={() => { setModalOpen(false); setEditingSection(null) }} 
-        section={editingSection} 
-        branchId={branchId} 
-        onSuccess={() => { setModalOpen(false); setEditingSection(null); loadSections() }} 
+      <SectionModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingSection(null) }}
+        section={editingSection}
+        branchId={branchId}
+        onSuccess={() => { setModalOpen(false); setEditingSection(null); loadSections() }}
+        onImageUploaded={loadSections}
       />
       
       <ConfirmDialog 
@@ -938,48 +1345,44 @@ export function SectionsPage() {
 }
 
 // ==================== SECTION MODAL ====================
-export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
+export function SectionModal({ open, onClose, section, branchId, onSuccess, onImageUploaded }) {
   const showSnackbar = useSnackbar()
   const isEditing = !!section?.id
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [form, setForm] = useState({
-    name: '', 
-    slug: '', 
-    description: '', 
-    icon: '📍', 
-    color: '#e53935', 
-    isActive: true, 
-    image: null, 
-    homepageImage: null
+    name: '',
+    slug: '',
+    description: '',
+    color: '#e53935',
+    isActive: true,
+    image: null,
+    heroImage: null
   })
 
-  const icons = ['📍', '🏠', '🌳', '☀️', '🌙', '🎉', '👑', '🍽️', '🪴', '🏖️', '🎪', '🎭', '🎨', '🌺', '🍀', '⭐', '💎', '🔥', '🌊', '🏔️', '🌆', '🌃', '🎵', '🎸', '🍷', '🍸', '☕', '🍵']
   const colors = ['#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab', '#1e88e5', '#039be5', '#00acc1', '#00897b', '#43a047', '#7cb342', '#c0ca33', '#fdd835', '#ffb300', '#fb8c00', '#f4511e', '#6d4c41', '#546e7a']
 
   useEffect(() => {
     if (open) {
       if (section) {
         setForm({
-          name: section.name || '', 
-          slug: section.slug || '', 
+          name: section.name || '',
+          slug: section.slug || '',
           description: section.description || '',
-          icon: section.icon || '📍', 
-          color: section.color || '#e53935', 
+          color: section.color || '#e53935',
           isActive: section.isActive !== false,
-          image: section.image || null, 
-          homepageImage: section.homepageImage || null
+          image: section.image || null,
+          heroImage: section.heroImage || null
         })
       } else {
-        setForm({ 
-          name: '', 
-          slug: '', 
-          description: '', 
-          icon: '📍', 
-          color: '#e53935', 
-          isActive: true, 
-          image: null, 
-          homepageImage: null 
+        setForm({
+          name: '',
+          slug: '',
+          description: '',
+          color: '#e53935',
+          isActive: true,
+          image: null,
+          heroImage: null
         })
       }
     }
@@ -997,7 +1400,6 @@ export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
         name: form.name,
         slug: form.slug || undefined,
         description: form.description,
-        icon: form.icon,
         color: form.color,
         isActive: form.isActive
       }
@@ -1036,7 +1438,7 @@ export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
       const res = await api.post(`/sections/${section.id}/image?type=${type}`, formData)
       setForm(prev => ({ ...prev, [type]: res.data[type] }))
       showSnackbar('Görsel yüklendi', 'success')
-      onSuccess()
+      if (onImageUploaded) onImageUploaded()
     } catch (err) { 
       console.error(err)
       showSnackbar('Yüklenemedi', 'error') 
@@ -1089,24 +1491,6 @@ export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
               />
               
               <Box>
-                <Typography variant="subtitle2" gutterBottom>İkon Seçin</Typography>
-                <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 140, overflow: 'auto' }}>
-                  <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                    {icons.map(icon => (
-                      <Button 
-                        key={icon} 
-                        variant={form.icon === icon ? 'contained' : 'outlined'} 
-                        onClick={() => setForm({ ...form, icon })} 
-                        sx={{ minWidth: 44, height: 44, fontSize: 20, p: 0 }}
-                      >
-                        {icon}
-                      </Button>
-                    ))}
-                  </Stack>
-                </Paper>
-              </Box>
-              
-              <Box>
                 <Typography variant="subtitle2" gutterBottom>Arka Plan Rengi</Typography>
                 <Stack direction="row" flexWrap="wrap" gap={0.5}>
                   {colors.map(color => (
@@ -1150,16 +1534,15 @@ export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
             <Stack spacing={2.5}>
               <Box>
                 <Typography variant="subtitle2" gutterBottom>Önizleme</Typography>
-                <Paper 
-                  sx={{ 
-                    p: 3, 
-                    bgcolor: form.color, 
-                    color: 'white', 
+                <Paper
+                  sx={{
+                    p: 3,
+                    bgcolor: form.color,
+                    color: 'white',
                     borderRadius: 2,
                     textAlign: 'center'
                   }}
                 >
-                  <Typography variant="h1" sx={{ fontSize: 64, mb: 1 }}>{form.icon}</Typography>
                   <Typography variant="h5" fontWeight={700}>
                     {form.name || 'Bölüm Adı'}
                   </Typography>
@@ -1286,16 +1669,16 @@ export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
                       overflow: 'hidden', 
                       cursor: uploadingImage ? 'wait' : 'pointer', 
                       border: '2px dashed', 
-                      borderColor: form.homepageImage ? 'success.main' : 'divider', 
-                      bgcolor: form.homepageImage ? 'background.default' : alpha('#e53935', 0.05),
+                      borderColor: form.heroImage ? 'success.main' : 'divider',
+                      bgcolor: form.heroImage ? 'background.default' : alpha('#e53935', 0.05),
                       '&:hover .overlay': { opacity: 1 } 
                     }}
                   >
-                    {form.homepageImage ? (
+                    {form.heroImage ? (
                       <>
-                        <Box 
-                          component="img" 
-                          src={getImageUrl(form.homepageImage)} 
+                        <Box
+                          component="img"
+                          src={getImageUrl(form.heroImage)}
                           alt="Anasayfa" 
                           sx={{ 
                             position: 'absolute', 
@@ -1348,7 +1731,7 @@ export function SectionModal({ open, onClose, section, branchId, onSuccess }) {
                       type="file" 
                       hidden 
                       accept="image/*,.heic" 
-                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'homepageImage')} 
+                      onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0], 'heroImage')} 
                       disabled={uploadingImage}
                     />
                   </Box>
@@ -1396,6 +1779,9 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null })
   const [previewDialog, setPreviewDialog] = useState({ open: false, product: null })
+  const [quickSortOpen, setQuickSortOpen] = useState(false)
+  const [quickSortItems, setQuickSortItems] = useState([])
+  const [draggedProduct, setDraggedProduct] = useState(null)
 
   useEffect(() => { if (branchId && sectionId) loadData() }, [branchId, sectionId])
 
@@ -1413,13 +1799,14 @@ export function ProductsPage() {
         api.get(`/branches/${branchId}/tags`),
         api.get(`/branches/${branchId}/glb`)
       ])
-      setProducts(productsRes.data.products || productsRes.data)
+      const prods = productsRes.data.products || productsRes.data
+      setProducts(prods.sort((a, b) => (a.order || 0) - (b.order || 0)))
       setCategories(categoriesRes.data)
       setTags(tagsRes.data || [])
       setGlbFiles(glbRes.data || [])
-    } catch (err) { 
+    } catch (err) {
       console.error(err)
-      showSnackbar('Veriler yüklenemedi', 'error') 
+      showSnackbar('Veriler yüklenemedi', 'error')
     }
     finally { setLoading(false) }
   }
@@ -1433,16 +1820,124 @@ export function ProductsPage() {
     } catch { showSnackbar('Silme başarısız', 'error') }
   }
 
-  const filteredProducts = products.filter(p => {
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (filterCategory && p.categoryId !== filterCategory) return false
-    if (filterStatus === 'active' && !p.isActive) return false
-    if (filterStatus === 'inactive' && p.isActive) return false
-    if (filterStatus === 'featured' && !p.isFeatured) return false
-    if (filterStatus === 'campaign' && !p.isCampaign) return false
-    if (filterStatus === 'has3d' && !p.hasGlb) return false
-    return true
-  })
+  // Hiyerarşik kategori listesi oluştur
+  const buildCategoryTree = useCallback((cats, parentId = null, level = 0) => {
+    return cats
+      .filter(c => {
+        const catParent = c.parent?._id || c.parent || null
+        return catParent === parentId
+      })
+      .flatMap(c => [
+        { ...c, level },
+        ...buildCategoryTree(cats, c.id || c._id, level + 1)
+      ])
+  }, [])
+
+  const hierarchicalCategories = useMemo(() => buildCategoryTree(categories), [categories, buildCategoryTree])
+
+  // Kategori ve alt kategorilerinin ID'lerini bul
+  const getCategoryAndChildIds = useCallback((categoryId) => {
+    const ids = [categoryId]
+    const findChildren = (parentId) => {
+      categories.forEach(c => {
+        const pId = c.parent?._id || c.parent
+        if (pId === parentId || String(pId) === String(parentId)) {
+          ids.push(c.id || c._id)
+          findChildren(c.id || c._id)
+        }
+      })
+    }
+    findChildren(categoryId)
+    return ids
+  }, [categories])
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
+      if (filterCategory) {
+        const allowedCatIds = getCategoryAndChildIds(filterCategory)
+        if (!allowedCatIds.some(catId => p.categoryId === catId || String(p.categoryId) === String(catId))) return false
+      }
+      if (filterStatus === 'active' && !p.isActive) return false
+      if (filterStatus === 'inactive' && p.isActive) return false
+      if (filterStatus === 'featured' && !p.isFeatured) return false
+      if (filterStatus === 'campaign' && !p.isCampaign) return false
+      if (filterStatus === 'has3d' && !p.hasGlb) return false
+      return true
+    })
+  }, [products, search, filterCategory, filterStatus, getCategoryAndChildIds])
+
+  // Drag & Drop
+  const handleDragStart = (e, product) => {
+    setDraggedProduct(product)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e, targetProduct) => {
+    e.preventDefault()
+    if (!draggedProduct || draggedProduct.id === targetProduct.id) {
+      setDraggedProduct(null)
+      return
+    }
+
+    try {
+      const draggedIndex = filteredProducts.findIndex(p => p.id === draggedProduct.id)
+      const targetIndex = filteredProducts.findIndex(p => p.id === targetProduct.id)
+
+      const newOrder = [...filteredProducts]
+      newOrder.splice(draggedIndex, 1)
+      newOrder.splice(targetIndex, 0, draggedProduct)
+
+      await api.put('/products/reorder', {
+        orders: newOrder.map((p, i) => ({ id: p.id, order: i }))
+      })
+
+      showSnackbar('Sıralama güncellendi', 'success')
+      loadData()
+    } catch {
+      showSnackbar('Sıralama güncellenemedi', 'error')
+    }
+    setDraggedProduct(null)
+  }
+
+  // Hızlı Sıralama Modal
+  const openQuickSort = () => {
+    setQuickSortItems([...filteredProducts])
+    setQuickSortOpen(true)
+  }
+
+  const handleQuickSortDragStart = (e, index) => {
+    e.dataTransfer.setData('text/plain', index)
+  }
+
+  const handleQuickSortDrop = (e, targetIndex) => {
+    e.preventDefault()
+    const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'))
+    if (sourceIndex === targetIndex) return
+
+    const newItems = [...quickSortItems]
+    const [removed] = newItems.splice(sourceIndex, 1)
+    newItems.splice(targetIndex, 0, removed)
+    setQuickSortItems(newItems)
+  }
+
+  const saveQuickSort = async () => {
+    try {
+      await api.put('/products/reorder', {
+        orders: quickSortItems.map((p, i) => ({ id: p.id, order: i }))
+      })
+      showSnackbar('Sıralama güncellendi', 'success')
+      setQuickSortOpen(false)
+      loadData()
+    } catch {
+      showSnackbar('Sıralama güncellenemedi', 'error')
+    }
+  }
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
@@ -1455,11 +1950,16 @@ export function ProductsPage() {
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
                 <TextField size="small" placeholder="Ürün ara..." value={search} onChange={e => setSearch(e.target.value)}
                   InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }} sx={{ minWidth: 200 }} />
-                <FormControl size="small" sx={{ minWidth: 150 }}>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
                   <InputLabel>Kategori</InputLabel>
                   <Select value={filterCategory} label="Kategori" onChange={e => setFilterCategory(e.target.value)}>
                     <MenuItem value="">Tümü</MenuItem>
-                    {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.icon} {cat.name}</MenuItem>)}
+                    {hierarchicalCategories.map(cat => (
+                      <MenuItem key={cat.id} value={cat.id} sx={{ pl: 2 + cat.level * 2 }}>
+                        {cat.level > 0 && <Typography component="span" color="text.secondary" sx={{ mr: 0.5 }}>└</Typography>}
+                        {cat.icon} {cat.name}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 {currentSection && (
@@ -1478,6 +1978,7 @@ export function ProductsPage() {
                 </FormControl>
               </Stack>
               <Stack direction="row" spacing={1}>
+                <Button startIcon={<DragIndicator />} onClick={openQuickSort} variant="outlined">Hızlı Sırala</Button>
                 <Button startIcon={<Refresh />} onClick={loadData}>Yenile</Button>
                 <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingProduct(null); setModalOpen(true) }}>Yeni Ürün</Button>
               </Stack>
@@ -1494,7 +1995,25 @@ export function ProductsPage() {
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
           {filteredProducts.map(product => (
-            <Card key={product.id} sx={{ width: 200, height: 320, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+            <Card
+              key={product.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, product)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, product)}
+              sx={{
+                width: 200,
+                height: 320,
+                display: 'flex',
+                flexDirection: 'column',
+                flexShrink: 0,
+                cursor: 'grab',
+                transition: 'all 0.2s',
+                border: draggedProduct?.id === product.id ? '2px solid' : '1px solid',
+                borderColor: draggedProduct?.id === product.id ? 'primary.main' : 'divider',
+                '&:hover': { borderColor: 'primary.main', transform: 'translateY(-2px)', boxShadow: 4 }
+              }}
+            >
               <Box sx={{ position: 'relative', width: 200, height: 160, bgcolor: 'background.default', overflow: 'hidden', flexShrink: 0 }}>
                 {product.thumbnail ? (
                   <Box component="img" src={getImageUrl(product.thumbnail)} alt={product.name} sx={{ width: 200, height: 160, objectFit: 'cover', objectPosition: 'center' }} />
@@ -1503,6 +2022,9 @@ export function ProductsPage() {
                     <Restaurant sx={{ fontSize: 48, color: 'text.secondary' }} />
                   </Box>
                 )}
+                <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
+                  <DragIndicator sx={{ color: 'white', fontSize: 20, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }} />
+                </Box>
                 <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 8, right: 8 }} flexWrap="wrap">
                   {product.hasGlb && (
                     <Chip label="3D" size="small" color="info" icon={<ViewInAr />} onClick={(e) => { e.stopPropagation(); setPreviewDialog({ open: true, product }) }} sx={{ cursor: 'pointer' }} />
@@ -1564,6 +2086,63 @@ export function ProductsPage() {
               <ModelViewer3D glbFile={previewDialog.product.glbFile} productName={previewDialog.product.name} size="large" />
             )}
           </DialogContent>
+        </Dialog>
+
+        {/* Hızlı Sıralama Modal */}
+        <Dialog open={quickSortOpen} onClose={() => setQuickSortOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6" fontWeight={700}>Ürün Sıralaması</Typography>
+              <IconButton onClick={() => setQuickSortOpen(false)}><Close /></IconButton>
+            </Stack>
+          </DialogTitle>
+          <DialogContent dividers sx={{ p: 0 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ p: 2, display: 'block' }}>
+              Ürünleri sürükleyerek sıralayın. {filterCategory && 'Seçili kategorideki ürünler gösteriliyor.'}
+            </Typography>
+            <Box sx={{ maxHeight: 450, overflow: 'auto' }}>
+              {quickSortItems.length === 0 ? (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary">Ürün bulunamadı</Typography>
+                </Box>
+              ) : (
+                quickSortItems.map((product, index) => (
+                  <Paper
+                    key={product.id}
+                    draggable
+                    onDragStart={(e) => handleQuickSortDragStart(e, index)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleQuickSortDrop(e, index)}
+                    sx={{
+                      p: 1.5,
+                      mx: 2,
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      cursor: 'grab',
+                      transition: 'all 0.15s',
+                      '&:hover': { bgcolor: 'action.hover', transform: 'scale(1.01)' }
+                    }}
+                  >
+                    <DragIndicator sx={{ color: 'text.disabled' }} />
+                    <Typography variant="body2" sx={{ minWidth: 35, color: 'text.secondary', fontWeight: 600 }}>#{index + 1}</Typography>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body1" fontWeight={500} noWrap>{product.name}</Typography>
+                      {product.categoryName && (
+                        <Typography variant="caption" color="text.secondary" noWrap>{product.categoryIcon} {product.categoryName}</Typography>
+                      )}
+                    </Box>
+                    <Typography variant="body2" color="primary.main" fontWeight={600}>{formatPrice(product.price)}</Typography>
+                  </Paper>
+                ))
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setQuickSortOpen(false)}>İptal</Button>
+            <Button variant="contained" onClick={saveQuickSort} startIcon={<Check />}>Kaydet</Button>
+          </DialogActions>
         </Dialog>
       </Stack>
     </PageWrapper>
@@ -2113,6 +2692,8 @@ export function CategoriesPage() {
   const [editingCategory, setEditingCategory] = useState(null)
   const [deleteDialog, setDeleteDialog] = useState({ open: false, category: null })
   const [search, setSearch] = useState('')
+  const [expandedCategories, setExpandedCategories] = useState({})
+  const [draggedCategory, setDraggedCategory] = useState(null)
 
   useEffect(() => { if (branchId && sectionId) loadData() }, [branchId, sectionId])
 
@@ -2149,154 +2730,267 @@ export function CategoriesPage() {
     } catch { showSnackbar('Yükleme başarısız', 'error') }
   }
 
-  const getLayoutLabel = (size) => {
-    switch(size) {
-      case 'full': return 'Tam'
-      case 'half': return '1/2'
-      case 'third': return '1/3'
-      default: return '1/2'
+  // Toggle expand/collapse
+  const toggleExpand = (categoryId) => {
+    setExpandedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }))
+  }
+
+  // Ana kategoriler (parent yok)
+  const mainCategories = useMemo(() => {
+    return categories.filter(c => !c.parent).sort((a, b) => (a.order || 0) - (b.order || 0))
+  }, [categories])
+
+  // Bir kategorinin alt kategorilerini bul
+  const getChildCategories = useCallback((parentId) => {
+    return categories.filter(c => {
+      const pId = c.parent?._id || c.parent
+      return pId === parentId || String(pId) === String(parentId)
+    }).sort((a, b) => (a.order || 0) - (b.order || 0))
+  }, [categories])
+
+  // Alt kategori sayısını hesapla (recursive)
+  const getSubCategoryCount = useCallback((parentId) => {
+    const children = getChildCategories(parentId)
+    let count = children.length
+    children.forEach(child => {
+      count += getSubCategoryCount(child.id || child._id)
+    })
+    return count
+  }, [getChildCategories])
+
+  // Drag & Drop handlers
+  const handleDragStart = (e, category) => {
+    setDraggedCategory(category)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e, targetCategory) => {
+    e.preventDefault()
+    if (!draggedCategory || draggedCategory.id === targetCategory.id) {
+      setDraggedCategory(null)
+      return
     }
-  }
 
-  // Hiyerarşik kategori ağacı oluştur
-  const buildCategoryTree = useCallback((cats, parentId = null, level = 0) => {
-    return cats
-      .filter(c => {
-        const catParent = c.parent?._id || c.parent || null
-        return catParent === parentId
+    // Aynı parent altındaki kategorilerin sırasını değiştir
+    const draggedParent = draggedCategory.parent?._id || draggedCategory.parent || null
+    const targetParent = targetCategory.parent?._id || targetCategory.parent || null
+
+    if (draggedParent !== targetParent && String(draggedParent) !== String(targetParent)) {
+      showSnackbar('Farklı üst kategoriler arası taşıma yapılamaz', 'warning')
+      setDraggedCategory(null)
+      return
+    }
+
+    try {
+      // Sıralama güncelle
+      const siblings = draggedParent
+        ? getChildCategories(draggedParent)
+        : mainCategories
+
+      const draggedIndex = siblings.findIndex(c => c.id === draggedCategory.id)
+      const targetIndex = siblings.findIndex(c => c.id === targetCategory.id)
+
+      const newOrder = [...siblings]
+      newOrder.splice(draggedIndex, 1)
+      newOrder.splice(targetIndex, 0, draggedCategory)
+
+      // Backend'e sıralama gönder
+      await api.put(`/categories/reorder`, {
+        orders: newOrder.map((c, i) => ({ id: c.id, order: i }))
       })
-      .flatMap(c => [
-        { ...c, level },
-        ...buildCategoryTree(cats, c.id || c._id, level + 1)
-      ])
-  }, [])
 
-  // Üst kategori adını bul
-  const getParentName = (category) => {
-    if (!category.parent) return null
-    const parentId = category.parent?._id || category.parent
-    const parent = categories.find(c => (c.id || c._id) === parentId)
-    return parent ? parent.name : null
+      showSnackbar('Sıralama güncellendi', 'success')
+      loadData()
+    } catch {
+      showSnackbar('Sıralama güncellenemedi', 'error')
+    }
+    setDraggedCategory(null)
   }
 
-  const hierarchicalCategories = useMemo(() => buildCategoryTree(categories), [categories, buildCategoryTree])
-
-  const filteredCategories = hierarchicalCategories.filter(category => {
+  const filteredMainCategories = mainCategories.filter(category => {
     if (!search.trim()) return true
     const searchLower = search.toLowerCase()
-    return category.name?.toLowerCase().includes(searchLower) || category.nameEN?.toLowerCase().includes(searchLower) || category.icon?.includes(search)
+    return category.name?.toLowerCase().includes(searchLower) || category.nameEN?.toLowerCase().includes(searchLower)
   })
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
 
+  // Alt kategori renderı (recursive)
+  const renderSubCategories = (parentId, level = 1) => {
+    const children = getChildCategories(parentId)
+    if (children.length === 0) return null
+
+    return (
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1.5, pl: 1, borderLeft: '2px solid', borderColor: 'primary.main', ml: 1 }}>
+        {children.map(subCat => {
+          const subChildren = getChildCategories(subCat.id || subCat._id)
+          const hasChildren = subChildren.length > 0
+          const isExpanded = expandedCategories[subCat.id]
+
+          return (
+            <Box key={subCat.id} sx={{ width: 'calc(20% - 12px)', minWidth: 160 }}>
+              <Paper
+                draggable
+                onDragStart={(e) => handleDragStart(e, subCat)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, subCat)}
+                elevation={2}
+                sx={{
+                  p: 1.5,
+                  cursor: 'grab',
+                  transition: 'all 0.2s',
+                  border: '1px solid',
+                  borderColor: draggedCategory?.id === subCat.id ? 'primary.main' : 'transparent',
+                  bgcolor: draggedCategory?.id === subCat.id ? 'action.selected' : 'background.paper',
+                  '&:hover': { borderColor: 'primary.main', transform: 'translateY(-2px)', boxShadow: 4 }
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                  <DragIndicator sx={{ fontSize: 18, color: 'text.disabled', cursor: 'grab' }} />
+                  <Typography sx={{ fontSize: '1.5rem' }}>{subCat.icon}</Typography>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600} noWrap>{subCat.name}</Typography>
+                    {subCat.nameEN && <Typography variant="caption" color="text.secondary" noWrap>EN: {subCat.nameEN}</Typography>}
+                  </Box>
+                </Stack>
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    {hasChildren && (
+                      <Chip
+                        size="small"
+                        label={`${subChildren.length} alt`}
+                        color="primary"
+                        variant="outlined"
+                        onClick={() => toggleExpand(subCat.id)}
+                        icon={isExpanded ? <ExpandMore sx={{ fontSize: 14 }} /> : <KeyboardArrowRight sx={{ fontSize: 14 }} />}
+                        sx={{ height: 22, fontSize: '0.7rem', cursor: 'pointer' }}
+                      />
+                    )}
+                    <Chip size="small" label={subCat.isActive ? 'Aktif' : 'Pasif'} color={subCat.isActive ? 'success' : 'default'} sx={{ height: 20, fontSize: '0.65rem' }} />
+                  </Stack>
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small" onClick={() => { setEditingCategory(subCat); setModalOpen(true) }}>
+                      <Edit sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category: subCat })}>
+                      <Delete sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Stack>
+                </Stack>
+              </Paper>
+              {hasChildren && isExpanded && renderSubCategories(subCat.id || subCat._id, level + 1)}
+            </Box>
+          )
+        })}
+      </Box>
+    )
+  }
+
   return (
     <PageWrapper>
-      <Stack spacing={3}>
+      <Stack spacing={2}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
           <Box>
             <Typography variant="h6" fontWeight={700}>{categories.length} Kategori</Typography>
-            <Typography variant="body2" color="text.secondary">{currentSection?.icon} {currentSection?.name} bölümü kategorileri</Typography>
+            <Typography variant="body2" color="text.secondary">{currentSection?.icon} {currentSection?.name} bölümü</Typography>
           </Box>
-          <Stack direction="row" spacing={2} alignItems="center">
-            {currentSection && <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />}
-            <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>Yeni Kategori</Button>
-          </Stack>
+          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>Yeni Kategori</Button>
         </Stack>
 
-        <TextField fullWidth placeholder="Kategori ara... (isim veya ikon)" value={search} onChange={e => setSearch(e.target.value)}
-          InputProps={{
-            startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>,
-            endAdornment: search && <InputAdornment position="end"><IconButton size="small" onClick={() => setSearch('')}><Close fontSize="small" /></IconButton></InputAdornment>
-          }}
-          sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'background.paper', borderRadius: 2 } }} />
+        <TextField size="small" fullWidth placeholder="Kategori ara..." value={search} onChange={e => setSearch(e.target.value)}
+          InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action" fontSize="small" /></InputAdornment> }}
+          sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'background.paper' } }} />
 
-        {search && <Typography variant="body2" color="text.secondary">{filteredCategories.length} sonuç bulundu</Typography>}
+        {/* Ana kategoriler - 5'li grid */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          {filteredMainCategories.map(category => {
+            const subCount = getSubCategoryCount(category.id)
+            const isExpanded = expandedCategories[category.id]
+            const children = getChildCategories(category.id)
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {filteredCategories.map(category => {
-            const isMainCategory = category.level === 0
-
-            // Ana kategori - resimli büyük kart
-            if (isMainCategory) {
-              return (
-                <Card key={category.id} sx={{ display: 'flex', flexDirection: 'row', overflow: 'hidden', maxWidth: 500 }}>
-                  <Box sx={{ position: 'relative', width: 160, minHeight: 160, bgcolor: 'background.default', overflow: 'hidden', flexShrink: 0 }}>
+            return (
+              <Box key={category.id} sx={{ width: 'calc(20% - 13px)', minWidth: 180, display: 'flex', flexDirection: 'column' }}>
+                <Card
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, category)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, category)}
+                  sx={{
+                    cursor: 'grab',
+                    transition: 'all 0.2s',
+                    border: draggedCategory?.id === category.id ? '2px solid' : '1px solid',
+                    borderColor: draggedCategory?.id === category.id ? 'primary.main' : 'divider',
+                    '&:hover': { borderColor: 'primary.main', transform: 'translateY(-2px)', boxShadow: 4 },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: 280
+                  }}
+                >
+                  {/* Resim alanı - 16:9 oran, sabit yükseklik */}
+                  <Box sx={{ position: 'relative', height: 120, flexShrink: 0, bgcolor: 'background.default' }}>
                     {category.image ? (
-                      <Box component="img" src={getImageUrl(category.image)} alt={category.name} sx={{ width: 160, height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                      <Box component="img" src={getImageUrl(category.image)} alt={category.name} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <Box sx={{ width: 160, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' }}>
+                      <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' }}>
                         <Typography variant="h2">{category.icon}</Typography>
                       </Box>
                     )}
-                    <Tooltip title="Görsel Yükle">
-                      <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}>
-                        <PhotoCamera sx={{ color: 'white', fontSize: 20 }} />
-                        <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.7)', p: 0.75, '&:hover': { bgcolor: 'primary.main' } }}>
+                      <PhotoCamera sx={{ color: 'white', fontSize: 18 }} />
+                      <input type="file" hidden accept="image/*,.heic" onChange={e => e.target.files[0] && handleImageUpload(category.id, e.target.files[0])} />
+                    </IconButton>
+                    <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
+                      <DragIndicator sx={{ color: 'white', fontSize: 20, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }} />
+                    </Box>
+                    <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} sx={{ position: 'absolute', top: 8, right: 8, height: 20, fontSize: '0.65rem' }} />
                   </Box>
-                  <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                      <Box>
-                        <Typography variant="h6" fontWeight={700}>{category.icon} {category.name}</Typography>
-                        {category.nameEN && <Typography variant="body2" color="text.secondary">🇬🇧 {category.nameEN}</Typography>}
-                      </Box>
-                      <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} />
-                    </Stack>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>{category.productCount || 0} ürün</Typography>
-                    <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
-                      <Chip label={getLayoutLabel(category.layoutSize)} size="small" variant="outlined" color="primary" sx={{ height: 20, fontSize: '0.65rem' }} />
-                    </Stack>
-                    <Stack direction="row" spacing={1} sx={{ mt: 'auto', pt: 1 }}>
-                      <Button size="small" startIcon={<Edit />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>Düzenle</Button>
-                      <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete fontSize="small" /></IconButton>
-                    </Stack>
-                  </Box>
-                </Card>
-              )
-            }
 
-            // Alt kategori - kompakt satır görünümü (resimsiz)
-            return (
-              <Paper
-                key={category.id}
-                variant="outlined"
-                sx={{
-                  ml: category.level * 4,
-                  p: 1.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  borderLeft: '3px solid',
-                  borderColor: 'primary.main',
-                  maxWidth: 500 - (category.level * 32)
-                }}
-              >
-                <Typography variant="h5" sx={{ minWidth: 40, textAlign: 'center' }}>{category.icon}</Typography>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle2" fontWeight={600} noWrap>{category.name}</Typography>
-                    <Chip label={`${category.level}. seviye`} size="small" color="primary" sx={{ height: 18, fontSize: '0.6rem' }} />
-                    <Chip label={category.isActive ? 'Aktif' : 'Pasif'} size="small" color={category.isActive ? 'success' : 'default'} sx={{ height: 18, fontSize: '0.6rem' }} />
-                  </Stack>
-                  {category.nameEN && <Typography variant="caption" color="text.secondary" noWrap>🇬🇧 {category.nameEN}</Typography>}
-                  <Typography variant="caption" color="text.secondary" display="block">{category.productCount || 0} ürün • ↳ {getParentName(category)}</Typography>
-                </Box>
-                <Stack direction="row" spacing={0.5}>
-                  <IconButton size="small" onClick={() => { setEditingCategory(category); setModalOpen(true) }}><Edit fontSize="small" /></IconButton>
-                  <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete fontSize="small" /></IconButton>
-                </Stack>
-              </Paper>
+                  <CardContent sx={{ p: 1.5, pb: '12px !important', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={700} noWrap>{category.icon} {category.name}</Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ minHeight: 18 }}>
+                      {category.nameEN ? `EN: ${category.nameEN}` : ''}
+                    </Typography>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 'auto' }}>
+                      <Typography variant="body2" color="text.secondary">{category.productCount || 0} ürün</Typography>
+                      {subCount > 0 && (
+                        <Chip
+                          label={`${subCount} alt`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          onClick={() => toggleExpand(category.id)}
+                          icon={isExpanded ? <ExpandMore sx={{ fontSize: 16 }} /> : <KeyboardArrowRight sx={{ fontSize: 16 }} />}
+                          sx={{ height: 24, fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
+                        />
+                      )}
+                    </Stack>
+                    <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
+                      <Button size="small" fullWidth variant="contained" startIcon={<Edit sx={{ fontSize: 16 }} />} onClick={() => { setEditingCategory(category); setModalOpen(true) }}>
+                        Düzenle
+                      </Button>
+                      <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, category })}><Delete sx={{ fontSize: 18 }} /></IconButton>
+                    </Stack>
+                  </CardContent>
+                </Card>
+
+                {/* Alt kategoriler dropdown */}
+                {children.length > 0 && isExpanded && renderSubCategories(category.id)}
+              </Box>
             )
           })}
         </Box>
 
-        {filteredCategories.length === 0 && !search && (
+        {filteredMainCategories.length === 0 && !search && (
           <EmptyState icon={<Category sx={{ fontSize: 64 }} />} title="Henüz kategori yok"
             action={<Button variant="contained" startIcon={<Add />} onClick={() => { setEditingCategory(null); setModalOpen(true) }}>İlk Kategoriyi Ekle</Button>} />
         )}
 
-        {filteredCategories.length === 0 && search && (
+        {filteredMainCategories.length === 0 && search && (
           <EmptyState icon={<Search sx={{ fontSize: 64 }} />} title="Sonuç bulunamadı" description={`"${search}" için kategori bulunamadı`}
             action={<Button variant="outlined" onClick={() => setSearch('')}>Aramayı Temizle</Button>} />
         )}
@@ -2555,7 +3249,6 @@ function CategoryModal({ open, category, sectionId, branchId, onClose, onSave })
 // ==================== CATEGORY LAYOUT PAGE ====================
 export function CategoryLayoutPage() {
   const { branchId, sectionId } = useParams()
-  const { currentSection } = useBranch()
   const showSnackbar = useSnackbar()
   const [categories, setCategories] = useState([])
   const [layouts, setLayouts] = useState([])
@@ -2642,8 +3335,13 @@ export function CategoryLayoutPage() {
     finally { setSaving(false) }
   }
 
+  // Sadece ana kategoriler (parent'ı olmayan)
+  const mainCategories = useMemo(() => {
+    return categories.filter(c => !c.parent).sort((a, b) => (a.order || 0) - (b.order || 0))
+  }, [categories])
+
   const usedCategoryIds = layouts.flatMap(l => (l.categories || []).map(c => c.category?.id || c.category?._id || c.category)).filter(Boolean)
-  const unusedCategories = categories.filter(c => !usedCategoryIds.includes(c.id))
+  const unusedCategories = mainCategories.filter(c => !usedCategoryIds.includes(c.id))
   const getGridSize = (size) => size === 'full' ? 12 : size === 'half' ? 6 : 4
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
@@ -2651,19 +3349,10 @@ export function CategoryLayoutPage() {
   return (
     <PageWrapper>
       <Stack spacing={3}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={2}>
-          <Box>
-            <Typography variant="h6" fontWeight={700}>Kategori Düzeni</Typography>
-            <Typography variant="body2" color="text.secondary">{currentSection?.icon} {currentSection?.name} bölümü için menü düzeni</Typography>
-          </Box>
-          <Stack direction="row" spacing={1}>
-            {currentSection && <Chip icon={<Place />} label={`${currentSection.icon} ${currentSection.name}`} color="primary" variant="outlined" />}
-            <Button onClick={loadData} startIcon={<Refresh />}>Yenile</Button>
-            <Button variant="contained" onClick={saveLayouts} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button>
-          </Stack>
+        <Stack direction="row" justifyContent="flex-end" spacing={1}>
+          <Button onClick={loadData} startIcon={<Refresh />}>Yenile</Button>
+          <Button variant="contained" onClick={saveLayouts} disabled={saving} startIcon={saving ? <CircularProgress size={20} /> : <Check />}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Button>
         </Stack>
-
-        <Alert severity="info">Her satır maksimum 1 birim genişliğinde. Tam: 1, Yarım: 0.5, Üçte Bir: 0.33</Alert>
 
         <Card>
           <CardHeader title={`Kullanılmayan Kategoriler (${unusedCategories.length})`} />
@@ -3697,6 +4386,7 @@ export function BranchSettingsPage() {
   const [tab, setTab] = useState(0)
   const [saving, setSaving] = useState(false)
   const [branch, setBranch] = useState(null)
+  const [sections, setSections] = useState([])
   const [form, setForm] = useState({
     name: '',
     slug: '',
@@ -3712,8 +4402,13 @@ export function BranchSettingsPage() {
   const loadBranch = async () => {
     if (!branchId) return
     try {
-      const res = await api.get(`/branches/${branchId}`)
-      setBranch(res.data)
+      const [branchRes, sectionsRes] = await Promise.all([
+        api.get(`/branches/${branchId}`),
+        api.get(`/branches/${branchId}/sections`)
+      ])
+      setBranch(branchRes.data)
+      setSections(sectionsRes.data || [])
+      const res = branchRes
       setForm({
         name: res.data.name || '',
         slug: res.data.slug || '',
@@ -3783,6 +4478,23 @@ export function BranchSettingsPage() {
     }
   }
 
+  const handleHeroUpload = async (file) => {
+    try {
+      let processedFile = file
+      if (isHeicFile(file)) {
+        processedFile = await convertHeicToJpg(file)
+      }
+      const formData = new FormData()
+      formData.append('image', processedFile)
+      await api.post(`/branches/${branchId}/image?type=hero`, formData)
+      showSnackbar('Anasayfa görseli yüklendi', 'success')
+      loadBranch()
+    } catch (err) {
+      console.error(err)
+      showSnackbar('Yüklenemedi', 'error')
+    }
+  }
+
   const copyMenuLink = () => {
     const link = `${window.location.origin}/${branch?.slug || 'menu'}`
     navigator.clipboard.writeText(link)
@@ -3824,64 +4536,139 @@ export function BranchSettingsPage() {
         {tab === 0 && (
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="subtitle2" gutterBottom>Şube Logosu</Typography>
-                  <Box
-                    component="label"
-                    sx={{
-                      display: 'block',
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '100%',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      border: '2px dashed',
-                      borderColor: branch?.logo ? 'transparent' : 'divider',
-                      bgcolor: 'background.default',
-                      '&:hover .overlay': { opacity: 1 }
-                    }}
-                  >
-                    {branch?.logo ? (
-                      <>
-                        <Box
-                          component="img"
-                          src={getImageUrl(branch.logo)}
-                          alt="Logo"
-                          sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', p: 2 }}
-                        />
-                        <Box
-                          className="overlay"
-                          sx={{
-                            position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.6)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            opacity: 0, transition: 'opacity 0.2s'
-                          }}
-                        >
+              <Stack spacing={2}>
+                {/* Şube Logosu */}
+                <Card>
+                  <CardContent>
+                    <Typography variant="subtitle2" gutterBottom>Şube Logosu</Typography>
+                    <Box
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        position: 'relative',
+                        width: '100%',
+                        paddingTop: '100%',
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        border: '2px dashed',
+                        borderColor: branch?.logo ? 'transparent' : 'divider',
+                        bgcolor: 'background.default',
+                        '&:hover .overlay': { opacity: 1 }
+                      }}
+                    >
+                      {branch?.logo ? (
+                        <>
+                          <Box
+                            component="img"
+                            src={getImageUrl(branch.logo)}
+                            alt="Logo"
+                            sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', p: 2 }}
+                          />
+                          <Box
+                            className="overlay"
+                            sx={{
+                              position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.6)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              opacity: 0, transition: 'opacity 0.2s'
+                            }}
+                          >
+                            <Stack alignItems="center" spacing={0.5}>
+                              <PhotoCamera sx={{ color: 'white', fontSize: 32 }} />
+                              <Typography variant="caption" color="white">Değiştir</Typography>
+                            </Stack>
+                          </Box>
+                        </>
+                      ) : (
+                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Stack alignItems="center" spacing={0.5}>
-                            <PhotoCamera sx={{ color: 'white', fontSize: 32 }} />
-                            <Typography variant="caption" color="white">Değiştir</Typography>
+                            <CloudUpload sx={{ fontSize: 40, color: 'text.secondary' }} />
+                            <Typography variant="caption" color="text.secondary">Logo Yükle</Typography>
                           </Stack>
                         </Box>
-                      </>
-                    ) : (
-                      <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Stack alignItems="center" spacing={0.5}>
-                          <CloudUpload sx={{ fontSize: 40, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary">Logo Yükle</Typography>
-                        </Stack>
+                      )}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*,.heic"
+                        onChange={e => e.target.files[0] && handleLogoUpload(e.target.files[0])}
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                {/* Anasayfa Görseli (Hero) - Sadece bölüm yoksa göster */}
+                {sections.length === 0 && (
+                  <Card>
+                    <CardContent>
+                      <Typography variant="subtitle2" gutterBottom>Anasayfa Görseli</Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                        Menünün en üstünde görünecek kapak resmi
+                      </Typography>
+                      <Box
+                        component="label"
+                        sx={{
+                          display: 'block',
+                          position: 'relative',
+                          width: '100%',
+                          paddingTop: '56.25%', // 16:9 aspect ratio
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          border: '2px dashed',
+                          borderColor: branch?.heroImage ? 'transparent' : 'divider',
+                          bgcolor: 'background.default',
+                          '&:hover .overlay': { opacity: 1 }
+                        }}
+                      >
+                        {branch?.heroImage ? (
+                          <>
+                            <Box
+                              component="img"
+                              src={getImageUrl(branch.heroImage)}
+                              alt="Hero"
+                              sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            <Box
+                              className="overlay"
+                              sx={{
+                                position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.6)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                opacity: 0, transition: 'opacity 0.2s'
+                              }}
+                            >
+                              <Stack alignItems="center" spacing={0.5}>
+                                <PhotoCamera sx={{ color: 'white', fontSize: 32 }} />
+                                <Typography variant="caption" color="white">Değiştir</Typography>
+                              </Stack>
+                            </Box>
+                          </>
+                        ) : (
+                          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Stack alignItems="center" spacing={0.5}>
+                              <CloudUpload sx={{ fontSize: 40, color: 'text.secondary' }} />
+                              <Typography variant="caption" color="text.secondary">Kapak Resmi Yükle</Typography>
+                            </Stack>
+                          </Box>
+                        )}
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*,.heic"
+                          onChange={e => e.target.files[0] && handleHeroUpload(e.target.files[0])}
+                        />
                       </Box>
-                    )}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*,.heic"
-                      onChange={e => e.target.files[0] && handleLogoUpload(e.target.files[0])}
-                    />
-                  </Box>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Bölüm varsa bilgilendirme */}
+                {sections.length > 0 && (
+                  <Alert severity="info" sx={{ mt: 0 }}>
+                    Anasayfa görseli her bölüm için ayrı ayarlanabilir. Bölümler sayfasından düzenleyebilirsiniz.
+                  </Alert>
+                )}
+              </Stack>
             </Grid>
 
             <Grid item xs={12} md={8}>
