@@ -14,7 +14,8 @@ import {
   KeyboardArrowRight, ViewInAr, Close, ShoppingBag, Star, Search,
   Person, Lock, Visibility, VisibilityOff, Email, Login as LoginIcon,
   Send, ArrowBack, ExpandMore, LocalOffer, Info, RateReview, ChevronLeft, ChevronRight,
-  Language, Place, Translate
+  Language, Place, Translate, Check, QrCode, Speed, TouchApp, Palette,
+  Devices, CloudUpload, Support, TrendingUp, BarChart, Groups
 } from '@mui/icons-material'
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
 import { useAuth, API_URL, api, formatPrice, getImageUrl, getGlbUrl } from './App'
@@ -145,108 +146,408 @@ export function LoginPage() {
 
 // ==================== BRANCH SELECTION PAGE ====================
 export function BranchSelectionPage() {
-  const [branches, setBranches] = useState([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width:600px)')
 
-  useEffect(() => { loadBranches() }, [])
+  const features = [
+    { icon: <ViewInAr sx={{ fontSize: 40 }} />, title: '3D & AR Görüntüleme', desc: 'Ürünlerinizi 3 boyutlu olarak müşterilerinize gösterin. Artırılmış gerçeklik ile masada görselleştirme.' },
+    { icon: <QrCode sx={{ fontSize: 40 }} />, title: 'QR Kod Menü', desc: 'Masalara özel QR kodlar ile temassız menü deneyimi. Hijyenik ve modern çözüm.' },
+    { icon: <Devices sx={{ fontSize: 40 }} />, title: 'Tüm Cihazlarda', desc: 'Mobil, tablet ve masaüstü cihazlarda mükemmel görünüm. Responsive tasarım.' },
+    { icon: <Speed sx={{ fontSize: 40 }} />, title: 'Hızlı & Kolay', desc: 'Dakikalar içinde menünüzü oluşturun. Sürükle-bırak ile kolay düzenleme.' },
+    { icon: <Palette sx={{ fontSize: 40 }} />, title: 'Özelleştirilebilir', desc: 'Markanıza uygun renkler, logolar ve temalar. Tamamen size özel tasarım.' },
+    { icon: <Language sx={{ fontSize: 40 }} />, title: 'Çoklu Dil Desteği', desc: 'Türkçe, İngilizce, Arapça ve daha fazlası. Uluslararası misafirlerinize hitap edin.' }
+  ]
 
-  const loadBranches = async () => {
-    try {
-      const res = await axios.get(API_URL + '/public/branches')
-      setBranches(res.data)
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
-  }
+  const pricingPlans = [
+    {
+      name: 'Başlangıç',
+      price: '1.000',
+      period: 'ay',
+      desc: 'Küçük işletmeler için ideal',
+      color: '#1e88e5',
+      features: ['1 Şube', '100 Ürün', 'QR Kod Menü', '10 Adet 3D Model', 'AR Görüntüleme', 'Temel Tema', 'Email Destek'],
+      notIncluded: ['Çoklu Dil', 'Öncelikli Destek', 'API Erişimi']
+    },
+    {
+      name: 'Profesyonel',
+      price: '2.500',
+      period: 'ay',
+      desc: 'Büyüyen restoranlar için',
+      color: '#e53935',
+      popular: true,
+      features: ['3 Şube', 'Sınırsız Ürün', 'QR Kod Menü', 'Sınırsız 3D Model', 'AR Görüntüleme', 'Özel Tema', '3 Dil Desteği', 'Öncelikli Destek', 'Haftalık Raporlar'],
+      notIncluded: ['API Erişimi']
+    },
+    {
+      name: 'Kurumsal',
+      price: '5.000',
+      period: 'ay',
+      desc: 'Zincir restoranlar için',
+      color: '#7c4dff',
+      features: ['Sınırsız Şube', 'Sınırsız Ürün', 'QR Kod Menü', 'Sınırsız 3D Model', 'AR Görüntüleme', 'Özel Tema & Tasarım', 'Sınırsız Dil', '7/24 Destek', 'Anlık Raporlar', 'API Erişimi', 'Özel Entegrasyonlar'],
+      notIncluded: []
+    }
+  ]
+
+  const stats = [
+    { value: '500+', label: 'Aktif Restoran' },
+    { value: '50K+', label: 'Aylık Menü Görüntüleme' },
+    { value: '99.9%', label: 'Uptime Garantisi' },
+    { value: '4.9', label: 'Müşteri Puanı', icon: <Star sx={{ color: '#ffc107', ml: 0.5 }} /> }
+  ]
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a', backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(229,57,53,0.15) 0%, transparent 50%)' }}>
-        {loading ? (
-          <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Stack alignItems="center" spacing={2}>
-              <CircularProgress size={60} />
-              <Typography color="text.secondary">Şubeler yükleniyor...</Typography>
-            </Stack>
-          </Box>
-        ) : branches.length === 0 ? (
-          <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 3 }}>
-            <Store sx={{ fontSize: 100, color: 'text.secondary', mb: 3 }} />
-            <Typography variant="h4" color="white" gutterBottom fontWeight={700}>Hoş Geldiniz</Typography>
-            <Typography color="text.secondary" mb={4} textAlign="center">Henüz şube eklenmemiş.</Typography>
-            <Button variant="contained" component={Link} to="/login" size="large" startIcon={<LoginIcon />}>Admin Girişi</Button>
-          </Box>
-        ) : (
-          <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3, py: 6 }}>
-            {/* Header */}
-            <Fade in timeout={500}>
-              <Box sx={{ textAlign: 'center', mb: 6 }}>
-                <Box sx={{
-                  width: 100, height: 100, borderRadius: '24px', bgcolor: 'primary.main',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 3,
-                  boxShadow: '0 12px 40px rgba(229,57,53,0.4)'
-                }}>
-                  <Restaurant sx={{ fontSize: 50, color: 'white' }} />
-                </Box>
-                <Typography variant="h2" fontWeight={800} color="white" gutterBottom>AR Menu</Typography>
-                <Typography variant="h6" color="text.secondary">Şubenizi Seçin</Typography>
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
+        {/* Navbar */}
+        <Box sx={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+          backdropFilter: 'blur(20px)', bgcolor: 'rgba(10,10,10,0.8)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center"
+            sx={{ maxWidth: 1400, mx: 'auto', px: 3, py: 2 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box sx={{
+                width: 40, height: 40, borderRadius: 2, bgcolor: 'primary.main',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <Restaurant sx={{ color: 'white' }} />
               </Box>
-            </Fade>
+              <Typography variant="h6" fontWeight={800} color="white">AR Menu</Typography>
+            </Stack>
+            <Stack direction="row" spacing={2}>
+              <Button color="inherit" sx={{ color: 'text.secondary', display: { xs: 'none', sm: 'flex' } }}
+                onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}>
+                Özellikler
+              </Button>
+              <Button color="inherit" sx={{ color: 'text.secondary', display: { xs: 'none', sm: 'flex' } }}
+                onClick={() => document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' })}>
+                Fiyatlar
+              </Button>
+              <Button variant="outlined" color="inherit" onClick={() => navigate('/login')}>
+                Giriş Yap
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
 
-            {/* Branch Cards */}
-            <Grid container spacing={3} justifyContent="center">
-              {branches.map((branch, index) => (
-                <Grid item xs={12} sm={6} md={4} key={branch.id}>
-                  <Grow in timeout={300 + index * 100}>
-                    <Card component={Link} to={`/menu/${branch.slug}`}
-                      sx={{
-                        textDecoration: 'none', height: '100%', display: 'flex', flexDirection: 'column',
-                        transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-8px)', boxShadow: '0 20px 60px rgba(229,57,53,0.3)' }
-                      }}>
-                      <Box sx={{ position: 'relative', pt: '60%', bgcolor: 'background.default', overflow: 'hidden' }}>
-                        {branch.image ? (
-                          <CardMedia component="img" image={getImageUrl(branch.image)} alt={branch.name}
-                            sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.05)' } }} />
-                        ) : (
-                          <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)' }}>
-                            <Store sx={{ fontSize: 80, color: 'text.secondary' }} />
+        {/* Hero Section */}
+        <Box sx={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(229,57,53,0.15) 0%, transparent 60%)',
+          pt: 10
+        }}>
+          <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3, py: 8, width: '100%' }}>
+            <Grid container spacing={6} alignItems="center">
+              <Grid item xs={12} md={6}>
+                <Fade in timeout={800}>
+                  <Box>
+                    <Chip label="Yeni Nesil Dijital Menü" color="primary" sx={{ mb: 3, fontWeight: 600 }} />
+                    <Typography variant={isMobile ? 'h3' : 'h2'} fontWeight={800} color="white" sx={{ mb: 3, lineHeight: 1.2 }}>
+                      Restoranınızı <br />
+                      <Box component="span" sx={{ color: 'primary.main' }}>Geleceğe</Box> Taşıyın
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.8 }}>
+                      3D modeller, artırılmış gerçeklik ve QR kod menü ile müşterilerinize
+                      unutulmaz bir deneyim sunun. Dijital dönüşümünüzü bugün başlatın.
+                    </Typography>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                      <Button variant="contained" size="large" sx={{ py: 2, px: 4, fontSize: '1.1rem' }}
+                        onClick={() => document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' })}>
+                        Hemen Başla
+                      </Button>
+                      <Button variant="outlined" size="large" sx={{ py: 2, px: 4 }} startIcon={<ViewInAr />}
+                        onClick={() => navigate('/menu/demo')}>
+                        Demo Menüyü İncele
+                      </Button>
+                    </Stack>
+
+                    {/* Stats */}
+                    <Grid container spacing={3} sx={{ mt: 6 }}>
+                      {stats.map((stat, i) => (
+                        <Grid item xs={6} sm={3} key={i}>
+                          <Box>
+                            <Stack direction="row" alignItems="center">
+                              <Typography variant="h4" fontWeight={800} color="white">{stat.value}</Typography>
+                              {stat.icon}
+                            </Stack>
+                            <Typography variant="body2" color="text.secondary">{stat.label}</Typography>
                           </Box>
-                        )}
-                        {branch.logo && (
-                          <Avatar src={getImageUrl(branch.logo)} sx={{ position: 'absolute', bottom: -30, left: 20, width: 64, height: 64, border: '4px solid', borderColor: 'background.paper', boxShadow: 3 }} />
-                        )}
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                </Fade>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Fade in timeout={1000}>
+                  <Box sx={{
+                    position: 'relative',
+                    '&::before': {
+                      content: '""', position: 'absolute', top: -20, right: -20, bottom: -20, left: -20,
+                      background: 'linear-gradient(135deg, rgba(229,57,53,0.3) 0%, rgba(124,77,255,0.3) 100%)',
+                      borderRadius: 4, filter: 'blur(40px)', zIndex: 0
+                    }
+                  }}>
+                    <Box sx={{
+                      position: 'relative', zIndex: 1,
+                      bgcolor: 'background.paper', borderRadius: 4, p: 3,
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      boxShadow: '0 20px 80px rgba(0,0,0,0.5)'
+                    }}>
+                      <Box sx={{
+                        bgcolor: '#1a1a1a', borderRadius: 3, p: 2, mb: 2,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        aspectRatio: '16/10'
+                      }}>
+                        <Stack alignItems="center" spacing={2}>
+                          <ViewInAr sx={{ fontSize: 80, color: 'primary.main' }} />
+                          <Typography color="text.secondary">3D Menü Önizleme</Typography>
+                        </Stack>
                       </Box>
+                      <Stack direction="row" spacing={2}>
+                        {[1, 2, 3].map(i => (
+                          <Box key={i} sx={{
+                            flex: 1, bgcolor: '#1a1a1a', borderRadius: 2, p: 2,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            aspectRatio: '1'
+                          }}>
+                            <Restaurant sx={{ fontSize: 30, color: 'text.secondary' }} />
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  </Box>
+                </Fade>
+              </Grid>
+            </Grid>
+          </Box>
+        </Box>
 
-                      <CardContent sx={{ pt: branch.logo ? 5 : 2, flexGrow: 1 }}>
-                        <Typography variant="h5" fontWeight={700} color="white" gutterBottom>{branch.name}</Typography>
-                        {branch.description && <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>{branch.description}</Typography>}
-                        {branch.address && (
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
-                            <LocationOn fontSize="small" /><Typography variant="body2">{branch.address}</Typography>
-                          </Stack>
-                        )}
-                        {branch.phone && (
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                            <Phone fontSize="small" /><Typography variant="body2">{branch.phone}</Typography>
-                          </Stack>
-                        )}
-                      </CardContent>
+        {/* Features Section */}
+        <Box id="features" sx={{ py: 12, bgcolor: '#050505' }}>
+          <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3 }}>
+            <Box sx={{ textAlign: 'center', mb: 8 }}>
+              <Typography variant="h3" fontWeight={800} color="white" gutterBottom>
+                Neden AR Menu?
+              </Typography>
+              <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+                Modern restoranların ihtiyaç duyduğu tüm özellikler tek platformda
+              </Typography>
+            </Box>
 
-                      <Box sx={{ p: 2, pt: 0 }}>
-                        <Button variant="contained" fullWidth size="large" endIcon={<KeyboardArrowRight />} sx={{ py: 1.5 }}>Menüyü Görüntüle</Button>
+            <Grid container spacing={4}>
+              {features.map((feature, i) => (
+                <Grid item xs={12} sm={6} md={4} key={i}>
+                  <Grow in timeout={300 + i * 100}>
+                    <Card sx={{
+                      height: '100%', p: 3, bgcolor: 'background.paper',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        borderColor: 'primary.main',
+                        boxShadow: '0 20px 60px rgba(229,57,53,0.2)'
+                      }
+                    }}>
+                      <Box sx={{
+                        width: 70, height: 70, borderRadius: 3,
+                        bgcolor: alpha('#e53935', 0.1), color: 'primary.main',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3
+                      }}>
+                        {feature.icon}
                       </Box>
+                      <Typography variant="h6" fontWeight={700} color="white" gutterBottom>
+                        {feature.title}
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                        {feature.desc}
+                      </Typography>
                     </Card>
                   </Grow>
                 </Grid>
               ))}
             </Grid>
-
-            {/* Admin Link */}
-            <Box sx={{ textAlign: 'center', mt: 8, pb: 4 }}>
-              <Button component={Link} to="/login" color="inherit" sx={{ color: 'text.secondary' }} startIcon={<Lock />}>Admin Girişi</Button>
-            </Box>
           </Box>
-        )}
+        </Box>
+
+        {/* Pricing Section */}
+        <Box id="pricing" sx={{
+          py: 12,
+          background: 'radial-gradient(ellipse at 50% 100%, rgba(229,57,53,0.1) 0%, transparent 60%)'
+        }}>
+          <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3 }}>
+            <Box sx={{ textAlign: 'center', mb: 8 }}>
+              <Typography variant="h3" fontWeight={800} color="white" gutterBottom>
+                Fiyatlandırma
+              </Typography>
+              <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+                İşletmenizin büyüklüğüne uygun planlar. İstediğiniz zaman yükseltin veya iptal edin.
+              </Typography>
+            </Box>
+
+            <Grid container spacing={4} justifyContent="center">
+              {pricingPlans.map((plan, i) => (
+                <Grid item xs={12} sm={6} md={4} key={i}>
+                  <Grow in timeout={300 + i * 150}>
+                    <Card sx={{
+                      height: '100%', position: 'relative', overflow: 'visible',
+                      bgcolor: 'background.paper',
+                      border: plan.popular ? `2px solid ${plan.color}` : '1px solid rgba(255,255,255,0.1)',
+                      transform: plan.popular ? 'scale(1.05)' : 'none',
+                      boxShadow: plan.popular ? `0 20px 60px ${alpha(plan.color, 0.3)}` : 'none',
+                      transition: 'all 0.3s',
+                      '&:hover': { transform: plan.popular ? 'scale(1.08)' : 'scale(1.03)' }
+                    }}>
+                      {plan.popular && (
+                        <Chip label="En Popüler" size="small"
+                          sx={{
+                            position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+                            bgcolor: plan.color, color: 'white', fontWeight: 700
+                          }}
+                        />
+                      )}
+                      <CardContent sx={{ p: 4 }}>
+                        <Typography variant="h5" fontWeight={700} color="white" gutterBottom>
+                          {plan.name}
+                        </Typography>
+                        <Typography color="text.secondary" sx={{ mb: 3 }}>
+                          {plan.desc}
+                        </Typography>
+                        <Stack direction="row" alignItems="baseline" sx={{ mb: 4 }}>
+                          <Typography variant="h3" fontWeight={800} sx={{ color: plan.color }}>
+                            {plan.price}
+                          </Typography>
+                          <Typography variant="h6" color="text.secondary" sx={{ ml: 1 }}>
+                            TL / {plan.period}
+                          </Typography>
+                        </Stack>
+
+                        <Button variant={plan.popular ? 'contained' : 'outlined'} fullWidth size="large"
+                          sx={{
+                            py: 1.5, mb: 4,
+                            bgcolor: plan.popular ? plan.color : 'transparent',
+                            borderColor: plan.color,
+                            '&:hover': { bgcolor: plan.popular ? plan.color : alpha(plan.color, 0.1) }
+                          }}
+                          onClick={() => navigate('/login')}>
+                          Hemen Başla
+                        </Button>
+
+                        <Divider sx={{ mb: 3 }} />
+
+                        <Stack spacing={2}>
+                          {plan.features.map((f, j) => (
+                            <Stack key={j} direction="row" spacing={1.5} alignItems="center">
+                              <Check sx={{ color: 'success.main', fontSize: 20 }} />
+                              <Typography color="white" variant="body2">{f}</Typography>
+                            </Stack>
+                          ))}
+                          {plan.notIncluded.map((f, j) => (
+                            <Stack key={j} direction="row" spacing={1.5} alignItems="center" sx={{ opacity: 0.4 }}>
+                              <Close sx={{ fontSize: 20 }} />
+                              <Typography color="text.secondary" variant="body2">{f}</Typography>
+                            </Stack>
+                          ))}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grow>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        </Box>
+
+        {/* CTA Section */}
+        <Box sx={{ py: 12, bgcolor: '#050505' }}>
+          <Box sx={{ maxWidth: 800, mx: 'auto', px: 3, textAlign: 'center' }}>
+            <Typography variant="h3" fontWeight={800} color="white" gutterBottom>
+              Dijital Menünüzü Oluşturmaya Hazır mısınız?
+            </Typography>
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
+              14 gün ücretsiz deneyin. Kredi kartı gerekmez.
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+              <Button variant="contained" size="large" sx={{ py: 2, px: 5, fontSize: '1.1rem' }}
+                onClick={() => navigate('/login')}>
+                Ücretsiz Dene
+              </Button>
+              <Button variant="outlined" size="large" sx={{ py: 2, px: 5 }} startIcon={<Phone />}>
+                Bizi Arayın
+              </Button>
+            </Stack>
+          </Box>
+        </Box>
+
+        {/* Footer */}
+        <Box sx={{ py: 6, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3 }}>
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={4}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <Box sx={{
+                    width: 40, height: 40, borderRadius: 2, bgcolor: 'primary.main',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <Restaurant sx={{ color: 'white' }} />
+                  </Box>
+                  <Typography variant="h6" fontWeight={800} color="white">AR Menu</Typography>
+                </Stack>
+                <Typography color="text.secondary" sx={{ mb: 2, lineHeight: 1.8 }}>
+                  Restoranlar için yeni nesil dijital menü çözümü. 3D modeller, AR görüntüleme ve QR kod menü ile müşteri deneyimini dönüştürün.
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  <IconButton sx={{ color: 'text.secondary' }}><Instagram /></IconButton>
+                  <IconButton sx={{ color: 'text.secondary' }}><WhatsApp /></IconButton>
+                </Stack>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Typography variant="subtitle1" fontWeight={700} color="white" gutterBottom>Ürün</Typography>
+                <Stack spacing={1}>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Özellikler</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Fiyatlandırma</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Demo</Typography>
+                </Stack>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Typography variant="subtitle1" fontWeight={700} color="white" gutterBottom>Şirket</Typography>
+                <Stack spacing={1}>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Hakkımızda</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Blog</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Kariyer</Typography>
+                </Stack>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Typography variant="subtitle1" fontWeight={700} color="white" gutterBottom>Destek</Typography>
+                <Stack spacing={1}>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Yardım Merkezi</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>İletişim</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>SSS</Typography>
+                </Stack>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Typography variant="subtitle1" fontWeight={700} color="white" gutterBottom>Yasal</Typography>
+                <Stack spacing={1}>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Gizlilik Politikası</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>Kullanım Şartları</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', '&:hover': { color: 'white' } }}>KVKK</Typography>
+                </Stack>
+              </Grid>
+            </Grid>
+            <Divider sx={{ my: 4 }} />
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                © 2024 AR Menu. Tüm hakları saklıdır.
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Made with ❤️ in Turkey
+              </Typography>
+            </Stack>
+          </Box>
+        </Box>
       </Box>
     </ThemeProvider>
   )

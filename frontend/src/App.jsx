@@ -15,8 +15,9 @@ import {
 } from '@mui/icons-material'
 
 // ==================== CONFIG ====================
-export const API_URL = 'http://localhost:3001/api'
-export const FILES_URL = 'http://localhost:3001'
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+export const API_URL = isDev ? 'http://localhost:3001/api' : 'https://api.armenuqr.com/api'
+export const FILES_URL = isDev ? 'http://localhost:3001' : 'https://api.armenuqr.com'
 
 // ==================== AXIOS ====================
 export const api = axios.create({ baseURL: API_URL })

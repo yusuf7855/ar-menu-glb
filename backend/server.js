@@ -12,12 +12,34 @@ const app = express()
 
 // ==================== CONFIG ====================
 const PORT = process.env.PORT || 3001;
-const MONGODB_URI = 'mongodb://localhost:27017/ar-menu-qr1';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ar-menu-qr1';
 const JWT_SECRET = process.env.JWT_SECRET || 'ar-menu-secret-key-change-in-production';
 const API_KEY = process.env.API_KEY || "test123";
 
 // ==================== MIDDLEWARE ====================
-app.use(cors())
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://armenuqr.com',
+  'https://www.armenuqr.com',
+  'https://admin.armenuqr.com'
+]
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+    // Allow any subdomain of armenuqr.com
+    if (origin.endsWith('.armenuqr.com')) {
+      return callback(null, true)
+    }
+    return callback(null, true) // For now allow all, tighten in production
+  },
+  credentials: true
+}))
 app.use(express.json())
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 app.use('/outputs', express.static(path.join(__dirname, 'outputs')))
